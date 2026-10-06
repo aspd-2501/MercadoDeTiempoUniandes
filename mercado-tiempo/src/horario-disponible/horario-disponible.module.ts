@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { HorarioDisponibleService } from './horario-disponible.service';
 
-@Module({})
+@Module({
+  providers: [HorarioDisponibleService]
+})
 export class HorarioDisponibleModule {}

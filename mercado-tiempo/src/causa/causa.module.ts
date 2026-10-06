@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { CausaService } from './causa.service';
 
-@Module({})
+@Module({
+  providers: [CausaService]
+})
 export class CausaModule {}
