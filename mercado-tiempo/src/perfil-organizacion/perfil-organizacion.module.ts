@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { PerfilOrganizacionService } from './perfil-organizacion.service';
 
-@Module({})
+@Module({
+  providers: [PerfilOrganizacionService]
+})
 export class PerfilOrganizacionModule {}
