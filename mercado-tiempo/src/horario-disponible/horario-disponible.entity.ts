@@ -8,9 +8,9 @@ import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 
 @Entity()
 @Check(`
-    ("idAcuerdo" IS NOT NULL)::int +
-    ("idSolicitud" IS NOT NULL)::int +
-    ("idPostAyuda" IS NOT NULL)::int = 1
+    (CASE WHEN "idAcuerdo" IS NOT NULL THEN 1 ELSE 0 END) +
+    (CASE WHEN "idSolicitud" IS NOT NULL THEN 1 ELSE 0 END) +
+    (CASE WHEN "idPostAyuda" IS NOT NULL THEN 1 ELSE 0 END) = 1
 `)
 export class HorarioDisponibleEntity {
     @PrimaryGeneratedColumn('uuid')

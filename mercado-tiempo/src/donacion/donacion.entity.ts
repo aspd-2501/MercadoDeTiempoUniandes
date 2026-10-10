@@ -5,8 +5,14 @@ import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { DepositoHorasEntity } from '../deposito-horas/deposito-horas.entity';
 
 @Entity()
-@Check(`("idPerfilDonante" IS NOT NULL)::int + ("idDepositoDonante" IS NOT NULL)::int = 1`)
-@Check(`("idPerfilReceptor" IS NOT NULL)::int + ("idDepositoReceptor" IS NOT NULL)::int = 1`)
+@Check(`
+    (CASE WHEN "idPerfilDonante" IS NOT NULL THEN 1 ELSE 0 END) +
+    (CASE WHEN "idDepositoDonante" IS NOT NULL THEN 1 ELSE 0 END) = 1
+`)
+@Check(`
+    (CASE WHEN "idPerfilReceptor" IS NOT NULL THEN 1 ELSE 0 END) +
+    (CASE WHEN "idDepositoReceptor" IS NOT NULL THEN 1 ELSE 0 END) = 1
+`)
 @Check(`"idPerfilDonante" IS NULL OR "idPerfilDonante" <> "idPerfilReceptor"`)
 @Check(`"idDepositoDonante" IS NULL OR "idDepositoDonante" <> "idDepositoReceptor"`)
 export class DonacionEntity {
