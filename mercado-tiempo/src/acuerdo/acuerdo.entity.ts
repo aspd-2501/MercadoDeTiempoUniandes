@@ -7,7 +7,10 @@ import { ParticipanteAcuerdoEntity } from './participante-acuerdo.entity';
 import { HorarioDisponibleEntity } from '../horario-disponible/horario-disponible.entity';
 
 @Entity()
-@Check(`("idPostAyuda" IS NOT NULL)::int + ("idSolicitud" IS NOT NULL)::int = 1`)
+@Check(`
+    (CASE WHEN "idPostAyuda" IS NOT NULL THEN 1 ELSE 0 END) +
+    (CASE WHEN "idSolicitud" IS NOT NULL THEN 1 ELSE 0 END) = 1
+`)
 export class AcuerdoEntity {
     @PrimaryGeneratedColumn('uuid')
     id: string;
