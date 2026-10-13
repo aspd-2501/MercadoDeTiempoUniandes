@@ -183,7 +183,7 @@ export default function HomeFeed({
       {/* 02. ENCABEZADO FIJO: identidad, notificaciones, perfil y filtros */}
       <header
         data-section="encabezado-home"
-        className="sticky top-0 z-30 bg-white px-4 pb-0 pt-12 shadow-[0_1px_0_#E8E8E8] lg:pt-6"
+        className="sticky top-0 z-30 bg-white px-4 pb-0 pt-3 shadow-[0_1px_0_#E8E8E8] lg:pt-6"
       >
         <div className="mx-auto max-w-2xl">
           
