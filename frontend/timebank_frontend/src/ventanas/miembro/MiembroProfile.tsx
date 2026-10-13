@@ -261,7 +261,7 @@ export default function MiembroProfile({
                 </div>
               </div>
               {/* Nombre y facultad: deben permanecer debajo del banner */}
-              <div className="min-w-0 flex-1 pt-8 pb-1">
+              <div className="min-w-0 flex-1 pt-2 pb-1">
                 <h1
                   className="break-words text-lg font-bold leading-tight text-[#0D0D0D]"
                   style={{ fontFamily: 'Outfit, sans-serif' }}
