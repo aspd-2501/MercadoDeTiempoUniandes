@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Activity,
   Award,
@@ -23,6 +23,7 @@ import {
  * semánticas con comentarios y atributos data-section para ubicar cada bloque.
  *
  * Solo muestra datos de demostración: sin API, navegación ni acciones reales.
+ * Los botones tienen animaciones visuales y el interruptor usa estado local.
  */
 
 // ─────────────────────────── TIPOS DE DATOS ───────────────────────────
@@ -125,6 +126,13 @@ const ICONS = {
   logout: LogOut,
 };
 
+// Animaciones compartidas por los botones de esta vista.
+// :hover = al pasar el cursor; :active = mientras se presiona;
+// :focus-visible = al navegar con teclado. No activan navegación.
+const BUTTON_FEEDBACK =
+  'cursor-pointer transition-[transform,background-color,color,box-shadow] duration-200 ease-out motion-safe:active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C9DA0] focus-visible:ring-offset-2 motion-reduce:transition-none';
+const BUTTON_HOVER_LIFT = 'motion-safe:hover:-translate-y-0.5 hover:shadow-md';
+
 function Icon({
   name,
   size = 20,
@@ -176,7 +184,10 @@ function Section({
           {title}
         </h2>
         {actionLabel && (
-          <button type="button" className="shrink-0 text-xs font-medium text-[#3C9DA0]">
+          <button
+            type="button"
+            className={`${BUTTON_FEEDBACK} rounded-md px-1 py-0.5 text-xs font-medium text-[#3C9DA0] hover:text-[#2D8B8E] hover:underline`}
+          >
             {actionLabel}
           </button>
         )}
@@ -191,6 +202,9 @@ export default function MiembroProfile({
   miembro = DEMO_MIEMBRO,
   services = DEMO_SERVICES,
 }: MiembroProfileProps) {
+  // Estado local de demostración: no se guarda en el backend.
+  const [isAvailable, setIsAvailable] = useState(miembro.isAvailable);
+
   const visibleServices = services.filter((service) => service.isVisible);
   const stats = [
     { label: 'Intercambios', value: miembro.completedExchanges },
@@ -218,7 +232,7 @@ export default function MiembroProfile({
         <button
           type="button"
           aria-label="Notificaciones"
-          className="absolute right-4 top-12 flex h-10 w-10 items-center justify-center rounded-full bg-white/20"
+          className={`${BUTTON_FEEDBACK} absolute right-4 top-12 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 hover:bg-white/30 motion-safe:hover:scale-105 focus-visible:ring-white focus-visible:ring-offset-[#3C9DA0]`}
         >
           <Icon name="bell" size={20} className="text-white" />
           <span className="absolute right-1 top-1 h-3 w-3 rounded-full border border-[#3C9DA0] bg-[#FFFF00]" />
@@ -247,7 +261,7 @@ export default function MiembroProfile({
                 </div>
               </div>
               {/* Nombre y facultad: deben permanecer debajo del banner */}
-              <div className="min-w-0 flex-1 pt-2 pb-1">
+              <div className="min-w-0 flex-1 pt-8 pb-1">
                 <h1
                   className="break-words text-lg font-bold leading-tight text-[#0D0D0D]"
                   style={{ fontFamily: 'Outfit, sans-serif' }}
@@ -263,27 +277,32 @@ export default function MiembroProfile({
           </header>
 
           <div className="px-5 pb-5">
-            {/* 02.2 DISPONIBILIDAD: indicador visual, sin cambio de estado */}
+            {/* 02.2 DISPONIBILIDAD: interruptor animado con estado local */}
             <div
               data-section="disponibilidad"
               className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-[#F6F6F6] p-3"
             >
               <div className="min-w-0">
                 <p className="text-sm font-medium text-[#0D0D0D]">
-                  {miembro.isAvailable ? 'Disponible para ayudar' : 'No disponible temporalmente'}
+                  {isAvailable ? 'Disponible para ayudar' : 'No disponible temporalmente'}
                 </p>
                 <p className="mt-0.5 text-xs text-[#737373]">
-                  {miembro.isAvailable ? 'Tu perfil aparece en los resultados' : 'Tu perfil está oculto por ahora'}
+                  {isAvailable ? 'Tu perfil aparece en los resultados' : 'Tu perfil está oculto por ahora'}
                 </p>
               </div>
-              <div
-                aria-hidden="true"
-                className={`relative h-6 w-12 shrink-0 rounded-full ${miembro.isAvailable ? 'bg-[#3C9DA0]' : 'bg-[#D0D0D0]'}`}
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isAvailable}
+                aria-label="Disponible para ayudar"
+                onClick={() => setIsAvailable((previous) => !previous)}
+                className={`${BUTTON_FEEDBACK} relative h-6 w-12 shrink-0 rounded-full hover:shadow-md ${isAvailable ? 'bg-[#3C9DA0]' : 'bg-[#D0D0D0]'}`}
               >
                 <span
-                  className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow ${miembro.isAvailable ? 'left-7' : 'left-1'}`}
+                  aria-hidden="true"
+                  className={`absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow transition-transform duration-200 motion-reduce:transition-none ${isAvailable ? 'translate-x-6' : 'translate-x-0'}`}
                 />
-              </div>
+              </button>
             </div>
 
             {/* 02.3 SALDO DE HORAS: valor disponible y tres botones */}
@@ -305,11 +324,11 @@ export default function MiembroProfile({
                 <Icon name="clock" size={28} className="text-[#0D0D0D] opacity-20" strokeWidth={1.5} />
               </div>
 
-              {/* Acciones: movimientos, donar horas y pedir horas (solo visuales) */}
+              {/* Acciones: movimientos, donar horas y pedir horas (animadas, sin navegación) */}
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  className="flex min-w-[100px] flex-1 items-center justify-center gap-1 rounded-xl bg-[#0D0D0D] px-3 py-2 text-xs font-semibold text-white"
+                  className={`${BUTTON_FEEDBACK} ${BUTTON_HOVER_LIFT} flex min-w-[100px] flex-1 items-center justify-center gap-1 rounded-xl bg-[#0D0D0D] px-3 py-2 text-xs font-semibold text-white hover:bg-[#292929]`}
                   style={{ fontFamily: 'Outfit, sans-serif' }}
                 >
                   <Icon name="activity" size={12} />
@@ -317,20 +336,20 @@ export default function MiembroProfile({
                 </button>
                 <button
                   type="button"
-                  className="flex min-w-[80px] flex-1 items-center justify-center gap-1 rounded-xl bg-white/80 px-3 py-2 text-xs font-semibold text-[#0D0D0D]"
+                  className={`${BUTTON_FEEDBACK} ${BUTTON_HOVER_LIFT} flex min-w-[80px] flex-1 items-center justify-center gap-1 rounded-xl bg-white/80 px-3 py-2 text-xs font-semibold text-[#0D0D0D] hover:bg-white`}
                   style={{ fontFamily: 'Outfit, sans-serif' }}
                 >
                   <Icon name="heart" size={12} />
                   Donar horas
                 </button>
-                <button
+                {/*<button
                   type="button"
-                  className="flex min-w-[80px] flex-1 items-center justify-center gap-1 rounded-xl bg-white/80 px-3 py-2 text-xs font-semibold text-[#0D0D0D]"
+                  className={`${BUTTON_FEEDBACK} ${BUTTON_HOVER_LIFT} flex min-w-[80px] flex-1 items-center justify-center gap-1 rounded-xl bg-white/80 px-3 py-2 text-xs font-semibold text-[#0D0D0D] hover:bg-white`}
                   style={{ fontFamily: 'Outfit, sans-serif' }}
                 >
                   <Icon name="plus" size={12} />
                   Pedir horas
-                </button>
+                </button>*/}
               </div>
             </section>
 
@@ -353,7 +372,7 @@ export default function MiembroProfile({
             {/* 02.5 BOTÓN EDITAR PERFIL (solo visual) */}
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#E8E8E8] py-2.5 text-sm font-medium text-[#0D0D0D] hover:bg-[#F6F6F6]"
+              className={`${BUTTON_FEEDBACK} flex w-full items-center justify-center gap-2 rounded-xl border border-[#E8E8E8] py-2.5 text-sm font-medium text-[#0D0D0D] hover:border-[#3C9DA0] hover:bg-[#E8F5F6]`}
             >
               <Icon name="edit" size={15} />
               Editar perfil
@@ -451,20 +470,23 @@ export default function MiembroProfile({
             <button
               key={item.label}
               type="button"
-              className={`flex w-full items-center gap-3 px-4 py-3.5 transition-colors hover:bg-[#F6F6F6] ${
+              className={`${BUTTON_FEEDBACK} group flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-[#F6F6F6] active:bg-[#E8F5F6] ${
                 index < quickLinks.length - 1 ? 'border-b border-[#F0F0F0]' : ''
               }`}
             >
               <Icon name={item.icon} size={18} className="shrink-0 text-[#737373]" />
               <span className="min-w-0 flex-1 text-left text-sm text-[#0D0D0D]">{item.label}</span>
-              <Icon name="chevron-right" size={16} className="shrink-0 text-[#C0C0C0]" />
+              <Icon name="chevron-right" size={16} className="shrink-0 text-[#C0C0C0] transition-transform duration-200 motion-safe:group-hover:translate-x-1 motion-reduce:transition-none" />
             </button>
           ))}
         </nav>
 
         {/* 09. PIE DEL PERFIL: botón para cerrar sesión (solo visual) */}
         <footer data-section="cerrar-sesion" className="pb-6 text-center">
-          <button type="button" className="mx-auto flex items-center gap-2 text-sm text-[#D32F2F]">
+          <button
+            type="button"
+            className={`${BUTTON_FEEDBACK} mx-auto flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#D32F2F] hover:bg-red-50 hover:text-[#B71C1C]`}
+          >
             <Icon name="logout" size={16} />
             Cerrar sesión
           </button>
