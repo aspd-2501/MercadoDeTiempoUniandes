@@ -10,6 +10,7 @@ import MiembroDetail from './ventanas/miembro/MiembroDetail'
 import NavBarDesktop from './componentes/navBar/NavBarDesktop'
 import NavBarMobile from './componentes/navBar/NavBarMobile'
 import MenuCrear from './componentes/navBar/MenuCrear';
+import Homefeed from './ventanas/HomeFeed'
 
 import './App.css'
 
@@ -34,7 +35,7 @@ function App() {
 
       {/* 03. CONTENIDO PRINCIPAL */}
       <main className="min-w-0 min-h-screen pb-24 lg:pb-0 lg:ml-60">
-        <MiembroProfile />
+        <Homefeed />
       </main>
 
       {/* 04. MENÚ EMERGENTE CREAR */}
