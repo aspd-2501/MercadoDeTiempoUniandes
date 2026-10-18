@@ -265,7 +265,7 @@ export default function MiembroDetail({
             </div>
 
             {/* Espacio superior: evita que el nombre se superponga al banner. */}
-            <div className="min-w-0 flex-1 pt-6">
+            <div className="min-w-0 flex-1 pt-1">
               <h1 className="text-lg leading-tight font-bold text-[#0D0D0D]" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 {miembro.name}
               </h1>

@@ -77,8 +77,16 @@ function App() {
       {/* 05. CONTENIDO PRINCIPAL */}
       <main className="min-h-screen min-w-0 pb-24 lg:ml-60 lg:pb-0">
         <Routes>
-          <Route path="/" element={<HomeFeed onDonarHoras={() => navigate('/donar-horas')} onVerMovimientos={() => navigate('/movimientos')}/>} />
+          <Route path="/" element={<HomeFeed onDonarHoras={() => navigate('/donar-horas')} onVerMovimientos={() => navigate('/movimientos')} onVerAutorPost={(miembroId) => navigate(`/${miembroId}`)} onVerDetallePost={(postId) => navigate(`/posts/${postId}`)}/>} />
+          
+          {/*Info Miembros*/}
           <Route path="/perfil" element={<MiembroProfile onDonarHoras={() => navigate('/donar-horas')} onVerMovimientos={() => navigate('/movimientos')} />} />
+          <Route path="/:miembroId" element={<MiembroDetail />} />
+
+          {/*Posts*/}
+          <Route path="/posts/:postId" element={<PostAyudaDetail onBack={() => navigate("/")} onIrChat={() => navigate("/chats/:chatId")} onVerPerfil={() => navigate("/:miembroId")} onVolverInicio={() => navigate('/')} />} />
+
+          {/*Transacciones de Horas*/}
           <Route path="/donar-horas" element={<DonarHoras />} />
           <Route path="/movimientos" element={<HistorialMiembro onDonarHoras={() => navigate('/donar-horas')} />} />
 

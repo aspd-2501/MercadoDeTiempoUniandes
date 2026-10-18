@@ -10,6 +10,8 @@ import {
   UsersRound,
 } from 'lucide-react';
 
+import type {DatosPostAyuda, } from '../../tipos/postAyuda';
+
 /**
  * COMPONENTE: Tarjeta de publicación de ayuda.
  *
@@ -24,23 +26,6 @@ import {
  */
 
 // ─────────────────── 00. TIPOS Y PROPIEDADES ───────────────────
-export type TipoPublicacionAyuda = 'help-request' | 'help-offer';
-
-export interface DatosPostAyuda {
-  id: string;
-  userId: string;
-  type: TipoPublicacionAyuda;
-  title: string;
-  description: string;
-  category: string;
-  createdAt: string;
-  image?: string;
-  preferredDate?: string;
-  preferredTime?: string;
-  estimatedHours?: number;
-  maxParticipants?: number;
-  confirmedParticipants?: string[];
-}
 
 export interface AutorPostAyuda {
   id: string;

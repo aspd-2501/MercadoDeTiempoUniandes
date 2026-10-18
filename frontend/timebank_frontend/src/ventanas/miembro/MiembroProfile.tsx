@@ -228,7 +228,7 @@ export default function MiembroProfile({
           <header data-section="identidad-miembro" className="px-5 pt-0">
             <div className="mb-3 flex items-start gap-4">
               {/* Avatar: es el único elemento que sobresale por encima de la tarjeta */}
-              <div className="relative -mt-10 shrink-0">
+              <div className="relative -mt-3 shrink-0">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#3C9DA0] ring-4 ring-white">
                   <span className="text-2xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
                     {miembro.initials}
@@ -239,7 +239,7 @@ export default function MiembroProfile({
                 </div>
               </div>
               {/* Nombre y facultad: deben permanecer debajo del banner */}
-              <div className="min-w-0 flex-1 pt-2 pb-1">
+              <div className="min-w-0 flex-1 pt-6 pb-1">
                 <h1
                   className="break-words text-lg font-bold leading-tight text-[#0D0D0D]"
                   style={{ fontFamily: 'Outfit, sans-serif' }}

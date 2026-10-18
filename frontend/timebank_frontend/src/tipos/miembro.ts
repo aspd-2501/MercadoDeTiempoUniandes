@@ -20,3 +20,13 @@ export interface Miembro {
   recognitions: string[];
   isAvailable: boolean;
 }
+
+export interface MiembroPublico {
+  id: string;
+  name: string;
+  firstName: string;
+  faculty?: string;
+  avatar?: string;
+  avatarColor?: string;
+  isAvailable?: boolean;
+}

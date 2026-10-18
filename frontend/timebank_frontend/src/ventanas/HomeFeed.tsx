@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useMiembroSesion } from '../contextos/MiembroSesionContext';
 import type { Miembro } from '../tipos/miembro';
 import { Activity, Bell, Clock3, Heart, Plus, Search } from 'lucide-react';
-import PostAyuda, {
-  type AutorPostAyuda,
-  type DatosPostAyuda,
-} from '../componentes/posts/PostAyuda';
+import PostAyuda, { type AutorPostAyuda } from '../componentes/posts/PostAyuda';
+import type { DatosPostAyuda } from '../tipos/postAyuda';
+import { PUBLICACIONES_DEMO } from '../mocks/postsAyuda.mocks';
+import { MIEMBROS_DEMO} from '../mocks/miembros.mocks';
 
 /**
  * VENTANA: Home / feed de publicaciones del Banco de Tiempo.
@@ -48,82 +48,7 @@ const CATEGORIAS = [
   'Bienestar',
 ];
 
-// ─────────────────── 00.2 DATOS SIMULADOS ───────────────────
-
-const AUTORES_DEMO: Record<string, AutorPostAyuda> = {
-  'miembro-demo-1': {
-    id: 'miembro-demo-1',
-    name: 'María López',
-    firstName: 'María',
-    avatarColor: '#3C9DA0',
-  },
-  'miembro-demo-2': {
-    id: 'miembro-demo-2',
-    name: 'Carlos Martínez',
-    firstName: 'Carlos',
-    avatarColor: '#7A5FB2',
-  },
-  'miembro-demo-3': {
-    id: 'miembro-demo-3',
-    name: 'Camila Torres',
-    firstName: 'Camila',
-    avatarColor: '#BE6B79',
-  },
-  'miembro-demo-4': {
-    id: 'miembro-demo-4',
-    name: 'Santiago Gómez',
-    firstName: 'Santiago',
-    avatarColor: '#477CA8',
-  },
-};
-
-const PUBLICACIONES_DEMO: DatosPostAyuda[] = [
-  {
-    id: 'post-ayuda-1',
-    userId: 'miembro-demo-3',
-    type: 'help-request',
-    title: 'Necesito ayuda con cálculo diferencial',
-    description:
-      'Busco a alguien que pueda explicarme derivadas y ayudarme a practicar ejercicios para el parcial.',
-    category: 'Académico / Matemáticas',
-    createdAt: 'Hace 2 horas',
-    preferredDate: '15 de octubre',
-    preferredTime: '2:00 p. m.',
-    estimatedHours: 2,
-    maxParticipants: 3,
-    confirmedParticipants: ['miembro-demo-2'],
-  },
-  {
-    id: 'post-ayuda-2',
-    userId: 'miembro-demo-2',
-    type: 'help-offer',
-    title: 'Ofrezco práctica de conversación en inglés',
-    description:
-      'Podemos practicar conversación y pronunciación en sesiones presenciales o virtuales.',
-    category: 'Idiomas / Inglés',
-    createdAt: 'Hace 5 horas',
-    preferredDate: '17 de octubre',
-    preferredTime: '4:00 p. m.',
-    estimatedHours: 1,
-    maxParticipants: 2,
-    confirmedParticipants: [],
-  },
-  {
-    id: 'post-ayuda-3',
-    userId: 'miembro-demo-4',
-    type: 'help-request',
-    title: 'Necesito orientación con un proyecto de Python',
-    description:
-      'Estoy construyendo una pequeña aplicación y quisiera resolver algunas dudas sobre programación.',
-    category: 'Tecnología / Programación',
-    createdAt: 'Ayer',
-    estimatedHours: 1.5,
-    maxParticipants: 1,
-    confirmedParticipants: [],
-  },
-];
-
-// ─────────────────── 00.3 ESTILOS DE INTERACCIÓN ───────────────────
+// ─────────────────── 00.2 ESTILOS DE INTERACCIÓN ───────────────────
 const ANIMACION_BOTON =
   'cursor-pointer transition-[transform,background-color,color,box-shadow] duration-200 ease-out ' +
   'motion-safe:active:scale-[0.96] focus-visible:outline-none ' +
@@ -133,7 +58,7 @@ const ANIMACION_BOTON =
 // ─────────────────── 01. VENTANA HOME ───────────────────
 export default function HomeFeed({
   publicaciones = PUBLICACIONES_DEMO,
-  autores = AUTORES_DEMO,
+  autores = MIEMBROS_DEMO,
   notificacionesPendientes = 3,
   onNotificaciones,
   onVerPerfil,
