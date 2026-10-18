@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
 import {
   Activity,
   Award,
@@ -27,20 +28,6 @@ import {
  */
 
 // ─────────────────────────── TIPOS DE DATOS ───────────────────────────
-interface MiembroPerfil {
-  id: string;
-  name: string;
-  faculty: string;
-  bio: string;
-  initials: string;
-  balance: number;
-  completedExchanges: number;
-  interests: string[];
-  skills: string[];
-  organizations: string[];
-  recognitions: string[];
-  isAvailable: boolean;
-}
 
 interface ServicioPerfil {
   id: string;
@@ -53,25 +40,10 @@ interface ServicioPerfil {
 }
 
 interface MiembroProfileProps {
-  miembro?: MiembroPerfil;
   services?: ServicioPerfil[];
 }
 
-// ────────────────────────── DATOS DE PRUEBA ──────────────────────────
-const DEMO_MIEMBRO: MiembroPerfil = {
-  id: 'miembro-demo-1',
-  name: 'María López',
-  faculty: 'Facultad de Ingeniería',
-  initials: 'ML',
-  bio: 'Estudiante apasionada por el aprendizaje colaborativo. Me gusta compartir lo que sé y aprender de otras personas de la comunidad Uniandes.',
-  balance: 8,
-  completedExchanges: 12,
-  interests: ['Tecnología', 'Música', 'Idiomas', 'Voluntariado'],
-  skills: ['Matemáticas', 'Programación', 'Inglés'],
-  organizations: ['Grupo de voluntariado Uniandes'],
-  recognitions: ['Primera ayuda', 'Colaboradora destacada'],
-  isAvailable: true,
-};
+// ─────────────────── DATOS SIMULADOS ───────────────────
 
 const DEMO_SERVICES: ServicioPerfil[] = [
   {
@@ -199,11 +171,13 @@ function Section({
 
 // ────────────────────────── VISTA PRINCIPAL ──────────────────────────
 export default function MiembroProfile({
-  miembro = DEMO_MIEMBRO,
   services = DEMO_SERVICES,
 }: MiembroProfileProps) {
-  // Estado local de demostración: no se guarda en el backend.
-  const [isAvailable, setIsAvailable] = useState(miembro.isAvailable);
+
+  // 00. MIEMBRO AUTENTICADO
+  const { miembro, actualizarDisponibilidad } = useMiembroSesion();
+
+  const isAvailable = miembro.isAvailable;
 
   const visibleServices = services.filter((service) => service.isVisible);
   const stats = [
@@ -295,7 +269,7 @@ export default function MiembroProfile({
                 role="switch"
                 aria-checked={isAvailable}
                 aria-label="Disponible para ayudar"
-                onClick={() => setIsAvailable((previous) => !previous)}
+                onClick={() => actualizarDisponibilidad(!isAvailable)}  
                 className={`${BUTTON_FEEDBACK} relative h-6 w-12 shrink-0 rounded-full hover:shadow-md ${isAvailable ? 'bg-[#3C9DA0]' : 'bg-[#D0D0D0]'}`}
               >
                 <span

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useMiembroSesion } from '../contextos/MiembroSesionContext';
+import type { Miembro } from '../tipos/miembro';
 import { Activity, Bell, Clock3, Heart, Plus, Search } from 'lucide-react';
 import PostAyuda, {
   type AutorPostAyuda,
@@ -18,17 +20,7 @@ import PostAyuda, {
  */
 
 // ─────────────────── 00. MODELOS Y PROPIEDADES ───────────────────
-export interface MiembroHome {
-  id: string;
-  firstName: string;
-  faculty: string;
-  balance: number;
-  initials: string;
-  avatar?: string;
-}
-
 export interface HomeFeedProps {
-  miembro?: MiembroHome;
   publicaciones?: DatosPostAyuda[];
   autores?: Record<string, AutorPostAyuda>;
   notificacionesPendientes?: number;
@@ -57,13 +49,6 @@ const CATEGORIAS = [
 ];
 
 // ─────────────────── 00.2 DATOS SIMULADOS ───────────────────
-const MIEMBRO_DEMO: MiembroHome = {
-  id: 'miembro-demo-1',
-  firstName: 'María',
-  faculty: 'Facultad de Ingeniería',
-  balance: 8,
-  initials: 'ML',
-};
 
 const AUTORES_DEMO: Record<string, AutorPostAyuda> = {
   'miembro-demo-1': {
@@ -147,7 +132,6 @@ const ANIMACION_BOTON =
 
 // ─────────────────── 01. VENTANA HOME ───────────────────
 export default function HomeFeed({
-  miembro = MIEMBRO_DEMO,
   publicaciones = PUBLICACIONES_DEMO,
   autores = AUTORES_DEMO,
   notificacionesPendientes = 3,
@@ -161,11 +145,14 @@ export default function HomeFeed({
   onGuardarPost,
   onCompartirPost,
 }: HomeFeedProps) {
-  // 01.1 ESTADO LOCAL: búsqueda y categoría seleccionada.
+  // 01.1 MIEMBRO CON SESIÓN INICIADA
+  const { miembro } = useMiembroSesion();
+  
+  // 01.2 ESTADO LOCAL: búsqueda y categoría seleccionada.
   const [categoriaActiva, setCategoriaActiva] = useState('Todo');
   const [busqueda, setBusqueda] = useState('');
 
-  // 01.2 DATOS DERIVADOS: publicaciones filtradas por búsqueda y categoría.
+  // 01.3 DATOS DERIVADOS: publicaciones filtradas por búsqueda y categoría.
   const busquedaNormalizada = busqueda.trim().toLocaleLowerCase('es');
   const publicacionesFiltradas = publicaciones.filter((post) => {
     const autor = autores[post.userId];
@@ -356,7 +343,7 @@ export default function HomeFeed({
 // Se conserva dentro de este archivo porque aún no hemos decidido extraerla.
 // En el futuro puede moverse a src/componentes sin modificar HomeFeed.
 interface BalanceCardProps {
-  miembro: MiembroHome;
+  miembro: Miembro;
   onVerMovimientos?: () => void;
   onDonarHoras?: () => void;
   onPedirHoras?: () => void;
