@@ -17,6 +17,8 @@ import AniadirServicio from './ventanas/creacionYEdicion/AniadirServicio'
 import MiembroDetail from './ventanas/miembro/MiembroDetail'
 import Homefeed from './ventanas/HomeFeed'
 import ServiciosMiembroDetail from './ventanas/miembro/ServiciosMiembro'
+import ChatList from './ventanas/chats/ChatList'
+import Chat from './ventanas/chats/Chat';
 
 import './App.css'
 
@@ -38,6 +40,10 @@ function App() {
         navigate('/perfil');
         break;
 
+      case 'chat':
+        navigate('/chats');
+        break;
+
       default:
         // Las demás rutas se implementarán después.
         break;
@@ -48,7 +54,9 @@ function App() {
   const location = useLocation();
 
   const activeTab =
-    location.pathname === '/perfil' ? 'profile' : 'home';
+    location.pathname.startsWith('/perfil') ? 'profile' :
+    location.pathname.startsWith('/chats') ? 'chat' :
+    'home';
 
     return (
       <div className="min-h-screen bg-[#F6F6F6]">
@@ -73,6 +81,11 @@ function App() {
           <Route path="/perfil" element={<MiembroProfile onDonarHoras={() => navigate('/donar-horas')} onVerMovimientos={() => navigate('/movimientos')} />} />
           <Route path="/donar-horas" element={<DonarHoras />} />
           <Route path="/movimientos" element={<HistorialMiembro onDonarHoras={() => navigate('/donar-horas')} />} />
+
+          {/*Chats*/}
+          <Route path="/chats" element={<ChatList  onAbrirChat={(chatId) => navigate(`/chats/${chatId}`)} />} />
+          <Route path="/chats/:chatId" element={<Chat />} />
+          
         </Routes>
       </main>
 
