@@ -25,8 +25,18 @@ export interface MiembroPublico {
   id: string;
   name: string;
   firstName: string;
-  faculty?: string;
   avatar?: string;
   avatarColor?: string;
+
+  // Información del perfil
+  faculty?: string;
+  bio?: string;
   isAvailable?: boolean;
+  completedExchanges?: number;
+
+  // Información adicional
+  interests?: string[];
+  skills?: string[];
+  organizations?: string[];
+  recognitions?: string[];
 }

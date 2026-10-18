@@ -84,7 +84,7 @@ function App() {
           <Route path="/:miembroId" element={<MiembroDetail />} />
 
           {/*Posts*/}
-          <Route path="/posts/:postId" element={<PostAyudaDetail onBack={() => navigate("/")} onIrChat={() => navigate("/chats/:chatId")} onVerPerfil={() => navigate("/:miembroId")} onVolverInicio={() => navigate('/')} />} />
+          <Route path="/posts/:postId" element={<PostAyudaDetail onBack={() => navigate("/")} onIrChat={(chatId) => navigate(`/chats/${chatId}`)} onVerPerfil={(miembroId) => navigate(`/${miembroId}`)} onVolverInicio={() => navigate('/')} />} />
 
           {/*Transacciones de Horas*/}
           <Route path="/donar-horas" element={<DonarHoras />} />
