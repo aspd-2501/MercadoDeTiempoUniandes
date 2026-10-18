@@ -386,7 +386,7 @@ function BalanceCard({
               className="text-xl font-bold leading-tight text-white"
               style={{ fontFamily: 'Outfit, sans-serif' }}
             >
-              Hola, {miembro.firstName} 👋
+              Hola, {miembro.firstName}
             </h2>
             <p className="mt-0.5 text-sm text-white/70">{miembro.faculty}</p>
           </div>

@@ -13,6 +13,7 @@ import MenuCrear from './componentes/navBar/MenuCrear';
 import Homefeed from './ventanas/HomeFeed'
 
 import './App.css'
+import HomeFeed from './ventanas/HomeFeed';
 
 
 function App() {
@@ -35,7 +36,7 @@ function App() {
 
       {/* 03. CONTENIDO PRINCIPAL */}
       <main className="min-w-0 min-h-screen pb-24 lg:pb-0 lg:ml-60">
-        <Homefeed />
+        <HomeFeed />
       </main>
 
       {/* 04. MENÚ EMERGENTE CREAR */}
