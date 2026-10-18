@@ -16,6 +16,7 @@ import ServiciosMiembro from './ventanas/miembro/ServiciosMiembro'
 import AniadirServicio from './ventanas/creacionYEdicion/AniadirServicio'
 import MiembroDetail from './ventanas/miembro/MiembroDetail'
 import Homefeed from './ventanas/HomeFeed'
+import ServiciosMiembroDetail from './ventanas/miembro/ServiciosMiembro'
 
 import './App.css'
 
@@ -68,8 +69,10 @@ function App() {
       {/* 05. CONTENIDO PRINCIPAL */}
       <main className="min-h-screen min-w-0 pb-24 lg:ml-60 lg:pb-0">
         <Routes>
-          <Route path="/" element={<HomeFeed />} />
-          <Route path="/perfil" element={<MiembroProfile />} />
+          <Route path="/" element={<HomeFeed onDonarHoras={() => navigate('/donar-horas')} onVerMovimientos={() => navigate('/movimientos')}/>} />
+          <Route path="/perfil" element={<MiembroProfile onDonarHoras={() => navigate('/donar-horas')} onVerMovimientos={() => navigate('/movimientos')} />} />
+          <Route path="/donar-horas" element={<DonarHoras />} />
+          <Route path="/movimientos" element={<HistorialMiembro onDonarHoras={() => navigate('/donar-horas')} />} />
         </Routes>
       </main>
 

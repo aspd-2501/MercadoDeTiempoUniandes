@@ -41,6 +41,8 @@ interface ServicioPerfil {
 
 interface MiembroProfileProps {
   services?: ServicioPerfil[];
+  onDonarHoras?: () => void;
+  onVerMovimientos?: () => void;
 }
 
 // ─────────────────── DATOS SIMULADOS ───────────────────
@@ -172,6 +174,8 @@ function Section({
 // ────────────────────────── VISTA PRINCIPAL ──────────────────────────
 export default function MiembroProfile({
   services = DEMO_SERVICES,
+  onDonarHoras,
+  onVerMovimientos
 }: MiembroProfileProps) {
 
   // 00. MIEMBRO AUTENTICADO
@@ -304,6 +308,7 @@ export default function MiembroProfile({
                   type="button"
                   className={`${BUTTON_FEEDBACK} ${BUTTON_HOVER_LIFT} flex min-w-[100px] flex-1 items-center justify-center gap-1 rounded-xl bg-[#0D0D0D] px-3 py-2 text-xs font-semibold text-white hover:bg-[#292929]`}
                   style={{ fontFamily: 'Outfit, sans-serif' }}
+                  onClick={onVerMovimientos}
                 >
                   <Icon name="activity" size={12} />
                   Ver movimientos
@@ -312,6 +317,7 @@ export default function MiembroProfile({
                   type="button"
                   className={`${BUTTON_FEEDBACK} ${BUTTON_HOVER_LIFT} flex min-w-[80px] flex-1 items-center justify-center gap-1 rounded-xl bg-white/80 px-3 py-2 text-xs font-semibold text-[#0D0D0D] hover:bg-white`}
                   style={{ fontFamily: 'Outfit, sans-serif' }}
+                  onClick={onDonarHoras}
                 >
                   <Icon name="heart" size={12} />
                   Donar horas

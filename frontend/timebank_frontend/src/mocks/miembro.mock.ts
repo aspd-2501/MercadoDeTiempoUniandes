@@ -12,7 +12,7 @@ export const MIEMBRO_SESION_MOCK: Miembro = {
   faculty: 'Facultad de Ingeniería',
   bio: 'Estudiante apasionada por el aprendizaje colaborativo. Me gusta compartir lo que sé y aprender de otras personas de la comunidad Uniandes.',
   initials: 'ML',
-  balance: 6,
+  balance: 10,
   completedExchanges: 12,
   interests: ['Tecnología', 'Música', 'Idiomas', 'Voluntariado'],
   skills: ['Matemáticas', 'Programación', 'Inglés'],
