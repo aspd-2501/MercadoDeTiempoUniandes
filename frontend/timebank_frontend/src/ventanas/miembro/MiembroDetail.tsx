@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { useParams } from 'react-router';
 import { MIEMBROS_DEMO } from '../../mocks/miembros.mocks';
+import { SERVICIOS_DEMO } from '../../mocks/servicios.mocks';
+import type { ServicioCatalogo } from '../../tipos/servicio';
 import type { MiembroPublico } from '../../tipos/miembro';
 import {
   ArrowLeft,
@@ -27,47 +29,10 @@ import {
  * Ubicación: src/ventanas/miembro/MiembroDetail.tsx
  */
 
-// ───────────────────── 00. TIPOS Y DATOS SIMULADOS ─────────────────────
-export interface ServicioDetalleMiembro {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  estimatedHours: number;
-  imageUrl?: string;
-  isVisible: boolean;
-}
-
+// ───────────────────── 00. TIPOS  ─────────────────────
 interface MiembroDetailProps {
-  servicios?: ServicioDetalleMiembro[];
 }
 
-const DEMO_SERVICIOS: ServicioDetalleMiembro[] = [
-  {
-    id: 'servicio-demo-4',
-    title: 'Conversación en inglés',
-    category: 'Idiomas',
-    description: 'Sesiones de conversación para practicar pronunciación y desarrollar fluidez en inglés.',
-    estimatedHours: 1,
-    isVisible: true,
-  },
-  {
-    id: 'servicio-demo-5',
-    title: 'Revisión de textos académicos',
-    category: 'Académico / Escritura',
-    description: 'Te ayudo a revisar la claridad, ortografía y estructura de tus textos universitarios.',
-    estimatedHours: 1.5,
-    isVisible: true,
-  },
-  {
-    id: 'servicio-demo-6',
-    title: 'Asesoría de presentaciones',
-    category: 'Diseño',
-    description: 'Apoyo para organizar presentaciones y comunicar ideas.',
-    estimatedHours: 1,
-    isVisible: false,
-  },
-];
 
 // ───────────────────── 00.1 ESTILOS DE INTERACCIÓN ─────────────────────
 // Solo generan retroalimentación visual; no implican navegación.
@@ -145,7 +110,6 @@ function SeccionPerfil({
 // ───────────────────── COMPONENTE PRINCIPAL ─────────────────────
 
 export default function MiembroDetail({
-  servicios = DEMO_SERVICIOS,
 }: MiembroDetailProps) {
 
   // 01. IDENTIFICAR EL MIEMBRO DESDE LA URL
@@ -159,9 +123,11 @@ export default function MiembroDetail({
   // 03. ESTADOS LOCALES
   const [mostrarOpciones, setMostrarOpciones] = useState(false);
 
-  // 04. SERVICIOS VISIBLES
-  const serviciosVisibles = servicios.filter(
-    (servicio) => servicio.isVisible
+  // 04. SERVICIOS VISIBLES DEL MIEMBRO SELECCIONADO
+  const serviciosVisibles = SERVICIOS_DEMO.filter(
+    (servicio) =>
+      servicio.userId === miembroId &&
+      servicio.isVisible
   );
 
   // 05. VALIDAR QUE EL MIEMBRO EXISTA
