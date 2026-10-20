@@ -7,6 +7,7 @@ import { PostAyudaEntity } from './post-ayuda.entity';
 import { PostAyudaCategoriaEntity } from './post-ayuda-categoria.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { CategoriaEntity } from '../categoria/categoria.entity';
+import { PostAyudaController } from './post-ayuda.controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
@@ -16,5 +17,6 @@ import { CategoriaEntity } from '../categoria/categoria.entity';
         CategoriaEntity,
     ])],
     providers: [PostAyudaService],
+    controllers: [PostAyudaController],
 })
 export class PostAyudaModule {}

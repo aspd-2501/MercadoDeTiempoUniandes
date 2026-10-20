@@ -8,6 +8,7 @@ import { ReconocimientoOtorgadoEntity } from './reconocimiento-otorgado.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { PostComunitarioEntity } from '../post-comunitario/post-comunitario.entity';
 import { UsuarioPostEntity } from '../post-comunitario/usuario-post.entity';
+import { ReconocimientoController } from './reconocimiento.controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
@@ -18,5 +19,6 @@ import { UsuarioPostEntity } from '../post-comunitario/usuario-post.entity';
         UsuarioPostEntity,
     ])],
     providers: [ReconocimientoService],
+    controllers: [ReconocimientoController],
 })
 export class ReconocimientoModule {}

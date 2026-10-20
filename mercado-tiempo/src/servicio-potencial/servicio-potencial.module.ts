@@ -7,6 +7,7 @@ import { ServicioPotencialEntity } from './servicio-potencial.entity';
 import { ServicioPotencialCategoriaEntity } from './servicio-potencial-categoria.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { CategoriaEntity } from '../categoria/categoria.entity';
+import { ServicioPotencialController } from './servicio-potencial.controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
@@ -16,5 +17,6 @@ import { CategoriaEntity } from '../categoria/categoria.entity';
         CategoriaEntity,
     ])],
     providers: [ServicioPotencialService],
+    controllers: [ServicioPotencialController],
 })
 export class ServicioPotencialModule {}

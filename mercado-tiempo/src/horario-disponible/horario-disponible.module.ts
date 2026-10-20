@@ -8,6 +8,7 @@ import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
 import { SolicitudAyudaEntity } from '../solicitud-ayuda/solicitud-ayuda.entity';
 import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
+import { HorarioDisponibleController } from './horario-disponible.controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
@@ -18,5 +19,6 @@ import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
         PostAyudaEntity,
     ])],
     providers: [HorarioDisponibleService],
+    controllers: [HorarioDisponibleController],
 })
 export class HorarioDisponibleModule {}
