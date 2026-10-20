@@ -19,6 +19,7 @@ import Homefeed from './ventanas/HomeFeed'
 import ServiciosMiembroDetail from './ventanas/miembro/ServiciosMiembro'
 import ChatList from './ventanas/chats/ChatList'
 import Chat from './ventanas/chats/Chat';
+import Explorar from './ventanas/Explorar'
 
 import './App.css'
 
@@ -44,6 +45,10 @@ function App() {
         navigate('/chats');
         break;
 
+      case 'explore':
+        navigate('/explorar');
+        break;
+
       default:
         // Las demás rutas se implementarán después.
         break;
@@ -56,6 +61,7 @@ function App() {
   const activeTab =
     location.pathname.startsWith('/perfil') ? 'profile' :
     location.pathname.startsWith('/chats') ? 'chat' :
+    location.pathname === '/explorar' ? 'explore' :
     'home';
 
     return (
@@ -77,8 +83,13 @@ function App() {
       {/* 05. CONTENIDO PRINCIPAL */}
       <main className="min-h-screen min-w-0 pb-24 lg:ml-60 lg:pb-0">
         <Routes>
+
+          {/*HomeFeed*/}
           <Route path="/" element={<HomeFeed onDonarHoras={() => navigate('/donar-horas')} onVerMovimientos={() => navigate('/movimientos')} onVerAutorPost={(miembroId) => navigate(`/${miembroId}`)} onVerDetallePost={(postId) => navigate(`/posts/${postId}`)}/>} />
           
+          {/*Explorar*/}
+          <Route path="explorar" element={<Explorar onVerDetallePost={(postId) => navigate(`/posts/${postId}`)} onVerPerfil={(miembroId) => navigate(`/${miembroId}`)} />} />
+
           {/*Info Miembros*/}
           <Route path="/perfil" element={<MiembroProfile onDonarHoras={() => navigate('/donar-horas')} onVerMovimientos={() => navigate('/movimientos')} />} />
           <Route path="/:miembroId" element={<MiembroDetail />} />
