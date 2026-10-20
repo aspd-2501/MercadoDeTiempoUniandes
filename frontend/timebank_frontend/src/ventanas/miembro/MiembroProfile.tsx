@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
+import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
 import {
   Activity,
   Award,
@@ -27,20 +28,6 @@ import {
  */
 
 // ─────────────────────────── TIPOS DE DATOS ───────────────────────────
-interface MiembroPerfil {
-  id: string;
-  name: string;
-  faculty: string;
-  bio: string;
-  initials: string;
-  balance: number;
-  completedExchanges: number;
-  interests: string[];
-  skills: string[];
-  organizations: string[];
-  recognitions: string[];
-  isAvailable: boolean;
-}
 
 interface ServicioPerfil {
   id: string;
@@ -53,25 +40,12 @@ interface ServicioPerfil {
 }
 
 interface MiembroProfileProps {
-  miembro?: MiembroPerfil;
   services?: ServicioPerfil[];
+  onDonarHoras?: () => void;
+  onVerMovimientos?: () => void;
 }
 
-// ────────────────────────── DATOS DE PRUEBA ──────────────────────────
-const DEMO_MIEMBRO: MiembroPerfil = {
-  id: 'miembro-demo-1',
-  name: 'María López',
-  faculty: 'Facultad de Ingeniería',
-  initials: 'ML',
-  bio: 'Estudiante apasionada por el aprendizaje colaborativo. Me gusta compartir lo que sé y aprender de otras personas de la comunidad Uniandes.',
-  balance: 8,
-  completedExchanges: 12,
-  interests: ['Tecnología', 'Música', 'Idiomas', 'Voluntariado'],
-  skills: ['Matemáticas', 'Programación', 'Inglés'],
-  organizations: ['Grupo de voluntariado Uniandes'],
-  recognitions: ['Primera ayuda', 'Colaboradora destacada'],
-  isAvailable: true,
-};
+// ─────────────────── DATOS SIMULADOS ───────────────────
 
 const DEMO_SERVICES: ServicioPerfil[] = [
   {
@@ -199,11 +173,15 @@ function Section({
 
 // ────────────────────────── VISTA PRINCIPAL ──────────────────────────
 export default function MiembroProfile({
-  miembro = DEMO_MIEMBRO,
   services = DEMO_SERVICES,
+  onDonarHoras,
+  onVerMovimientos
 }: MiembroProfileProps) {
-  // Estado local de demostración: no se guarda en el backend.
-  const [isAvailable, setIsAvailable] = useState(miembro.isAvailable);
+
+  // 00. MIEMBRO AUTENTICADO
+  const { miembro, actualizarDisponibilidad } = useMiembroSesion();
+
+  const isAvailable = miembro.isAvailable;
 
   const visibleServices = services.filter((service) => service.isVisible);
   const stats = [
@@ -250,7 +228,7 @@ export default function MiembroProfile({
           <header data-section="identidad-miembro" className="px-5 pt-0">
             <div className="mb-3 flex items-start gap-4">
               {/* Avatar: es el único elemento que sobresale por encima de la tarjeta */}
-              <div className="relative -mt-10 shrink-0">
+              <div className="relative -mt-3 shrink-0">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#3C9DA0] ring-4 ring-white">
                   <span className="text-2xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
                     {miembro.initials}
@@ -261,7 +239,7 @@ export default function MiembroProfile({
                 </div>
               </div>
               {/* Nombre y facultad: deben permanecer debajo del banner */}
-              <div className="min-w-0 flex-1 pt-2 pb-1">
+              <div className="min-w-0 flex-1 pt-6 pb-1">
                 <h1
                   className="break-words text-lg font-bold leading-tight text-[#0D0D0D]"
                   style={{ fontFamily: 'Outfit, sans-serif' }}
@@ -295,7 +273,7 @@ export default function MiembroProfile({
                 role="switch"
                 aria-checked={isAvailable}
                 aria-label="Disponible para ayudar"
-                onClick={() => setIsAvailable((previous) => !previous)}
+                onClick={() => actualizarDisponibilidad(!isAvailable)}  
                 className={`${BUTTON_FEEDBACK} relative h-6 w-12 shrink-0 rounded-full hover:shadow-md ${isAvailable ? 'bg-[#3C9DA0]' : 'bg-[#D0D0D0]'}`}
               >
                 <span
@@ -330,6 +308,7 @@ export default function MiembroProfile({
                   type="button"
                   className={`${BUTTON_FEEDBACK} ${BUTTON_HOVER_LIFT} flex min-w-[100px] flex-1 items-center justify-center gap-1 rounded-xl bg-[#0D0D0D] px-3 py-2 text-xs font-semibold text-white hover:bg-[#292929]`}
                   style={{ fontFamily: 'Outfit, sans-serif' }}
+                  onClick={onVerMovimientos}
                 >
                   <Icon name="activity" size={12} />
                   Ver movimientos
@@ -338,6 +317,7 @@ export default function MiembroProfile({
                   type="button"
                   className={`${BUTTON_FEEDBACK} ${BUTTON_HOVER_LIFT} flex min-w-[80px] flex-1 items-center justify-center gap-1 rounded-xl bg-white/80 px-3 py-2 text-xs font-semibold text-[#0D0D0D] hover:bg-white`}
                   style={{ fontFamily: 'Outfit, sans-serif' }}
+                  onClick={onDonarHoras}
                 >
                   <Icon name="heart" size={12} />
                   Donar horas

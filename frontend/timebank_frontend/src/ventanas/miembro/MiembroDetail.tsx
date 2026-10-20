@@ -1,4 +1,7 @@
 import { useState, type ReactNode } from 'react';
+import { useParams } from 'react-router';
+import { MIEMBROS_DEMO } from '../../mocks/miembros.mocks';
+import type { MiembroPublico } from '../../tipos/miembro';
 import {
   ArrowLeft,
   Award,
@@ -25,21 +28,6 @@ import {
  */
 
 // ───────────────────── 00. TIPOS Y DATOS SIMULADOS ─────────────────────
-export interface MiembroDetalle {
-  id: string;
-  name: string;
-  faculty: string;
-  bio: string;
-  avatarUrl?: string;
-  avatarColor: string;
-  isAvailable: boolean;
-  completedExchanges: number;
-  interests: string[];
-  skills: string[];
-  organizations: string[];
-  recognitions: string[];
-}
-
 export interface ServicioDetalleMiembro {
   id: string;
   title: string;
@@ -51,23 +39,8 @@ export interface ServicioDetalleMiembro {
 }
 
 interface MiembroDetailProps {
-  miembro?: MiembroDetalle;
   servicios?: ServicioDetalleMiembro[];
 }
-
-const DEMO_MIEMBRO: MiembroDetalle = {
-  id: 'miembro-demo-2',
-  name: 'Daniela Torres',
-  faculty: 'Facultad de Ciencias Sociales',
-  bio: 'Me gusta compartir mis conocimientos y aprender de otras personas. Disfruto la lectura, los idiomas y las actividades colaborativas en la universidad.',
-  avatarColor: '#3C9DA0',
-  isAvailable: true,
-  completedExchanges: 18,
-  interests: ['Lectura', 'Idiomas', 'Voluntariado', 'Tecnología'],
-  skills: ['Inglés', 'Redacción', 'Investigación'],
-  organizations: ['Grupo de voluntariado Uniandes', 'Club de lectura'],
-  recognitions: ['Primera ayuda', 'Miembro solidario'],
-};
 
 const DEMO_SERVICIOS: ServicioDetalleMiembro[] = [
   {
@@ -103,7 +76,7 @@ const ANIMACION_BOTON =
 const ANIMACION_ELEVACION = 'motion-safe:hover:-translate-y-0.5 hover:shadow-md';
 
 // ───────────────────── 00.2 ELEMENTOS VISUALES LOCALES ─────────────────────
-function AvatarMiembro({ miembro }: { miembro: MiembroDetalle }) {
+function AvatarMiembro({ miembro }: { miembro: MiembroPublico }) {
   const iniciales = miembro.name
     .trim()
     .split(/\s+/)
@@ -115,17 +88,17 @@ function AvatarMiembro({ miembro }: { miembro: MiembroDetalle }) {
   return (
     <div
       className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full ring-4 ring-white"
-      style={{ backgroundColor: miembro.avatarColor }}
+      style={{ backgroundColor: miembro.avatarColor ?? '#3C9DA0' }}
       aria-label={`Avatar de ${miembro.name}`}
     >
-      {miembro.avatarUrl ? (
+      {miembro.avatar ? (
         <img
-          src={miembro.avatarUrl}
+          src={miembro.avatar}
           alt={`Foto de ${miembro.name}`}
           className="h-full w-full object-cover"
         />
       ) : (
-        <span className="text-2xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <span className="text-2xl font-bold text-white">
           {iniciales}
         </span>
       )}
@@ -170,18 +143,58 @@ function SeccionPerfil({
 }
 
 // ───────────────────── COMPONENTE PRINCIPAL ─────────────────────
+
 export default function MiembroDetail({
-  miembro = DEMO_MIEMBRO,
   servicios = DEMO_SERVICIOS,
 }: MiembroDetailProps) {
-  // Estado estrictamente visual: abre y cierra el menú de tres puntos.
-  const [mostrarOpciones, setMostrarOpciones] = useState(false);
-  const serviciosVisibles = servicios.filter((servicio) => servicio.isVisible);
 
+  // 01. IDENTIFICAR EL MIEMBRO DESDE LA URL
+  const { miembroId } = useParams<{ miembroId: string }>();
+
+  // 02. BUSCAR EL MIEMBRO EN LOS MOCKS
+  const miembro = miembroId
+    ? MIEMBROS_DEMO[miembroId]
+    : undefined;
+
+  // 03. ESTADOS LOCALES
+  const [mostrarOpciones, setMostrarOpciones] = useState(false);
+
+  // 04. SERVICIOS VISIBLES
+  const serviciosVisibles = servicios.filter(
+    (servicio) => servicio.isVisible
+  );
+
+  // 05. VALIDAR QUE EL MIEMBRO EXISTA
+  if (!miembro) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[#F6F6F6]">
+        <p className="text-sm text-[#737373]">
+          Miembro no encontrado.
+        </p>
+      </main>
+    );
+  }
+
+  // 06. DATOS OPCIONALES DEL PERFIL
+  const intereses = miembro.interests ?? [];
+  const habilidades = miembro.skills ?? [];
+  const organizaciones = miembro.organizations ?? [];
+  const reconocimientos = miembro.recognitions ?? [];
+
+  // 07. ESTADÍSTICAS
   const estadisticas = [
-    { label: 'Intercambios', value: miembro.completedExchanges },
-    { label: 'Servicios', value: serviciosVisibles.length },
-    { label: 'Reconocimientos', value: miembro.recognitions.length },
+    {
+      label: 'Intercambios',
+      value: miembro.completedExchanges ?? '—',
+    },
+    {
+      label: 'Servicios',
+      value: serviciosVisibles.length,
+    },
+    {
+      label: 'Reconocimientos',
+      value: reconocimientos.length,
+    },
   ];
 
   return (
@@ -265,7 +278,7 @@ export default function MiembroDetail({
             </div>
 
             {/* Espacio superior: evita que el nombre se superponga al banner. */}
-            <div className="min-w-0 flex-1 pt-6">
+            <div className="min-w-0 flex-1 pt-1">
               <h1 className="text-lg leading-tight font-bold text-[#0D0D0D]" style={{ fontFamily: 'Outfit, sans-serif' }}>
                 {miembro.name}
               </h1>
@@ -273,7 +286,15 @@ export default function MiembroDetail({
                 <span className="text-xs text-[#737373]">{miembro.faculty}</span>
                 <span className="text-[#C0C0C0]" aria-hidden="true">·</span>
                 <span className={`text-xs font-medium ${miembro.isAvailable ? 'text-green-600' : 'text-[#9E9E9E]'}`}>
-                  {miembro.isAvailable ? 'Disponible' : 'No disponible'}
+                  {typeof miembro.isAvailable === 'boolean' && (
+                    <span
+                      className={`text-xs font-medium ${
+                        miembro.isAvailable ? 'text-green-600' : 'text-[#9E9E9E]'
+                      }`}
+                    >
+                      {miembro.isAvailable ? 'Disponible' : 'No disponible'}
+                    </span>
+                  )}
                 </span>
               </div>
             </div>
@@ -281,7 +302,14 @@ export default function MiembroDetail({
 
           {/* 02.3 BIOGRAFÍA */}
           <p data-section="biografia" className="mb-4 text-sm leading-relaxed text-[#737373]">
-            {miembro.bio}
+            {miembro.bio && (
+              <p
+                data-section="biografia"
+                className="mb-4 text-sm leading-relaxed text-[#737373]"
+              >
+                {miembro.bio}
+              </p>
+            )}
           </p>
 
           {/* 02.4 ESTADÍSTICAS: intercambios, servicios y reconocimientos */}
@@ -319,10 +347,10 @@ export default function MiembroDetail({
         </article>
 
         {/* 03. INTERESES */}
-        {miembro.interests.length > 0 && (
+        {intereses.length > 0 && (
           <SeccionPerfil titulo="Intereses" identificador="intereses">
             <div className="flex flex-wrap gap-2">
-              {miembro.interests.map((interes) => (
+              {intereses.map((interes) => (
                 <Etiqueta key={interes} texto={interes} variante="turquesa" />
               ))}
             </div>
@@ -330,10 +358,10 @@ export default function MiembroDetail({
         )}
 
         {/* 04. HABILIDADES */}
-        {miembro.skills.length > 0 && (
+        {habilidades.length > 0 && (
           <SeccionPerfil titulo="Habilidades" identificador="habilidades">
             <div className="flex flex-wrap gap-2">
-              {miembro.skills.map((habilidad) => (
+              {habilidades.map((habilidad) => (
                 <Etiqueta key={habilidad} texto={habilidad} variante="amarillo" />
               ))}
             </div>
@@ -341,10 +369,10 @@ export default function MiembroDetail({
         )}
 
         {/* 05. ORGANIZACIONES */}
-        {miembro.organizations.length > 0 && (
+        {organizaciones.length > 0 && (
           <SeccionPerfil titulo="Organizaciones" identificador="organizaciones">
             <div className="flex flex-wrap gap-2">
-              {miembro.organizations.map((organizacion) => (
+              {organizaciones.map((organizacion) => (
                 <div key={organizacion} className="flex items-center gap-1.5 rounded-full bg-[#F6F6F6] px-3 py-1.5">
                   <Users size={13} className="shrink-0 text-[#737373]" aria-hidden="true" />
                   <span className="text-xs text-[#0D0D0D]">{organizacion}</span>
@@ -394,10 +422,10 @@ export default function MiembroDetail({
         )}
 
         {/* 07. RECONOCIMIENTOS RECIBIDOS */}
-        {miembro.recognitions.length > 0 && (
+        {reconocimientos.length > 0 && (
           <SeccionPerfil titulo="Reconocimientos recibidos" identificador="reconocimientos">
             <div className="flex flex-wrap gap-2">
-              {miembro.recognitions.map((reconocimiento) => (
+              {reconocimientos.map((reconocimiento) => (
                 <span
                   key={reconocimiento}
                   className="inline-flex items-center gap-1.5 rounded-full bg-[#FFFF00] px-3 py-1.5 text-xs font-bold text-[#0D0D0D]"

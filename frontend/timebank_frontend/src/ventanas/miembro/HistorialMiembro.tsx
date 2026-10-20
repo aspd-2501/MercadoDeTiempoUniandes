@@ -1,3 +1,5 @@
+import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
+import type { Miembro } from '../../tipos/miembro';
 import {
   ArrowLeft,
   Award,
@@ -39,8 +41,8 @@ export interface MovimientoHistorial {
 }
 
 interface HistorialMiembroProps {
-  balance?: number;
   transactions?: MovimientoHistorial[];
+  onDonarHoras: () => void;
 }
 
 // ────────────────────────── DATOS DE PRUEBA ──────────────────────────
@@ -148,9 +150,13 @@ const ESTILOS_MOVIMIENTO: Record<
 
 // ───────────────────────── COMPONENTE PRINCIPAL ─────────────────────────
 export default function HistorialMiembro({
-  balance = DEMO_BALANCE,
   transactions = DEMO_TRANSACTIONS,
+  onDonarHoras
 }: HistorialMiembroProps) {
+  // 00. MIEMBRO AUTENTICADO
+  const { miembro } = useMiembroSesion();
+  const balance = miembro.balance;
+
   // Cifras de demostración calculadas a partir de los movimientos mostrados.
   const totalEarned = transactions
     .filter((tx) => ['earned', 'community', 'received-donation'].includes(tx.type))
@@ -182,18 +188,11 @@ export default function HistorialMiembro({
         <div className="relative mx-auto max-w-2xl">
           {/* 01.2 Regresar y título de la pantalla */}
           <div data-section="titulo-historial" className="mb-6 flex items-center gap-3">
-            <button
-              type="button"
-              aria-label="Volver"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20"
-            >
-              <ArrowLeft size={20} className="text-white" aria-hidden="true" />
-            </button>
             <h1
               className="text-xl font-bold text-white"
               style={{ fontFamily: 'Outfit, sans-serif' }}
             >
-              Mis horas
+              Mis Movimientos
             </h1>
           </div>
 
@@ -257,6 +256,7 @@ export default function HistorialMiembro({
               type="button"
               className="btn-press flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#FFFF00] py-3 text-sm font-bold text-[#0D0D0D]"
               style={{ fontFamily: 'Outfit, sans-serif' }}
+              onClick={onDonarHoras}
             >
               <Heart size={16} strokeWidth={2.5} aria-hidden="true" />
               Donar horas

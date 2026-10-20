@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router';
+import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
 import {
   ArrowLeft,
   CalendarDays,
@@ -11,6 +13,8 @@ import {
   UsersRound,
 } from 'lucide-react';
 import type { LucideIcon, LucideProps } from 'lucide-react';
+import { MIEMBROS_DEMO } from '../../mocks/miembros.mocks';
+import { PUBLICACIONES_DEMO } from '../../mocks/postsAyuda.mocks';
 
 /**
  * Primera migración del mockup de Figma.
@@ -37,47 +41,18 @@ export interface AutorPostAyuda {
   id: string;
   name: string;
   firstName: string;
-  faculty: string;
+  faculty?: string;
   avatar?: string;
   avatarColor?: string;
 }
 
-type DestinoNavegacion = 'agreement-detail' | 'chat-conversation' | 'home' | 'other-profile';
-
 export interface PostAyudaDetailProps {
-  /** Por ahora opcional; cuando exista la API se suministrará desde la vista padre. */
-  post?: PostAyuda | null;
-  author?: AutorPostAyuda | null;
-  currentUserId?: string;
   onBack?: () => void;
-  onNavigate?: (destination: DestinoNavegacion, params?: Record<string, string>) => void;
+  onVerPerfil?: (miembroId: string) => void;
+  onVerAcuerdo?: (acuerdoId: string) => void;
+  onIrChat?: (chatId: string) => void;
+  onVolverInicio?: () => void;
 }
-
-// Datos de demostración para la vista de detalle de un post de ayuda.
-
-const DEMO_POST: PostAyuda = {
-  id: 'post-demo-1',
-  userId: 'usuario-demo-1',
-  type: 'help-request',
-  title: 'Necesito ayuda con cálculo diferencial',
-  description:
-    'Estoy buscando a alguien que me ayude a repasar algunos ejercicios de derivadas antes del parcial. Podemos reunirnos en la universidad.',
-  category: 'Tutorías / Matemáticas',
-  createdAt: 'Hace 2 horas',
-  preferredDate: '15 de octubre',
-  preferredTime: '2:00 p. m.',
-  estimatedHours: 2,
-  maxParticipants: 3,
-  confirmedParticipants: ['usuario-demo-2'],
-};
-
-const DEMO_AUTHOR: AutorPostAyuda = {
-  id: 'usuario-demo-1',
-  name: 'María Rodríguez',
-  firstName: 'María',
-  faculty: 'Ingeniería',
-  avatarColor: '#3C9DA0',
-};
 
 // Iconos y componentes auxiliares.
 const ICONOS = {
@@ -139,20 +114,29 @@ function Chip({ label }: { label: string; size?: 'sm'; color?: 'teal' }) {
 }
 
 export default function PostAyudaDetail({
-  post = DEMO_POST,
-  author = DEMO_AUTHOR,
-  currentUserId = 'usuario-actual-demo',
   onBack,
-  onNavigate,
+  onVerPerfil,
+  onVerAcuerdo,
+  onIrChat,
+  onVolverInicio,
 }: PostAyudaDetailProps) {
-  // ─── Navegación temporal (no existe todavía un router conectado) ───
-  const navigate = (destination: DestinoNavegacion, params?: Record<string, string>) => {
-    if (onNavigate) {
-      onNavigate(destination, params);
-    } else {
-      window.alert(`La vista «${destination}» todavía no está conectada.`);
-    }
-  };
+
+  // 01. IDENTIFICAR LA PUBLICACIÓN
+  const { postId } = useParams<{ postId: string }>();
+
+  // 02. OBTENER EL MIEMBRO AUTENTICADO
+  const { miembro } = useMiembroSesion();
+  const currentUserId = miembro.id;
+
+  // 03. BUSCAR LA PUBLICACIÓN
+  const post = PUBLICACIONES_DEMO.find(
+    (publicacion) => publicacion.id === postId
+  );
+
+  // 04. OBTENER AL AUTOR
+  const author = post
+    ? MIEMBROS_DEMO[post.userId]
+    : undefined;
 
   const goBack = () => {
     if (onBack) {
@@ -169,6 +153,12 @@ export default function PostAyudaDetail({
   const [confirmedParticipants, setConfirmedParticipants] = useState<string[]>(
     post?.confirmedParticipants ?? [],
   );
+  
+  // 05. REINICIAR LA PARTICIPACIÓN AL CAMBIAR DE POST
+  useEffect(() => {
+    setJoined(false);
+    setConfirmedParticipants(post?.confirmedParticipants ?? []);
+  }, [postId, post]);
 
   // ─── Caso especial: publicación no encontrada ───
   if (!post) {
@@ -247,7 +237,7 @@ export default function PostAyudaDetail({
           <div data-section="acciones-confirmacion" className="w-full max-w-xs space-y-3">
             <button
               type="button"
-              onClick={() => navigate('agreement-detail', { agreementId: 'acuerdo-demo' })}
+              onClick={() => onVerAcuerdo?.('agreement-demo')}
               className="w-full py-3 rounded-xl bg-[#3C9DA0] text-white font-semibold text-sm btn-press"
               style={{ fontFamily: 'Outfit, sans-serif' }}
             >
@@ -255,12 +245,12 @@ export default function PostAyudaDetail({
             </button>
             <button
               type="button"
-              onClick={() => navigate('chat-conversation', { chatId: 'chat-demo' })}
+              onClick={() => onIrChat?.('chat-demo')}
               className="w-full py-3 rounded-xl border border-[#E8E8E8] text-[#0D0D0D] font-medium text-sm btn-press"
             >
               Ir al chat
             </button>
-            <button type="button" onClick={() => navigate('home')} className="text-sm text-[#737373]">
+            <button type="button" onClick={() => onVolverInicio?.()} className="text-sm text-[#737373]">
               Volver al inicio
             </button>
           </div>
@@ -333,7 +323,7 @@ export default function PostAyudaDetail({
           <button
             type="button"
             data-section="autor-publicacion"
-            onClick={() => navigate('other-profile', { userId: author.id })}
+            onClick={() => onVerPerfil?.(author.id)}
             className="flex items-center gap-3 mb-4 hover:opacity-80 transition-opacity"
           >
             <Avatar name={author.name} avatarUrl={author.avatar} avatarColor={author.avatarColor} size="md" />
@@ -343,7 +333,8 @@ export default function PostAyudaDetail({
                 <Icon name="check-circle" size={14} className="text-[#3C9DA0]" strokeWidth={2.5} />
               </div>
               <p className="text-xs text-[#737373]">
-                {author.faculty} · {post.createdAt}
+                {author.faculty ? `${author.faculty} · ` : ''}
+                {post.createdAt}
               </p>
             </div>
             <span className="ml-auto text-xs text-[#3C9DA0] font-medium">Ver perfil →</span>

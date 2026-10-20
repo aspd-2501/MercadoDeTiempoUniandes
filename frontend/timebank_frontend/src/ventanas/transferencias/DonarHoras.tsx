@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -29,7 +30,6 @@ interface DonacionSimulada {
 }
 
 interface DonarHorasProps {
-  saldoDisponible?: number;
   miembros?: MiembroParaDonacion[];
 }
 
@@ -72,10 +72,15 @@ function AvatarMiembro({ miembro }: { miembro: MiembroParaDonacion }) {
 // ============================================================================
 
 export default function DonarHoras({
-  saldoDisponible = 8,
   miembros = MIEMBROS_DEMO,
 }: DonarHorasProps) {
-  // 00.1 Estados locales para demostrar la interfaz (sin backend).
+
+  // 00.1 DATOS DEL MIEMBRO AUTENTICADO
+  const { miembro } = useMiembroSesion();
+
+  const saldoDisponible = miembro.balance;
+
+  // 00.2 Estados locales para demostrar la interfaz (sin backend).
   const [horasComunidad, setHorasComunidad] = useState(1);
   const [busqueda, setBusqueda] = useState('');
   const [idMiembroSeleccionado, setIdMiembroSeleccionado] = useState('');
@@ -84,7 +89,7 @@ export default function DonarHoras({
   const [confirmacionAbierta, setConfirmacionAbierta] = useState<DestinoDonacion | null>(null);
   const [donacionSimulada, setDonacionSimulada] = useState<DonacionSimulada | null>(null);
 
-  // 00.2 Datos derivados para la visualización.
+  // 00.3 Datos derivados para la visualización.
   const miembrosFiltrados = miembros
     .filter((miembro) => miembro.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()))
     .slice(0, 5);
@@ -161,14 +166,6 @@ export default function DonarHoras({
         className="sticky top-0 z-30 border-b border-[#E8E8E8] bg-white px-4 pt-12 pb-4 lg:pt-6"
       >
         <div className="mx-auto flex max-w-lg items-center gap-3">
-          <button
-            type="button"
-            aria-label="Volver (navegación pendiente)"
-            title="Navegación pendiente"
-            className={`rounded-full p-1 text-[#0D0D0D] hover:bg-[#F6F6F6] ${BOTON_ANIMADO}`}
-          >
-            <ArrowLeft size={22} aria-hidden="true" />
-          </button>
           <h1 className="text-lg font-bold text-[#0D0D0D]" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Donar horas
           </h1>

@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useMiembroSesion } from '../contextos/MiembroSesionContext';
+import type { Miembro } from '../tipos/miembro';
 import { Activity, Bell, Clock3, Heart, Plus, Search } from 'lucide-react';
-import PostAyuda, {
-  type AutorPostAyuda,
-  type DatosPostAyuda,
-} from '../componentes/posts/PostAyuda';
+import PostAyuda, { type AutorPostAyuda } from '../componentes/posts/PostAyuda';
+import type { DatosPostAyuda } from '../tipos/postAyuda';
+import { PUBLICACIONES_DEMO } from '../mocks/postsAyuda.mocks';
+import { MIEMBROS_DEMO} from '../mocks/miembros.mocks';
 
 /**
  * VENTANA: Home / feed de publicaciones del Banco de Tiempo.
@@ -18,17 +20,7 @@ import PostAyuda, {
  */
 
 // ─────────────────── 00. MODELOS Y PROPIEDADES ───────────────────
-export interface MiembroHome {
-  id: string;
-  firstName: string;
-  faculty: string;
-  balance: number;
-  initials: string;
-  avatar?: string;
-}
-
 export interface HomeFeedProps {
-  miembro?: MiembroHome;
   publicaciones?: DatosPostAyuda[];
   autores?: Record<string, AutorPostAyuda>;
   notificacionesPendientes?: number;
@@ -56,89 +48,7 @@ const CATEGORIAS = [
   'Bienestar',
 ];
 
-// ─────────────────── 00.2 DATOS SIMULADOS ───────────────────
-const MIEMBRO_DEMO: MiembroHome = {
-  id: 'miembro-demo-1',
-  firstName: 'María',
-  faculty: 'Facultad de Ingeniería',
-  balance: 8,
-  initials: 'ML',
-};
-
-const AUTORES_DEMO: Record<string, AutorPostAyuda> = {
-  'miembro-demo-1': {
-    id: 'miembro-demo-1',
-    name: 'María López',
-    firstName: 'María',
-    avatarColor: '#3C9DA0',
-  },
-  'miembro-demo-2': {
-    id: 'miembro-demo-2',
-    name: 'Carlos Martínez',
-    firstName: 'Carlos',
-    avatarColor: '#7A5FB2',
-  },
-  'miembro-demo-3': {
-    id: 'miembro-demo-3',
-    name: 'Camila Torres',
-    firstName: 'Camila',
-    avatarColor: '#BE6B79',
-  },
-  'miembro-demo-4': {
-    id: 'miembro-demo-4',
-    name: 'Santiago Gómez',
-    firstName: 'Santiago',
-    avatarColor: '#477CA8',
-  },
-};
-
-const PUBLICACIONES_DEMO: DatosPostAyuda[] = [
-  {
-    id: 'post-ayuda-1',
-    userId: 'miembro-demo-3',
-    type: 'help-request',
-    title: 'Necesito ayuda con cálculo diferencial',
-    description:
-      'Busco a alguien que pueda explicarme derivadas y ayudarme a practicar ejercicios para el parcial.',
-    category: 'Académico / Matemáticas',
-    createdAt: 'Hace 2 horas',
-    preferredDate: '15 de octubre',
-    preferredTime: '2:00 p. m.',
-    estimatedHours: 2,
-    maxParticipants: 3,
-    confirmedParticipants: ['miembro-demo-2'],
-  },
-  {
-    id: 'post-ayuda-2',
-    userId: 'miembro-demo-2',
-    type: 'help-offer',
-    title: 'Ofrezco práctica de conversación en inglés',
-    description:
-      'Podemos practicar conversación y pronunciación en sesiones presenciales o virtuales.',
-    category: 'Idiomas / Inglés',
-    createdAt: 'Hace 5 horas',
-    preferredDate: '17 de octubre',
-    preferredTime: '4:00 p. m.',
-    estimatedHours: 1,
-    maxParticipants: 2,
-    confirmedParticipants: [],
-  },
-  {
-    id: 'post-ayuda-3',
-    userId: 'miembro-demo-4',
-    type: 'help-request',
-    title: 'Necesito orientación con un proyecto de Python',
-    description:
-      'Estoy construyendo una pequeña aplicación y quisiera resolver algunas dudas sobre programación.',
-    category: 'Tecnología / Programación',
-    createdAt: 'Ayer',
-    estimatedHours: 1.5,
-    maxParticipants: 1,
-    confirmedParticipants: [],
-  },
-];
-
-// ─────────────────── 00.3 ESTILOS DE INTERACCIÓN ───────────────────
+// ─────────────────── 00.2 ESTILOS DE INTERACCIÓN ───────────────────
 const ANIMACION_BOTON =
   'cursor-pointer transition-[transform,background-color,color,box-shadow] duration-200 ease-out ' +
   'motion-safe:active:scale-[0.96] focus-visible:outline-none ' +
@@ -147,9 +57,8 @@ const ANIMACION_BOTON =
 
 // ─────────────────── 01. VENTANA HOME ───────────────────
 export default function HomeFeed({
-  miembro = MIEMBRO_DEMO,
   publicaciones = PUBLICACIONES_DEMO,
-  autores = AUTORES_DEMO,
+  autores = MIEMBROS_DEMO,
   notificacionesPendientes = 3,
   onNotificaciones,
   onVerPerfil,
@@ -161,11 +70,14 @@ export default function HomeFeed({
   onGuardarPost,
   onCompartirPost,
 }: HomeFeedProps) {
-  // 01.1 ESTADO LOCAL: búsqueda y categoría seleccionada.
+  // 01.1 MIEMBRO CON SESIÓN INICIADA
+  const { miembro } = useMiembroSesion();
+  
+  // 01.2 ESTADO LOCAL: búsqueda y categoría seleccionada.
   const [categoriaActiva, setCategoriaActiva] = useState('Todo');
   const [busqueda, setBusqueda] = useState('');
 
-  // 01.2 DATOS DERIVADOS: publicaciones filtradas por búsqueda y categoría.
+  // 01.3 DATOS DERIVADOS: publicaciones filtradas por búsqueda y categoría.
   const busquedaNormalizada = busqueda.trim().toLocaleLowerCase('es');
   const publicacionesFiltradas = publicaciones.filter((post) => {
     const autor = autores[post.userId];
@@ -356,7 +268,7 @@ export default function HomeFeed({
 // Se conserva dentro de este archivo porque aún no hemos decidido extraerla.
 // En el futuro puede moverse a src/componentes sin modificar HomeFeed.
 interface BalanceCardProps {
-  miembro: MiembroHome;
+  miembro: Miembro;
   onVerMovimientos?: () => void;
   onDonarHoras?: () => void;
   onPedirHoras?: () => void;
@@ -386,7 +298,7 @@ function BalanceCard({
               className="text-xl font-bold leading-tight text-white"
               style={{ fontFamily: 'Outfit, sans-serif' }}
             >
-              Hola, {miembro.firstName} 👋
+              Hola, {miembro.firstName}
             </h2>
             <p className="mt-0.5 text-sm text-white/70">{miembro.faculty}</p>
           </div>
