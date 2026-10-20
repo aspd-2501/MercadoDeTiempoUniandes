@@ -47,6 +47,10 @@ export class AcuerdoService {
         const persisted: AcuerdoEntity | null = await this.acuerdoRepository.findOne({ where: { id } });
         if (!persisted)
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+
+        if (acuerdo.finalizado && !persisted.finalizado)
+            throw new BusinessLogicException("Use finalizarAcuerdo to mark an acuerdo as finalizado", BusinessError.PRECONDITION_FAILED);
+
         acuerdo.id = id;
         return await this.acuerdoRepository.save(acuerdo);
     }
@@ -164,5 +168,31 @@ export class AcuerdoService {
             throw new BusinessLogicException("The perfil with the given id is not a participant in the acuerdo", BusinessError.PRECONDITION_FAILED);
 
         await this.participanteRepository.delete({ idAcuerdo: acuerdoId, idPerfil: perfilId });
+    }
+
+    // --- Finalización: exige al menos 1 PRESTADOR y 1 RECEPTOR ---
+
+    async finalizarAcuerdo(id: string): Promise<AcuerdoEntity> {
+        const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
+            where: { id },
+            relations: { participantes: true }
+        });
+        if (!acuerdo)
+            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+
+        if (acuerdo.finalizado)
+            throw new BusinessLogicException("The acuerdo is already finalizado", BusinessError.PRECONDITION_FAILED);
+
+        const tienePrestador = acuerdo.participantes.some(p => p.rol === RolParticipante.PRESTADOR);
+        const tieneReceptor = acuerdo.participantes.some(p => p.rol === RolParticipante.RECEPTOR);
+
+        if (!tienePrestador || !tieneReceptor)
+            throw new BusinessLogicException(
+                "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be finalizado",
+                BusinessError.PRECONDITION_FAILED
+            );
+
+        acuerdo.finalizado = true;
+        return await this.acuerdoRepository.save(acuerdo);
     }
 }

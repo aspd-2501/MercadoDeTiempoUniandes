@@ -5,9 +5,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ModeradorService } from './moderador.service';
 import { ModeradorEntity } from './moderador.entity';
 import { UsuarioEntity } from '../usuario/usuario.entity';
+import { ModeradorController } from './moderador.controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([ModeradorEntity, UsuarioEntity])],
     providers: [ModeradorService],
+    controllers: [ModeradorController],
 })
 export class ModeradorModule {}

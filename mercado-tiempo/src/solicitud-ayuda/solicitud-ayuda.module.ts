@@ -6,6 +6,7 @@ import { SolicitudAyudaService } from './solicitud-ayuda.service';
 import { SolicitudAyudaEntity } from './solicitud-ayuda.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { ServicioOfrecidoEntity } from '../servicio-ofrecido/servicio-ofrecido.entity';
+import { SolicitudAyudaController } from './solicitud-ayuda.controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
@@ -14,5 +15,6 @@ import { ServicioOfrecidoEntity } from '../servicio-ofrecido/servicio-ofrecido.e
         ServicioOfrecidoEntity,
     ])],
     providers: [SolicitudAyudaService],
+    controllers: [SolicitudAyudaController],
 })
 export class SolicitudAyudaModule {}

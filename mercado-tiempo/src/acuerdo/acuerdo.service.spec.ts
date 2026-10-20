@@ -204,4 +204,32 @@ describe('AcuerdoService', () => {
         await expect(() => service.deleteParticipanteAcuerdo(acuerdo.id, newPerfil.id))
             .rejects.toHaveProperty("message", "The perfil with the given id is not a participant in the acuerdo");
     });
+
+    it('finalizarAcuerdo should mark an acuerdo as finalizado when it has both roles', async () => {
+        const result = await service.finalizarAcuerdo(acuerdo.id);
+        expect(result.finalizado).toBe(true);
+    });
+
+    it('finalizarAcuerdo should throw an exception for an invalid acuerdo', async () => {
+        await expect(() => service.finalizarAcuerdo("0"))
+            .rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
+    });
+
+    it('finalizarAcuerdo should throw an exception when already finalizado', async () => {
+        await service.finalizarAcuerdo(acuerdo.id);
+        await expect(() => service.finalizarAcuerdo(acuerdo.id))
+            .rejects.toHaveProperty("message", "The acuerdo is already finalizado");
+    });
+
+    it('finalizarAcuerdo should throw an exception without a PRESTADOR', async () => {
+        await service.deleteParticipanteAcuerdo(acuerdo.id, perfilesList[0].id);
+        await expect(() => service.finalizarAcuerdo(acuerdo.id))
+            .rejects.toHaveProperty("message", "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be finalizado");
+    });
+
+    it('finalizarAcuerdo should throw an exception without a RECEPTOR', async () => {
+        await service.deleteParticipanteAcuerdo(acuerdo.id, perfilesList[1].id);
+        await expect(() => service.finalizarAcuerdo(acuerdo.id))
+            .rejects.toHaveProperty("message", "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be finalizado");
+    });
 });

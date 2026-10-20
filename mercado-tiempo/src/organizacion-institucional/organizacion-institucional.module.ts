@@ -4,9 +4,11 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrganizacionInstitucionalService } from './organizacion-institucional.service';
 import { OrganizacionInstitucionalEntity } from './organizacion-institucional.entity';
+import { OrganizacionInstitucionalController } from './organizacion-institucional.controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([OrganizacionInstitucionalEntity])],
     providers: [OrganizacionInstitucionalService],
+    controllers: [OrganizacionInstitucionalController],
 })
 export class OrganizacionInstitucionalModule {}

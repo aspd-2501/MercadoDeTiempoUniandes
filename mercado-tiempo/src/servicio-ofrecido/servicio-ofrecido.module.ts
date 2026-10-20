@@ -7,6 +7,7 @@ import { ServicioOfrecidoEntity } from './servicio-ofrecido.entity';
 import { ServicioOfrecidoCategoriaEntity } from './servicio-ofrecido-categoria.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { CategoriaEntity } from '../categoria/categoria.entity';
+import { ServicioOfrecidoController } from './servicio-ofrecido.controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
@@ -16,5 +17,6 @@ import { CategoriaEntity } from '../categoria/categoria.entity';
         CategoriaEntity,
     ])],
     providers: [ServicioOfrecidoService],
+    controllers: [ServicioOfrecidoController],
 })
 export class ServicioOfrecidoModule {}

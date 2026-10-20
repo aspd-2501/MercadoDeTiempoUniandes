@@ -5,9 +5,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CausaService } from './causa.service';
 import { CausaEntity } from './causa.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
+import { CausaController } from './causa.controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([CausaEntity, PerfilMiembroEntity])],
     providers: [CausaService],
+    controllers: [CausaController],
 })
 export class CausaModule {}

@@ -86,7 +86,7 @@ import { OrganizacionInstitucionalEntity } from './organizacion-institucional/or
       port: 5432,
       username: 'postgres',
       password: 'postgres',
-      database: 'mercado-tiempo',
+      database: 'mercado_tiempo',
       entities: [
         UsuarioEntity,
         ModeradorEntity,
@@ -118,7 +118,6 @@ import { OrganizacionInstitucionalEntity } from './organizacion-institucional/or
         InscripcionActividadEntity,
         OrganizacionInstitucionalEntity,
       ],
-      dropSchema: true,
       synchronize: true,
     }),
   ],

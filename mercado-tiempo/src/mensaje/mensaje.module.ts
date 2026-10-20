@@ -7,6 +7,7 @@ import { MensajeEntity } from './mensaje.entity';
 import { ChatEntity } from '../chat/chat.entity';
 import { ChatParticipanteEntity } from '../chat/chat-participante.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
+import { MensajeController } from './mensaje.controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([
@@ -16,5 +17,6 @@ import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
         PerfilMiembroEntity,
     ])],
     providers: [MensajeService],
+    controllers: [MensajeController],
 })
 export class MensajeModule {}
