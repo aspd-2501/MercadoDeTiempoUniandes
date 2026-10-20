@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-/* archivo: src/usuario/login.dto.ts */
+/* archivo: src/auth/login.dto.ts */
 import { IsNotEmpty, IsString } from 'class-validator';
 
 export class LoginDto {

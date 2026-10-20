@@ -6,7 +6,6 @@ import { BusinessErrorsInterceptor } from '../shared/interceptors/business-error
 import { UsuarioService } from './usuario.service';
 import { UsuarioEntity } from './usuario.entity';
 import { UsuarioDto } from './usuario.dto';
-import { LoginDto } from './login.dto';
 
 @Controller('usuarios')
 @UseInterceptors(BusinessErrorsInterceptor)
@@ -45,11 +44,6 @@ export class UsuarioController {
         return await this.usuarioService.delete(usuarioId);
     }
 
-    @Post('login')
-    async login(@Body() dto: LoginDto) {
-        const usuario = await this.usuarioService.validarCredenciales(dto.idUniandes, dto.contrasenia);
-        return this.sinContrasenia(usuario);
-    }
 
     // --- Elimina la contraseña (hasheada) de la respuesta antes de enviarla al cliente ---
     private sinContrasenia(usuario: UsuarioEntity): Omit<UsuarioEntity, 'contrasenia'> {

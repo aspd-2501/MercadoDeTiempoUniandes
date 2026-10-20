@@ -17,9 +17,14 @@ export class PerfilMiembroController {
     }
 
     @Get(':perfilId')
-    async findOne(@Param('perfilId') perfilId: string) {
-        return await this.perfilMiembroService.findOne(perfilId);
+async findOne(@Param('perfilId') perfilId: string) {
+    const perfil = await this.perfilMiembroService.findOne(perfilId);
+    if (perfil.usuario) {
+        const { contrasenia, ...usuarioSinContrasenia } = perfil.usuario;
+        return { ...perfil, usuario: usuarioSinContrasenia };
     }
+    return perfil;
+}
 
     @Post()
     async create(@Body() perfilDto: PerfilMiembroDto) {

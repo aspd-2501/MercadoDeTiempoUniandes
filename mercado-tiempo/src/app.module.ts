@@ -26,6 +26,7 @@ import { PostComunitarioModule } from './post-comunitario/post-comunitario.modul
 import { ReconocimientoModule } from './reconocimiento/reconocimiento.module';
 import { ActividadComunitariaModule } from './actividad-comunitaria/actividad-comunitaria.module';
 import { OrganizacionInstitucionalModule } from './organizacion-institucional/organizacion-institucional.module';
+import { AuthModule } from './auth/auth.module';
 
 // Entidades
 import { UsuarioEntity } from './usuario/usuario.entity';
@@ -61,6 +62,7 @@ import { OrganizacionInstitucionalEntity } from './organizacion-institucional/or
 @Module({
   imports: [
     UsuarioModule,
+    AuthModule,
     ModeradorModule,
     PerfilMiembroModule,
     PerfilOrganizacionModule,
@@ -86,7 +88,7 @@ import { OrganizacionInstitucionalEntity } from './organizacion-institucional/or
       port: 5432,
       username: 'postgres',
       password: 'postgres',
-      database: 'mercado_tiempo',
+      database: 'mercado-tiempo',
       entities: [
         UsuarioEntity,
         ModeradorEntity,
