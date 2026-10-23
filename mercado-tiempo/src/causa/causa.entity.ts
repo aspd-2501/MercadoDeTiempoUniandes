@@ -1,7 +1,8 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/causa/causa.entity.ts */
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
+import { DonacionEntity } from '../donacion/donacion.entity';
 
 @Entity()
 export class CausaEntity {
@@ -25,4 +26,8 @@ export class CausaEntity {
     @ManyToOne(() => PerfilMiembroEntity, perfil => perfil.causasRecibidas)
     @JoinColumn({ name: 'idPerfilReceptor' })
     perfilReceptor: PerfilMiembroEntity;
+
+    // --- Donaciones hechas a esta causa ---
+    @OneToMany(() => DonacionEntity, donacion => donacion.causa)
+    donaciones: DonacionEntity[];
 }

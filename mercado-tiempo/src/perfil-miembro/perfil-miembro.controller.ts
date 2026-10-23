@@ -5,6 +5,7 @@ import { BusinessErrorsInterceptor } from '../shared/interceptors/business-error
 import { PerfilMiembroService } from './perfil-miembro.service';
 import { PerfilMiembroEntity } from './perfil-miembro.entity';
 import { PerfilMiembroDto } from './perfil-miembro.dto';
+import { AsociarInteresesDto } from './asociar-intereses.dto';
 
 @Controller('perfiles-miembro')
 @UseInterceptors(BusinessErrorsInterceptor)
@@ -44,12 +45,32 @@ async findOne(@Param('perfilId') perfilId: string) {
         return await this.perfilMiembroService.delete(perfilId);
     }
 
+    // --- Intereses (categorías) ---
+
+    @Get(':perfilId/intereses')
+    async findIntereses(@Param('perfilId') perfilId: string) {
+        return await this.perfilMiembroService.findInteresesByPerfilId(perfilId);
+    }
+
+    @Put(':perfilId/intereses')
+    async associateIntereses(@Param('perfilId') perfilId: string, @Body() dto: AsociarInteresesDto) {
+        return await this.perfilMiembroService.associateInteresesPerfil(perfilId, dto.categoriaIds);
+    }
+
+    @Delete(':perfilId/intereses/:categoriaId')
+    @HttpCode(204)
+    async deleteInteres(@Param('perfilId') perfilId: string, @Param('categoriaId') categoriaId: string) {
+        return await this.perfilMiembroService.deleteInteresPerfil(perfilId, categoriaId);
+    }
+
     // --- Mapeo manual DTO → Entity ---
     private dtoToEntity(dto: PerfilMiembroDto): PerfilMiembroEntity {
         const perfil = new PerfilMiembroEntity();
+        perfil.nombre = dto.nombre;
+        perfil.edad = dto.edad;
+        perfil.afiliacionUniandes = dto.afiliacionUniandes;
         perfil.imagen = dto.imagen;
         perfil.descripcion = dto.descripcion;
-        perfil.intereses = dto.intereses;
         perfil.estadoActividad = dto.estadoActividad;
         perfil.saldo = dto.saldo;
         perfil.usuario = { id: dto.usuarioId } as any;

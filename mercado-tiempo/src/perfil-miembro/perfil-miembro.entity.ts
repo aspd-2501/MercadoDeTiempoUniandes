@@ -11,10 +11,11 @@ import { MensajeEntity } from '../mensaje/mensaje.entity';
 import { SolicitudAyudaEntity } from '../solicitud-ayuda/solicitud-ayuda.entity';
 import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
 import { ServicioOfrecidoEntity } from '../servicio-ofrecido/servicio-ofrecido.entity';
-import { ServicioPotencialEntity } from '../servicio-potencial/servicio-potencial.entity';
+import { PerfilInteresEntity } from './perfil-interes.entity';
 import { ParticipanteAcuerdoEntity } from '../acuerdo/participante-acuerdo.entity';
 import { HorarioDisponibleEntity } from '../horario-disponible/horario-disponible.entity';
 import { UsuarioPostEntity } from '../post-comunitario/usuario-post.entity';
+import { PostComunitarioEntity } from '../post-comunitario/post-comunitario.entity';
 import { ReconocimientoOtorgadoEntity } from '../reconocimiento/reconocimiento-otorgado.entity';
 import { InscripcionActividadEntity } from '../actividad-comunitaria/inscripcion-actividad.entity';
 
@@ -24,13 +25,19 @@ export class PerfilMiembroEntity {
     id: string;
 
     @Column()
+    nombre: string;
+
+    @Column()
+    edad: number;
+
+    @Column()
+    afiliacionUniandes: string;
+
+    @Column()
     imagen: string;
 
     @Column()
     descripcion: string;
-
-    @Column()
-    intereses: string;
 
     @Column()
     estadoActividad: boolean;
@@ -84,12 +91,13 @@ export class PerfilMiembroEntity {
     @OneToMany(() => PostAyudaEntity, post => post.perfilAutor)
     postsDeAyuda: PostAyudaEntity[];
 
-    // --- Servicios ofrecidos y potenciales ---
+    // --- Servicios ofrecidos ---
     @OneToMany(() => ServicioOfrecidoEntity, servicio => servicio.perfil)
     serviciosOfrecidos: ServicioOfrecidoEntity[];
 
-    @OneToMany(() => ServicioPotencialEntity, servicio => servicio.perfil)
-    serviciosPotenciales: ServicioPotencialEntity[];
+    // --- Intereses: categorías que le interesan al miembro (N:M vía PerfilInteres) ---
+    @OneToMany(() => PerfilInteresEntity, pi => pi.perfil)
+    intereses: PerfilInteresEntity[];
 
     // --- Participación en acuerdos (N:M con atributo "rol") ---
     @OneToMany(() => ParticipanteAcuerdoEntity, participante => participante.perfil)
@@ -99,9 +107,13 @@ export class PerfilMiembroEntity {
     @OneToMany(() => HorarioDisponibleEntity, horario => horario.perfil)
     horariosDisponibles: HorarioDisponibleEntity[];
 
-    // --- Posts comunitarios (N:M vía UsuarioPost) ---
+    // --- Posts comunitarios en los que está taggeado (N:M vía UsuarioPost) ---
     @OneToMany(() => UsuarioPostEntity, up => up.perfil)
     postsComunitarios: UsuarioPostEntity[];
+
+    // --- Posts comunitarios creados ---
+    @OneToMany(() => PostComunitarioEntity, post => post.creador)
+    postsComunitariosCreados: PostComunitarioEntity[];
 
     // --- Reconocimientos recibidos y otorgados ---
     @OneToMany(() => ReconocimientoOtorgadoEntity, r => r.perfilReceptor)

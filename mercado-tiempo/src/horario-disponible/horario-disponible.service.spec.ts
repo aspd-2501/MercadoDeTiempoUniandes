@@ -11,6 +11,7 @@ import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { UsuarioEntity } from '../usuario/usuario.entity';
 import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
 import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
+import { EstadoAcuerdo } from '../acuerdo/estado-acuerdo.enum';
 import { SolicitudAyudaEntity } from '../solicitud-ayuda/solicitud-ayuda.entity';
 
 describe('HorarioDisponibleService', () => {
@@ -47,16 +48,15 @@ describe('HorarioDisponibleService', () => {
     const createPerfil = async (): Promise<PerfilMiembroEntity> => {
         const usuario: UsuarioEntity = await usuarioRepository.save({
             idUniandes: faker.string.alphanumeric(10),
-            nombre: faker.person.fullName(),
             contrasenia: faker.internet.password(),
-            edad: faker.number.int({ min: 18, max: 60 }),
-            afiliacionUniandes: "Estudiante",
         });
 
         return await perfilRepository.save({
             imagen: faker.image.url(),
             descripcion: faker.lorem.sentence(),
-            intereses: faker.lorem.words(3),
+            nombre: faker.person.fullName(),
+            edad: faker.number.int({ min: 18, max: 60 }),
+            afiliacionUniandes: "Estudiante",
             estadoActividad: true,
             saldo: faker.number.int({ min: 0, max: 100 }),
             usuario,
@@ -80,6 +80,7 @@ describe('HorarioDisponibleService', () => {
             ofrece: true,
             cupo: 1,
             cupoLleno: false,
+            horas: faker.number.int({ min: 1, max: 10 }),
             fechaCreacion: faker.date.recent(),
             perfilAutor: perfil,
         });
@@ -88,7 +89,7 @@ describe('HorarioDisponibleService', () => {
             horas: 2,
             fechaCreacion: faker.date.recent(),
             fechaRealizacion: faker.date.future(),
-            finalizado: false,
+            estado: EstadoAcuerdo.EN_CREACION,
             postAyuda,
         });
 
@@ -199,7 +200,7 @@ describe('HorarioDisponibleService', () => {
         } as HorarioDisponibleEntity;
 
         await expect(() => service.create(horario))
-            .rejects.toHaveProperty("message", "A horario disponible must have exactly one origen: an acuerdo, a solicitud or a postAyuda");
+            .rejects.toHaveProperty("message", "A horario disponible must have exactly one origen: an acuerdo, a solicitud, a postAyuda or an actividad");
     });
 
     it('create should throw an exception with more than one origen', async () => {
@@ -213,7 +214,7 @@ describe('HorarioDisponibleService', () => {
         } as HorarioDisponibleEntity;
 
         await expect(() => service.create(horario))
-            .rejects.toHaveProperty("message", "A horario disponible must have exactly one origen: an acuerdo, a solicitud or a postAyuda");
+            .rejects.toHaveProperty("message", "A horario disponible must have exactly one origen: an acuerdo, a solicitud, a postAyuda or an actividad");
     });
 
     it('create should throw an exception for an invalid acuerdo', async () => {

@@ -43,6 +43,7 @@ export class DonacionController {
         if (dto.depositoDonanteId) donacion.depositoDonante = { id: dto.depositoDonanteId } as any;
         if (dto.perfilReceptorId) donacion.perfilReceptor = { id: dto.perfilReceptorId } as any;
         if (dto.depositoReceptorId) donacion.depositoReceptor = { id: dto.depositoReceptorId } as any;
+        if (dto.causaId) donacion.causa = { id: dto.causaId } as any;
         return donacion;
     }
 }

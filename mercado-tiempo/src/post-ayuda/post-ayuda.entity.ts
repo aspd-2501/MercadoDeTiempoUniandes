@@ -18,6 +18,9 @@ export class PostAyudaEntity {
     descripcion: string;
 
     @Column()
+    horas: number;
+
+    @Column()
     imagen: string;
 
     @Column()
@@ -39,8 +42,9 @@ export class PostAyudaEntity {
     @OneToMany(() => PostAyudaCategoriaEntity, pc => pc.post)
     categorias: PostAyudaCategoriaEntity[];
 
-    @OneToOne(() => AcuerdoEntity, acuerdo => acuerdo.postAyuda)
-    acuerdo: AcuerdoEntity;
+    // --- Acuerdos generados a partir del post (0..*) ---
+    @OneToMany(() => AcuerdoEntity, acuerdo => acuerdo.postAyuda)
+    acuerdos: AcuerdoEntity[];
 
     @OneToOne(() => HorarioDisponibleEntity, horario => horario.postAyuda)
     horario: HorarioDisponibleEntity;

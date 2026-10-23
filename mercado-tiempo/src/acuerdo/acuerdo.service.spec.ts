@@ -7,6 +7,7 @@ import { faker } from '@faker-js/faker';
 import { TypeOrmTestingConfig } from '../shared/testing-utils/typeorm-testing-config';
 import { AcuerdoService } from './acuerdo.service';
 import { AcuerdoEntity } from './acuerdo.entity';
+import { EstadoAcuerdo } from './estado-acuerdo.enum';
 import { ParticipanteAcuerdoEntity, RolParticipante } from './participante-acuerdo.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { UsuarioEntity } from '../usuario/usuario.entity';
@@ -42,16 +43,15 @@ describe('AcuerdoService', () => {
     const createPerfil = async (): Promise<PerfilMiembroEntity> => {
         const usuario: UsuarioEntity = await usuarioRepository.save({
             idUniandes: faker.string.alphanumeric(10),
-            nombre: faker.person.fullName(),
             contrasenia: faker.internet.password(),
-            edad: faker.number.int({ min: 18, max: 60 }),
-            afiliacionUniandes: "Estudiante",
         });
 
         return await perfilRepository.save({
             imagen: faker.image.url(),
             descripcion: faker.lorem.sentence(),
-            intereses: faker.lorem.words(3),
+            nombre: faker.person.fullName(),
+            edad: faker.number.int({ min: 18, max: 60 }),
+            afiliacionUniandes: "Estudiante",
             estadoActividad: true,
             saldo: faker.number.int({ min: 0, max: 100 }),
             usuario,
@@ -73,6 +73,7 @@ describe('AcuerdoService', () => {
             ofrece: true,
             cupo: 1,
             cupoLleno: false,
+            horas: faker.number.int({ min: 1, max: 10 }),
             fechaCreacion: faker.date.recent(),
             perfilAutor: autor,
         });
@@ -81,7 +82,7 @@ describe('AcuerdoService', () => {
             horas: faker.number.int({ min: 1, max: 10 }),
             fechaCreacion: faker.date.recent(),
             fechaRealizacion: faker.date.future(),
-            finalizado: false,
+            estado: EstadoAcuerdo.EN_CREACION,
             postAyuda,
         });
 
@@ -205,9 +206,9 @@ describe('AcuerdoService', () => {
             .rejects.toHaveProperty("message", "The perfil with the given id is not a participant in the acuerdo");
     });
 
-    it('finalizarAcuerdo should mark an acuerdo as finalizado when it has both roles', async () => {
+    it('finalizarAcuerdo should mark an acuerdo as realizado when it has both roles', async () => {
         const result = await service.finalizarAcuerdo(acuerdo.id);
-        expect(result.finalizado).toBe(true);
+        expect(result.estado).toBe(EstadoAcuerdo.REALIZADO);
     });
 
     it('finalizarAcuerdo should throw an exception for an invalid acuerdo', async () => {
@@ -215,21 +216,21 @@ describe('AcuerdoService', () => {
             .rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
     });
 
-    it('finalizarAcuerdo should throw an exception when already finalizado', async () => {
+    it('finalizarAcuerdo should throw an exception when already realizado', async () => {
         await service.finalizarAcuerdo(acuerdo.id);
         await expect(() => service.finalizarAcuerdo(acuerdo.id))
-            .rejects.toHaveProperty("message", "The acuerdo is already finalizado");
+            .rejects.toHaveProperty("message", "The acuerdo is already realizado");
     });
 
     it('finalizarAcuerdo should throw an exception without a PRESTADOR', async () => {
         await service.deleteParticipanteAcuerdo(acuerdo.id, perfilesList[0].id);
         await expect(() => service.finalizarAcuerdo(acuerdo.id))
-            .rejects.toHaveProperty("message", "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be finalizado");
+            .rejects.toHaveProperty("message", "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be realizado");
     });
 
     it('finalizarAcuerdo should throw an exception without a RECEPTOR', async () => {
         await service.deleteParticipanteAcuerdo(acuerdo.id, perfilesList[1].id);
         await expect(() => service.finalizarAcuerdo(acuerdo.id))
-            .rejects.toHaveProperty("message", "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be finalizado");
+            .rejects.toHaveProperty("message", "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be realizado");
     });
 });

@@ -58,6 +58,7 @@ export class PostAyudaController {
         const post = new PostAyudaEntity();
         post.titulo = dto.titulo;
         post.descripcion = dto.descripcion;
+        post.horas = dto.horas;
         post.imagen = dto.imagen;
         post.ofrece = dto.ofrece;
         post.cupo = dto.cupo;

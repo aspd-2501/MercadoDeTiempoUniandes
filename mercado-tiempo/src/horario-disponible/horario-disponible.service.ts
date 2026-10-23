@@ -9,6 +9,7 @@ import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
 import { SolicitudAyudaEntity } from '../solicitud-ayuda/solicitud-ayuda.entity';
 import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
+import { ActividadComunitariaEntity } from '../actividad-comunitaria/actividad-comunitaria.entity';
 
 @Injectable()
 export class HorarioDisponibleService {
@@ -26,19 +27,22 @@ export class HorarioDisponibleService {
         private readonly solicitudRepository: Repository<SolicitudAyudaEntity>,
 
         @InjectRepository(PostAyudaEntity)
-        private readonly postAyudaRepository: Repository<PostAyudaEntity>
+        private readonly postAyudaRepository: Repository<PostAyudaEntity>,
+
+        @InjectRepository(ActividadComunitariaEntity)
+        private readonly actividadRepository: Repository<ActividadComunitariaEntity>
     ) {}
 
     async findAll(): Promise<HorarioDisponibleEntity[]> {
         return await this.horarioRepository.find({
-            relations: { acuerdo: true, solicitud: true, postAyuda: true, perfil: true }
+            relations: { acuerdo: true, solicitud: true, postAyuda: true, actividad: true, perfil: true }
         });
     }
 
     async findOne(id: string): Promise<HorarioDisponibleEntity> {
         const horario: HorarioDisponibleEntity | null = await this.horarioRepository.findOne({
             where: { id },
-            relations: { acuerdo: true, solicitud: true, postAyuda: true, perfil: true }
+            relations: { acuerdo: true, solicitud: true, postAyuda: true, actividad: true, perfil: true }
         });
         if (!horario)
             throw new BusinessLogicException("The horario disponible with the given id was not found", BusinessError.NOT_FOUND);
@@ -67,18 +71,19 @@ export class HorarioDisponibleService {
         await this.horarioRepository.remove(horario);
     }
 
-    // --- Validación de origen único: acuerdo, solicitud o postAyuda (espejo del CHECK) ---
+    // --- Validación de origen único: acuerdo, solicitud, postAyuda o actividad (espejo del CHECK) ---
 
     private async validarOrigen(horario: HorarioDisponibleEntity) {
         const origenes = [
             { valor: horario.acuerdo, nombre: 'acuerdo' },
             { valor: horario.solicitud, nombre: 'solicitud' },
             { valor: horario.postAyuda, nombre: 'postAyuda' },
+            { valor: horario.actividad, nombre: 'actividad' },
         ].filter(o => !!o.valor);
 
         if (origenes.length !== 1)
             throw new BusinessLogicException(
-                "A horario disponible must have exactly one origen: an acuerdo, a solicitud or a postAyuda",
+                "A horario disponible must have exactly one origen: an acuerdo, a solicitud, a postAyuda or an actividad",
                 BusinessError.PRECONDITION_FAILED
             );
 
@@ -92,10 +97,14 @@ export class HorarioDisponibleService {
             const solicitud = await this.solicitudRepository.findOne({ where: { id: valor.id } });
             if (!solicitud)
                 throw new BusinessLogicException("The solicitud with the given id was not found", BusinessError.NOT_FOUND);
-        } else {
+        } else if (nombre === 'postAyuda') {
             const post = await this.postAyudaRepository.findOne({ where: { id: valor.id } });
             if (!post)
                 throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+        } else {
+            const actividad = await this.actividadRepository.findOne({ where: { id: valor.id } });
+            if (!actividad)
+                throw new BusinessLogicException("The actividad comunitaria with the given id was not found", BusinessError.NOT_FOUND);
         }
     }
 }

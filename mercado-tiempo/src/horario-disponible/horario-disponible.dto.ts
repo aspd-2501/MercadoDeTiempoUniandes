@@ -26,4 +26,8 @@ export class HorarioDisponibleDto {
     @IsUUID()
     @IsOptional()
     readonly postAyudaId?: string;
+
+    @IsUUID()
+    @IsOptional()
+    readonly actividadId?: string;
 }

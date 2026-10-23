@@ -32,10 +32,7 @@ describe('PerfilMiembroService', () => {
     const createUsuario = async (): Promise<UsuarioEntity> => {
         return await usuarioRepository.save({
             idUniandes: faker.string.alphanumeric(10),
-            nombre: faker.person.fullName(),
             contrasenia: faker.internet.password(),
-            edad: faker.number.int({ min: 18, max: 60 }),
-            afiliacionUniandes: "Estudiante",
         });
     };
 
@@ -49,7 +46,9 @@ describe('PerfilMiembroService', () => {
             const perfil: PerfilMiembroEntity = await perfilRepository.save({
                 imagen: faker.image.url(),
                 descripcion: faker.lorem.sentence(),
-                intereses: faker.lorem.words(3),
+                nombre: faker.person.fullName(),
+                edad: faker.number.int({ min: 18, max: 60 }),
+                afiliacionUniandes: "Estudiante",
                 estadoActividad: true,
                 saldo: faker.number.int({ min: 0, max: 100 }),
                 usuario,
@@ -86,7 +85,9 @@ describe('PerfilMiembroService', () => {
             id: "",
             imagen: faker.image.url(),
             descripcion: faker.lorem.sentence(),
-            intereses: faker.lorem.words(3),
+            nombre: faker.person.fullName(),
+            edad: faker.number.int({ min: 18, max: 60 }),
+            afiliacionUniandes: "Estudiante",
             estadoActividad: true,
             saldo: faker.number.int({ min: 0, max: 100 }),
             usuario,
@@ -108,7 +109,9 @@ describe('PerfilMiembroService', () => {
             id: "",
             imagen: faker.image.url(),
             descripcion: faker.lorem.sentence(),
-            intereses: faker.lorem.words(3),
+            nombre: faker.person.fullName(),
+            edad: faker.number.int({ min: 18, max: 60 }),
+            afiliacionUniandes: "Estudiante",
             estadoActividad: true,
             saldo: 0,
         } as PerfilMiembroEntity;
@@ -123,7 +126,9 @@ describe('PerfilMiembroService', () => {
             id: "",
             imagen: faker.image.url(),
             descripcion: faker.lorem.sentence(),
-            intereses: faker.lorem.words(3),
+            nombre: faker.person.fullName(),
+            edad: faker.number.int({ min: 18, max: 60 }),
+            afiliacionUniandes: "Estudiante",
             estadoActividad: true,
             saldo: 0,
             usuario: invalidUsuario,
@@ -143,7 +148,9 @@ describe('PerfilMiembroService', () => {
             id: "",
             imagen: faker.image.url(),
             descripcion: faker.lorem.sentence(),
-            intereses: faker.lorem.words(3),
+            nombre: faker.person.fullName(),
+            edad: faker.number.int({ min: 18, max: 60 }),
+            afiliacionUniandes: "Estudiante",
             estadoActividad: true,
             saldo: 0,
             usuario: usuarioOcupado,

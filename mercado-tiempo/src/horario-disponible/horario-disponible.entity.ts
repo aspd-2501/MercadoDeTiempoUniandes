@@ -5,12 +5,14 @@ import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
 import { SolicitudAyudaEntity } from '../solicitud-ayuda/solicitud-ayuda.entity';
 import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
+import { ActividadComunitariaEntity } from '../actividad-comunitaria/actividad-comunitaria.entity';
 
 @Entity()
 @Check(`
     (CASE WHEN "idAcuerdo" IS NOT NULL THEN 1 ELSE 0 END) +
     (CASE WHEN "idSolicitud" IS NOT NULL THEN 1 ELSE 0 END) +
-    (CASE WHEN "idPostAyuda" IS NOT NULL THEN 1 ELSE 0 END) = 1
+    (CASE WHEN "idPostAyuda" IS NOT NULL THEN 1 ELSE 0 END) +
+    (CASE WHEN "idActividad" IS NOT NULL THEN 1 ELSE 0 END) = 1
 `)
 export class HorarioDisponibleEntity {
     @PrimaryGeneratedColumn('uuid')
@@ -22,8 +24,9 @@ export class HorarioDisponibleEntity {
     @Column()
     fechaFin: Date;
 
-    // --- Origen: acuerdo, solicitud o post (exactamente uno, validado por CHECK) ---
-    @OneToOne(() => AcuerdoEntity, acuerdo => acuerdo.horario, { nullable: true })
+    // --- Origen: acuerdo, solicitud, post o actividad (exactamente uno, validado por CHECK) ---
+    // Un acuerdo puede tener varios horarios propuestos (horariosDisponibles)
+    @ManyToOne(() => AcuerdoEntity, acuerdo => acuerdo.horariosDisponibles, { nullable: true, onDelete: 'CASCADE' })
     @JoinColumn({ name: 'idAcuerdo' })
     acuerdo: AcuerdoEntity;
 
@@ -34,6 +37,11 @@ export class HorarioDisponibleEntity {
     @OneToOne(() => PostAyudaEntity, post => post.horario, { nullable: true })
     @JoinColumn({ name: 'idPostAyuda' })
     postAyuda: PostAyudaEntity;
+
+    // --- Fecha(s) de evento de una actividad comunitaria ---
+    @ManyToOne(() => ActividadComunitariaEntity, actividad => actividad.fechaEvento, { nullable: true, onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'idActividad' })
+    actividad: ActividadComunitariaEntity;
 
     // --- Perfil que propone el horario ---
     @ManyToOne(() => PerfilMiembroEntity, perfil => perfil.horariosDisponibles)

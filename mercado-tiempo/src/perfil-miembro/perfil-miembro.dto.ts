@@ -5,15 +5,23 @@ import { IsBoolean, IsNotEmpty, IsNumber, IsString, IsUUID } from 'class-validat
 export class PerfilMiembroDto {
     @IsString()
     @IsNotEmpty()
+    readonly nombre: string;
+
+    @IsNumber()
+    @IsNotEmpty()
+    readonly edad: number;
+
+    @IsString()
+    @IsNotEmpty()
+    readonly afiliacionUniandes: string;
+
+    @IsString()
+    @IsNotEmpty()
     readonly imagen: string;
 
     @IsString()
     @IsNotEmpty()
     readonly descripcion: string;
-
-    @IsString()
-    @IsNotEmpty()
-    readonly intereses: string;
 
     @IsBoolean()
     @IsNotEmpty()

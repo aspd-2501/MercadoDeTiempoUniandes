@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/servicio-ofrecido/servicio-ofrecido.dto.ts */
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class ServicioOfrecidoDto {
     @IsString()
@@ -10,6 +10,10 @@ export class ServicioOfrecidoDto {
     @IsString()
     @IsNotEmpty()
     readonly descripcion: string;
+
+    @IsBoolean()
+    @IsOptional()
+    readonly visible?: boolean;
 
     @IsUUID()
     @IsNotEmpty()

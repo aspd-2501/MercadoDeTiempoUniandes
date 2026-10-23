@@ -3,6 +3,7 @@
 import { Check, Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { DepositoHorasEntity } from '../deposito-horas/deposito-horas.entity';
+import { CausaEntity } from '../causa/causa.entity';
 
 @Entity()
 @Check(`
@@ -45,4 +46,9 @@ export class DonacionEntity {
     @ManyToOne(() => DepositoHorasEntity, deposito => deposito.donacionesComoReceptor, { nullable: true })
     @JoinColumn({ name: 'idDepositoReceptor' })
     depositoReceptor: DepositoHorasEntity;
+
+    // --- Causa a la que se dona (opcional) ---
+    @ManyToOne(() => CausaEntity, causa => causa.donaciones, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'idCausa' })
+    causa: CausaEntity;
 }

@@ -33,10 +33,7 @@ describe('ModeradorService', () => {
     const createUsuario = async (): Promise<UsuarioEntity> => {
         return await usuarioRepository.save({
             idUniandes: faker.string.alphanumeric(10),
-            nombre: faker.person.fullName(),
             contrasenia: faker.internet.password(),
-            edad: faker.number.int({ min: 18, max: 60 }),
-            afiliacionUniandes: "Estudiante",
         });
     };
 

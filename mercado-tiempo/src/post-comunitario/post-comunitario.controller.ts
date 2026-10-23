@@ -58,6 +58,13 @@ export class PostComunitarioController {
         return await this.postComunitarioService.deleteParticipantePost(postId, perfilId);
     }
 
+    // --- Aprobación de un usuario taggeado ---
+
+    @Post(':postId/aprobaciones/:perfilId')
+    async aprobarPost(@Param('postId') postId: string, @Param('perfilId') perfilId: string) {
+        return await this.postComunitarioService.aprobarPost(postId, perfilId);
+    }
+
     // --- Mapeo manual DTO → Entity ---
     private dtoToEntity(dto: PostComunitarioDto): PostComunitarioEntity {
         const post = new PostComunitarioEntity();
@@ -66,6 +73,8 @@ export class PostComunitarioController {
         post.imagen = dto.imagen;
         post.fechaCreacion = new Date(dto.fechaCreacion);
         if (dto.likes !== undefined) post.likes = dto.likes;
+        post.creador = { id: dto.creadorId } as any;
+        if (dto.acuerdoId) post.acuerdo = { id: dto.acuerdoId } as any;
         return post;
     }
 }

@@ -33,10 +33,7 @@ describe('UsuarioService', () => {
         for (let i = 0; i < 5; i++) {
             const usuario: UsuarioEntity = await usuarioRepository.save({
                 idUniandes: faker.string.alphanumeric(10),
-                nombre: faker.person.fullName(),
                 contrasenia: await bcrypt.hash("password123", 10),
-                edad: faker.number.int({ min: 18, max: 60 }),
-                afiliacionUniandes: "Estudiante",
             });
             usuariosList.push(usuario);
         }
@@ -55,7 +52,7 @@ describe('UsuarioService', () => {
         const stored = usuariosList[0];
         const usuario = await service.findOne(stored.id);
         expect(usuario).not.toBeNull();
-        expect(usuario.nombre).toBe(stored.nombre);
+        expect(usuario.idUniandes).toBe(stored.idUniandes);
     });
 
     it('findOne should throw an exception for an invalid usuario', async () => {
@@ -67,10 +64,7 @@ describe('UsuarioService', () => {
         const usuario: UsuarioEntity = {
             id: "",
             idUniandes: faker.string.alphanumeric(10),
-            nombre: faker.person.fullName(),
             contrasenia: "password123",
-            edad: faker.number.int({ min: 18, max: 60 }),
-            afiliacionUniandes: "Estudiante",
         } as UsuarioEntity;
 
         const result = await service.create(usuario);
@@ -84,10 +78,7 @@ describe('UsuarioService', () => {
     it('create should throw an exception without idUniandes', async () => {
         const usuario: UsuarioEntity = {
             id: "",
-            nombre: faker.person.fullName(),
             contrasenia: "password123",
-            edad: faker.number.int({ min: 18, max: 60 }),
-            afiliacionUniandes: "Estudiante",
         } as UsuarioEntity;
 
         await expect(() => service.create(usuario))
@@ -98,10 +89,7 @@ describe('UsuarioService', () => {
         const usuario: UsuarioEntity = {
             id: "",
             idUniandes: usuariosList[0].idUniandes,
-            nombre: faker.person.fullName(),
             contrasenia: "password123",
-            edad: faker.number.int({ min: 18, max: 60 }),
-            afiliacionUniandes: "Estudiante",
         } as UsuarioEntity;
 
         await expect(() => service.create(usuario))
@@ -112,10 +100,7 @@ describe('UsuarioService', () => {
         const usuario: UsuarioEntity = {
             id: "",
             idUniandes: faker.string.alphanumeric(10),
-            nombre: faker.person.fullName(),
             contrasenia: "123",
-            edad: faker.number.int({ min: 18, max: 60 }),
-            afiliacionUniandes: "Estudiante",
         } as UsuarioEntity;
 
         await expect(() => service.create(usuario))
@@ -125,10 +110,10 @@ describe('UsuarioService', () => {
     it('update should modify a usuario without rehashing an unchanged contrasenia', async () => {
         const usuario = usuariosList[0];
         const contraseniaOriginal = usuario.contrasenia;
-        usuario.nombre = faker.person.fullName();
+        usuario.idUniandes = faker.string.alphanumeric(10);
 
         const updated = await service.update(usuario.id, usuario);
-        expect(updated.nombre).toBe(usuario.nombre);
+        expect(updated.idUniandes).toBe(usuario.idUniandes);
         expect(updated.contrasenia).toBe(contraseniaOriginal);
     });
 
@@ -150,7 +135,7 @@ describe('UsuarioService', () => {
     });
 
     it('update should throw an exception for an invalid usuario', async () => {
-        const usuario = { ...usuariosList[0], nombre: faker.person.fullName() };
+        const usuario = { ...usuariosList[0], idUniandes: faker.string.alphanumeric(10) };
         await expect(() => service.update("0", usuario))
             .rejects.toHaveProperty("message", "The usuario with the given id was not found");
     });

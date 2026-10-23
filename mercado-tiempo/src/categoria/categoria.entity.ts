@@ -3,7 +3,7 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { PostAyudaCategoriaEntity } from '../post-ayuda/post-ayuda-categoria.entity';
 import { ServicioOfrecidoCategoriaEntity } from '../servicio-ofrecido/servicio-ofrecido-categoria.entity';
-import { ServicioPotencialCategoriaEntity } from '../servicio-potencial/servicio-potencial-categoria.entity';
+import { PerfilInteresEntity } from '../perfil-miembro/perfil-interes.entity';
 
 @Entity()
 export class CategoriaEntity {
@@ -19,6 +19,6 @@ export class CategoriaEntity {
     @OneToMany(() => ServicioOfrecidoCategoriaEntity, sc => sc.categoria)
     serviciosOfrecidos: ServicioOfrecidoCategoriaEntity[];
 
-    @OneToMany(() => ServicioPotencialCategoriaEntity, sc => sc.categoria)
-    serviciosPotenciales: ServicioPotencialCategoriaEntity[];
+    @OneToMany(() => PerfilInteresEntity, pi => pi.categoria)
+    perfilesInteresados: PerfilInteresEntity[];
 }

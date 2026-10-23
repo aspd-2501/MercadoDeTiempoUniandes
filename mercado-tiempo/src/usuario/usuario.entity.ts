@@ -13,16 +13,7 @@ export class UsuarioEntity {
     idUniandes: string;
 
     @Column()
-    nombre: string;
-
-    @Column()
     contrasenia: string;
-
-    @Column()
-    edad: number;
-
-    @Column()
-    afiliacionUniandes: string;
 
     @OneToOne(() => PerfilMiembroEntity, perfil => perfil.usuario)
     perfil: PerfilMiembroEntity;

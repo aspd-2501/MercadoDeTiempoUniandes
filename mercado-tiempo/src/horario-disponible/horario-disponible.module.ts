@@ -8,6 +8,7 @@ import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
 import { SolicitudAyudaEntity } from '../solicitud-ayuda/solicitud-ayuda.entity';
 import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
+import { ActividadComunitariaEntity } from '../actividad-comunitaria/actividad-comunitaria.entity';
 import { HorarioDisponibleController } from './horario-disponible.controller';
 
 @Module({
@@ -17,6 +18,7 @@ import { HorarioDisponibleController } from './horario-disponible.controller';
         AcuerdoEntity,
         SolicitudAyudaEntity,
         PostAyudaEntity,
+        ActividadComunitariaEntity,
     ])],
     providers: [HorarioDisponibleService],
     controllers: [HorarioDisponibleController],

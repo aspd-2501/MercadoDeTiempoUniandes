@@ -7,6 +7,7 @@ import { BusinessError, BusinessLogicException } from '../shared/errors/business
 import { DonacionEntity } from './donacion.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { DepositoHorasEntity } from '../deposito-horas/deposito-horas.entity';
+import { CausaEntity } from '../causa/causa.entity';
 
 @Injectable()
 export class DonacionService {
@@ -18,19 +19,22 @@ export class DonacionService {
         private readonly perfilMiembroRepository: Repository<PerfilMiembroEntity>,
 
         @InjectRepository(DepositoHorasEntity)
-        private readonly depositoHorasRepository: Repository<DepositoHorasEntity>
+        private readonly depositoHorasRepository: Repository<DepositoHorasEntity>,
+
+        @InjectRepository(CausaEntity)
+        private readonly causaRepository: Repository<CausaEntity>
     ) {}
 
     async findAll(): Promise<DonacionEntity[]> {
         return await this.donacionRepository.find({
-            relations: { perfilDonante: true, depositoDonante: true, perfilReceptor: true, depositoReceptor: true }
+            relations: { perfilDonante: true, depositoDonante: true, perfilReceptor: true, depositoReceptor: true, causa: true }
         });
     }
 
     async findOne(id: string): Promise<DonacionEntity> {
         const donacion: DonacionEntity | null = await this.donacionRepository.findOne({
             where: { id },
-            relations: { perfilDonante: true, depositoDonante: true, perfilReceptor: true, depositoReceptor: true }
+            relations: { perfilDonante: true, depositoDonante: true, perfilReceptor: true, depositoReceptor: true, causa: true }
         });
         if (!donacion)
             throw new BusinessLogicException("The donacion with the given id was not found", BusinessError.NOT_FOUND);
@@ -41,6 +45,11 @@ export class DonacionService {
         await this.validarDonante(donacion);
         await this.validarReceptor(donacion);
         await this.validarDistintos(donacion);
+        if (donacion.causa) {
+            const causa = await this.causaRepository.findOne({ where: { id: donacion.causa.id } });
+            if (!causa)
+                throw new BusinessLogicException("The causa with the given id was not found", BusinessError.NOT_FOUND);
+        }
         return await this.donacionRepository.save(donacion);
     }
 

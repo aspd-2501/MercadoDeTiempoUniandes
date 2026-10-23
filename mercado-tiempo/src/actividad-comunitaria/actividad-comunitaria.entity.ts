@@ -3,6 +3,7 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { OrganizacionInstitucionalEntity } from '../organizacion-institucional/organizacion-institucional.entity';
 import { InscripcionActividadEntity } from './inscripcion-actividad.entity';
+import { HorarioDisponibleEntity } from '../horario-disponible/horario-disponible.entity';
 
 @Entity()
 export class ActividadComunitariaEntity {
@@ -33,4 +34,8 @@ export class ActividadComunitariaEntity {
 
     @OneToMany(() => InscripcionActividadEntity, i => i.actividad)
     inscritos: InscripcionActividadEntity[];
+
+    // --- Fecha(s) del evento ---
+    @OneToMany(() => HorarioDisponibleEntity, horario => horario.actividad)
+    fechaEvento: HorarioDisponibleEntity[];
 }

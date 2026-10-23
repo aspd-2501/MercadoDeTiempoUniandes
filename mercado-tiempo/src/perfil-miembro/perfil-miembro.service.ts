@@ -6,6 +6,8 @@ import { Repository } from 'typeorm';
 import { BusinessError, BusinessLogicException } from '../shared/errors/business-errors';
 import { PerfilMiembroEntity } from './perfil-miembro.entity';
 import { UsuarioEntity } from '../usuario/usuario.entity';
+import { CategoriaEntity } from '../categoria/categoria.entity';
+import { PerfilInteresEntity } from './perfil-interes.entity';
 
 @Injectable()
 export class PerfilMiembroService {
@@ -14,7 +16,13 @@ export class PerfilMiembroService {
         private readonly perfilMiembroRepository: Repository<PerfilMiembroEntity>,
 
         @InjectRepository(UsuarioEntity)
-        private readonly usuarioRepository: Repository<UsuarioEntity>
+        private readonly usuarioRepository: Repository<UsuarioEntity>,
+
+        @InjectRepository(CategoriaEntity)
+        private readonly categoriaRepository: Repository<CategoriaEntity>,
+
+        @InjectRepository(PerfilInteresEntity)
+        private readonly perfilInteresRepository: Repository<PerfilInteresEntity>
     ) {}
 
     async findAll(): Promise<PerfilMiembroEntity[]> {
@@ -61,5 +69,45 @@ export class PerfilMiembroService {
         if (!perfil)
             throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
         await this.perfilMiembroRepository.remove(perfil);
+    }
+
+    // --- Intereses (categorías, 0..*) ---
+
+    async findInteresesByPerfilId(perfilId: string): Promise<CategoriaEntity[]> {
+        const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({
+            where: { id: perfilId },
+            relations: { intereses: { categoria: true } }
+        });
+        if (!perfil)
+            throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
+        return perfil.intereses.map(i => i.categoria);
+    }
+
+    async associateInteresesPerfil(perfilId: string, categoriaIds: string[]): Promise<CategoriaEntity[]> {
+        const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
+        if (!perfil)
+            throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
+
+        const idsUnicos = [...new Set(categoriaIds ?? [])];
+        for (const idCategoria of idsUnicos) {
+            const categoria = await this.categoriaRepository.findOne({ where: { id: idCategoria } });
+            if (!categoria)
+                throw new BusinessLogicException("The categoria with the given id was not found", BusinessError.NOT_FOUND);
+        }
+
+        await this.perfilInteresRepository.delete({ idPerfil: perfilId });
+        const relaciones = idsUnicos.map(idCategoria =>
+            this.perfilInteresRepository.create({ idPerfil: perfilId, idCategoria })
+        );
+        await this.perfilInteresRepository.save(relaciones);
+
+        return await this.findInteresesByPerfilId(perfilId);
+    }
+
+    async deleteInteresPerfil(perfilId: string, categoriaId: string) {
+        const relacion = await this.perfilInteresRepository.findOne({ where: { idPerfil: perfilId, idCategoria: categoriaId } });
+        if (!relacion)
+            throw new BusinessLogicException("The categoria is not an interes of the perfil miembro", BusinessError.PRECONDITION_FAILED);
+        await this.perfilInteresRepository.remove(relacion);
     }
 }

@@ -19,7 +19,6 @@ import { CategoriaModule } from './categoria/categoria.module';
 import { PostAyudaModule } from './post-ayuda/post-ayuda.module';
 import { SolicitudAyudaModule } from './solicitud-ayuda/solicitud-ayuda.module';
 import { ServicioOfrecidoModule } from './servicio-ofrecido/servicio-ofrecido.module';
-import { ServicioPotencialModule } from './servicio-potencial/servicio-potencial.module';
 import { AcuerdoModule } from './acuerdo/acuerdo.module';
 import { HorarioDisponibleModule } from './horario-disponible/horario-disponible.module';
 import { PostComunitarioModule } from './post-comunitario/post-comunitario.module';
@@ -27,6 +26,7 @@ import { ReconocimientoModule } from './reconocimiento/reconocimiento.module';
 import { ActividadComunitariaModule } from './actividad-comunitaria/actividad-comunitaria.module';
 import { OrganizacionInstitucionalModule } from './organizacion-institucional/organizacion-institucional.module';
 import { AuthModule } from './auth/auth.module';
+import { SolicitudModificacionModule } from './solicitud-modificacion/solicitud-modificacion.module';
 
 // Entidades
 import { UsuarioEntity } from './usuario/usuario.entity';
@@ -46,10 +46,10 @@ import { PostAyudaCategoriaEntity } from './post-ayuda/post-ayuda-categoria.enti
 import { SolicitudAyudaEntity } from './solicitud-ayuda/solicitud-ayuda.entity';
 import { ServicioOfrecidoEntity } from './servicio-ofrecido/servicio-ofrecido.entity';
 import { ServicioOfrecidoCategoriaEntity } from './servicio-ofrecido/servicio-ofrecido-categoria.entity';
-import { ServicioPotencialEntity } from './servicio-potencial/servicio-potencial.entity';
-import { ServicioPotencialCategoriaEntity } from './servicio-potencial/servicio-potencial-categoria.entity';
+import { PerfilInteresEntity } from './perfil-miembro/perfil-interes.entity';
 import { AcuerdoEntity } from './acuerdo/acuerdo.entity';
 import { ParticipanteAcuerdoEntity } from './acuerdo/participante-acuerdo.entity';
+import { SolicitudModificacionEntity } from './solicitud-modificacion/solicitud-modificacion.entity';
 import { HorarioDisponibleEntity } from './horario-disponible/horario-disponible.entity';
 import { PostComunitarioEntity } from './post-comunitario/post-comunitario.entity';
 import { UsuarioPostEntity } from './post-comunitario/usuario-post.entity';
@@ -75,13 +75,13 @@ import { OrganizacionInstitucionalEntity } from './organizacion-institucional/or
     PostAyudaModule,
     SolicitudAyudaModule,
     ServicioOfrecidoModule,
-    ServicioPotencialModule,
     AcuerdoModule,
     HorarioDisponibleModule,
     PostComunitarioModule,
     ReconocimientoModule,
     ActividadComunitariaModule,
     OrganizacionInstitucionalModule,
+    SolicitudModificacionModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
@@ -107,10 +107,10 @@ import { OrganizacionInstitucionalEntity } from './organizacion-institucional/or
         SolicitudAyudaEntity,
         ServicioOfrecidoEntity,
         ServicioOfrecidoCategoriaEntity,
-        ServicioPotencialEntity,
-        ServicioPotencialCategoriaEntity,
+        PerfilInteresEntity,
         AcuerdoEntity,
         ParticipanteAcuerdoEntity,
+        SolicitudModificacionEntity,
         HorarioDisponibleEntity,
         PostComunitarioEntity,
         UsuarioPostEntity,

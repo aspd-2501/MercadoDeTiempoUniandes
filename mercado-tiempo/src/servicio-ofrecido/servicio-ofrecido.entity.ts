@@ -16,6 +16,9 @@ export class ServicioOfrecidoEntity {
     @Column()
     descripcion: string;
 
+    @Column({ default: true })
+    visible: boolean;
+
     @ManyToOne(() => PerfilMiembroEntity, perfil => perfil.serviciosOfrecidos)
     @JoinColumn({ name: 'idPerfil' })
     perfil: PerfilMiembroEntity;

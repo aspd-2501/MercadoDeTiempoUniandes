@@ -15,14 +15,14 @@ export class CategoriaService {
 
     async findAll(): Promise<CategoriaEntity[]> {
         return await this.categoriaRepository.find({
-            relations: { postsDeAyuda: true, serviciosOfrecidos: true, serviciosPotenciales: true }
+            relations: { postsDeAyuda: true, serviciosOfrecidos: true, perfilesInteresados: true }
         });
     }
 
     async findOne(id: string): Promise<CategoriaEntity> {
         const categoria: CategoriaEntity | null = await this.categoriaRepository.findOne({
             where: { id },
-            relations: { postsDeAyuda: true, serviciosOfrecidos: true, serviciosPotenciales: true }
+            relations: { postsDeAyuda: true, serviciosOfrecidos: true, perfilesInteresados: true }
         });
         if (!categoria)
             throw new BusinessLogicException("The categoria with the given id was not found", BusinessError.NOT_FOUND);

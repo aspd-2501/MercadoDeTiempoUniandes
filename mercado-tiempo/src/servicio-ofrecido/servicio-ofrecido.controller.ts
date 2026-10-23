@@ -58,6 +58,7 @@ export class ServicioOfrecidoController {
         const servicio = new ServicioOfrecidoEntity();
         servicio.titulo = dto.titulo;
         servicio.descripcion = dto.descripcion;
+        servicio.visible = dto.visible ?? true;
         servicio.perfil = { id: dto.perfilId } as any;
         return servicio;
     }

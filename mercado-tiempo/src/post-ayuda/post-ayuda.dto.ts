@@ -11,6 +11,10 @@ export class PostAyudaDto {
     @IsNotEmpty()
     readonly descripcion: string;
 
+    @IsNumber()
+    @IsNotEmpty()
+    readonly horas: number;
+
     @IsString()
     @IsNotEmpty()
     readonly imagen: string;

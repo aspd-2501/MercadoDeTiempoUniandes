@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/post-comunitario/post-comunitario.dto.ts */
-import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class PostComunitarioDto {
     @IsString()
@@ -22,4 +22,12 @@ export class PostComunitarioDto {
     @IsNumber()
     @IsOptional()
     readonly likes?: number;
+
+    @IsUUID()
+    @IsNotEmpty()
+    readonly creadorId: string;
+
+    @IsUUID()
+    @IsOptional()
+    readonly acuerdoId?: string;
 }

@@ -42,6 +42,7 @@ export class HorarioDisponibleController {
         if (dto.acuerdoId) horario.acuerdo = { id: dto.acuerdoId } as any;
         if (dto.solicitudId) horario.solicitud = { id: dto.solicitudId } as any;
         if (dto.postAyudaId) horario.postAyuda = { id: dto.postAyudaId } as any;
+        if (dto.actividadId) horario.actividad = { id: dto.actividadId } as any;
         return horario;
     }
 }

@@ -5,8 +5,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BusinessError, BusinessLogicException } from '../shared/errors/business-errors';
 import { AcuerdoEntity } from './acuerdo.entity';
+import { EstadoAcuerdo } from './estado-acuerdo.enum';
 import { ParticipanteAcuerdoEntity, RolParticipante } from './participante-acuerdo.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
+import { HorarioDisponibleEntity } from '../horario-disponible/horario-disponible.entity';
+import { ChatEntity } from '../chat/chat.entity';
 
 @Injectable()
 export class AcuerdoService {
@@ -18,21 +21,27 @@ export class AcuerdoService {
         private readonly perfilMiembroRepository: Repository<PerfilMiembroEntity>,
 
         @InjectRepository(ParticipanteAcuerdoEntity)
-        private readonly participanteRepository: Repository<ParticipanteAcuerdoEntity>
+        private readonly participanteRepository: Repository<ParticipanteAcuerdoEntity>,
+
+        @InjectRepository(HorarioDisponibleEntity)
+        private readonly horarioRepository: Repository<HorarioDisponibleEntity>,
+
+        @InjectRepository(ChatEntity)
+        private readonly chatRepository: Repository<ChatEntity>
     ) {}
 
     // --- CRUD de Acuerdo ---
 
     async findAll(): Promise<AcuerdoEntity[]> {
         return await this.acuerdoRepository.find({
-            relations: { postAyuda: true, solicitud: true, participantes: true, horario: true }
+            relations: { postAyuda: true, solicitud: true, participantes: true, horariosDisponibles: true, horarioAcordado: true, chat: true, solicitudesModificacion: true }
         });
     }
 
     async findOne(id: string): Promise<AcuerdoEntity> {
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
             where: { id },
-            relations: { postAyuda: true, solicitud: true, participantes: true, horario: true }
+            relations: { postAyuda: true, solicitud: true, participantes: true, horariosDisponibles: true, horarioAcordado: true, chat: true, solicitudesModificacion: true }
         });
         if (!acuerdo)
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
@@ -40,6 +49,13 @@ export class AcuerdoService {
     }
 
     async create(acuerdo: AcuerdoEntity): Promise<AcuerdoEntity> {
+        if (!!acuerdo.postAyuda === !!acuerdo.solicitud)
+            throw new BusinessLogicException("An acuerdo must have either a postAyuda or a solicitud, but not both", BusinessError.PRECONDITION_FAILED);
+
+        if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
+            throw new BusinessLogicException("Use finalizarAcuerdo to mark an acuerdo as realizado", BusinessError.PRECONDITION_FAILED);
+
+        acuerdo.estado = acuerdo.estado ?? EstadoAcuerdo.EN_CREACION;
         return await this.acuerdoRepository.save(acuerdo);
     }
 
@@ -48,8 +64,10 @@ export class AcuerdoService {
         if (!persisted)
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
 
-        if (acuerdo.finalizado && !persisted.finalizado)
-            throw new BusinessLogicException("Use finalizarAcuerdo to mark an acuerdo as finalizado", BusinessError.PRECONDITION_FAILED);
+        if (acuerdo.estado === EstadoAcuerdo.REALIZADO && persisted.estado !== EstadoAcuerdo.REALIZADO)
+            throw new BusinessLogicException("Use finalizarAcuerdo to mark an acuerdo as realizado", BusinessError.PRECONDITION_FAILED);
+
+        acuerdo.estado = acuerdo.estado ?? persisted.estado;
 
         acuerdo.id = id;
         return await this.acuerdoRepository.save(acuerdo);
@@ -170,7 +188,61 @@ export class AcuerdoService {
         await this.participanteRepository.delete({ idAcuerdo: acuerdoId, idPerfil: perfilId });
     }
 
-    // --- Finalización: exige al menos 1 PRESTADOR y 1 RECEPTOR ---
+    // --- Horario acordado: debe ser uno de los horarios propuestos para el acuerdo, su post o su solicitud ---
+
+    async setHorarioAcordado(acuerdoId: string, horarioId: string): Promise<AcuerdoEntity> {
+        const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
+            where: { id: acuerdoId },
+            relations: { postAyuda: true, solicitud: true }
+        });
+        if (!acuerdo)
+            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+
+        const horario: HorarioDisponibleEntity | null = await this.horarioRepository.findOne({
+            where: { id: horarioId },
+            relations: { acuerdo: true, postAyuda: true, solicitud: true }
+        });
+        if (!horario)
+            throw new BusinessLogicException("The horario disponible with the given id was not found", BusinessError.NOT_FOUND);
+
+        const perteneceAlAcuerdo =
+            horario.acuerdo?.id === acuerdo.id ||
+            (!!acuerdo.postAyuda && horario.postAyuda?.id === acuerdo.postAyuda.id) ||
+            (!!acuerdo.solicitud && horario.solicitud?.id === acuerdo.solicitud.id);
+        if (!perteneceAlAcuerdo)
+            throw new BusinessLogicException("The horario disponible is not associated with the acuerdo", BusinessError.PRECONDITION_FAILED);
+
+        acuerdo.horarioAcordado = horario;
+        await this.acuerdoRepository.save(acuerdo);
+        return await this.findOne(acuerdoId);
+    }
+
+    async deleteHorarioAcordado(acuerdoId: string): Promise<AcuerdoEntity> {
+        const acuerdo = await this.findOne(acuerdoId);
+        acuerdo.horarioAcordado = null;
+        await this.acuerdoRepository.save(acuerdo);
+        return await this.findOne(acuerdoId);
+    }
+
+    // --- Chat del acuerdo ---
+
+    async setChatAcuerdo(acuerdoId: string, chatId: string): Promise<AcuerdoEntity> {
+        const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({ where: { id: acuerdoId } });
+        if (!acuerdo)
+            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+
+        const chat: ChatEntity | null = await this.chatRepository.findOne({ where: { id: chatId }, relations: { acuerdo: true } });
+        if (!chat)
+            throw new BusinessLogicException("The chat with the given id was not found", BusinessError.NOT_FOUND);
+        if (chat.acuerdo && chat.acuerdo.id !== acuerdoId)
+            throw new BusinessLogicException("The chat already belongs to another acuerdo", BusinessError.PRECONDITION_FAILED);
+
+        acuerdo.chat = chat;
+        await this.acuerdoRepository.save(acuerdo);
+        return await this.findOne(acuerdoId);
+    }
+
+    // --- Finalización (estado 2: realizado): exige al menos 1 PRESTADOR y 1 RECEPTOR ---
 
     async finalizarAcuerdo(id: string): Promise<AcuerdoEntity> {
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
@@ -180,19 +252,19 @@ export class AcuerdoService {
         if (!acuerdo)
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
 
-        if (acuerdo.finalizado)
-            throw new BusinessLogicException("The acuerdo is already finalizado", BusinessError.PRECONDITION_FAILED);
+        if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
+            throw new BusinessLogicException("The acuerdo is already realizado", BusinessError.PRECONDITION_FAILED);
 
         const tienePrestador = acuerdo.participantes.some(p => p.rol === RolParticipante.PRESTADOR);
         const tieneReceptor = acuerdo.participantes.some(p => p.rol === RolParticipante.RECEPTOR);
 
         if (!tienePrestador || !tieneReceptor)
             throw new BusinessLogicException(
-                "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be finalizado",
+                "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be realizado",
                 BusinessError.PRECONDITION_FAILED
             );
 
-        acuerdo.finalizado = true;
+        acuerdo.estado = EstadoAcuerdo.REALIZADO;
         return await this.acuerdoRepository.save(acuerdo);
     }
 }

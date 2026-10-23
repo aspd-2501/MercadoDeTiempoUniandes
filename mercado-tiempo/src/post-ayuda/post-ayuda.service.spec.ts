@@ -43,16 +43,15 @@ describe('PostAyudaService', () => {
     const createPerfil = async (): Promise<PerfilMiembroEntity> => {
         const usuario: UsuarioEntity = await usuarioRepository.save({
             idUniandes: faker.string.alphanumeric(10),
-            nombre: faker.person.fullName(),
             contrasenia: faker.internet.password(),
-            edad: faker.number.int({ min: 18, max: 60 }),
-            afiliacionUniandes: "Estudiante",
         });
 
         return await perfilRepository.save({
             imagen: faker.image.url(),
             descripcion: faker.lorem.sentence(),
-            intereses: faker.lorem.words(3),
+            nombre: faker.person.fullName(),
+            edad: faker.number.int({ min: 18, max: 60 }),
+            afiliacionUniandes: "Estudiante",
             estadoActividad: true,
             saldo: faker.number.int({ min: 0, max: 100 }),
             usuario,
@@ -80,6 +79,7 @@ describe('PostAyudaService', () => {
             ofrece: true,
             cupo: 2,
             cupoLleno: false,
+            horas: faker.number.int({ min: 1, max: 10 }),
             fechaCreacion: faker.date.recent(),
             perfilAutor: perfil,
         });
@@ -101,6 +101,7 @@ describe('PostAyudaService', () => {
             ofrece: false,
             cupo: 1,
             cupoLleno: false,
+            horas: faker.number.int({ min: 1, max: 10 }),
             fechaCreacion: faker.date.recent(),
             perfilAutor: perfil,
         } as PostAyudaEntity;
@@ -119,6 +120,7 @@ describe('PostAyudaService', () => {
             ofrece: false,
             cupo: 1,
             cupoLleno: false,
+            horas: faker.number.int({ min: 1, max: 10 }),
             fechaCreacion: faker.date.recent(),
         } as PostAyudaEntity;
 
@@ -136,6 +138,7 @@ describe('PostAyudaService', () => {
             ofrece: false,
             cupo: 1,
             cupoLleno: false,
+            horas: faker.number.int({ min: 1, max: 10 }),
             fechaCreacion: faker.date.recent(),
             perfilAutor: invalidPerfil,
         } as PostAyudaEntity;
@@ -153,6 +156,7 @@ describe('PostAyudaService', () => {
             ofrece: false,
             cupo: 1,
             cupoLleno: false,
+            horas: faker.number.int({ min: 1, max: 10 }),
             fechaCreacion: faker.date.recent(),
             perfilAutor: perfil,
         } as PostAyudaEntity;
@@ -170,6 +174,7 @@ describe('PostAyudaService', () => {
             ofrece: false,
             cupo: 1,
             cupoLleno: false,
+            horas: faker.number.int({ min: 1, max: 10 }),
             fechaCreacion: faker.date.recent(),
             perfilAutor: perfil,
         } as PostAyudaEntity;
@@ -188,6 +193,7 @@ describe('PostAyudaService', () => {
             ofrece: false,
             cupo: 1,
             cupoLleno: false,
+            horas: faker.number.int({ min: 1, max: 10 }),
             fechaCreacion: faker.date.recent(),
             perfilAutor: perfil,
         } as PostAyudaEntity;

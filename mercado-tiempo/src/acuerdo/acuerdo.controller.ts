@@ -46,6 +46,25 @@ export class AcuerdoController {
         return await this.acuerdoService.finalizarAcuerdo(acuerdoId);
     }
 
+    // --- Horario acordado ---
+
+    @Put(':acuerdoId/horario-acordado/:horarioId')
+    async setHorarioAcordado(@Param('acuerdoId') acuerdoId: string, @Param('horarioId') horarioId: string) {
+        return await this.acuerdoService.setHorarioAcordado(acuerdoId, horarioId);
+    }
+
+    @Delete(':acuerdoId/horario-acordado')
+    async deleteHorarioAcordado(@Param('acuerdoId') acuerdoId: string) {
+        return await this.acuerdoService.deleteHorarioAcordado(acuerdoId);
+    }
+
+    // --- Chat del acuerdo ---
+
+    @Put(':acuerdoId/chat/:chatId')
+    async setChatAcuerdo(@Param('acuerdoId') acuerdoId: string, @Param('chatId') chatId: string) {
+        return await this.acuerdoService.setChatAcuerdo(acuerdoId, chatId);
+    }
+
     // --- Relación con PerfilMiembro (vía ParticipanteAcuerdo, con rol) ---
 
     @Post(':acuerdoId/participantes/:perfilId')
@@ -84,7 +103,7 @@ export class AcuerdoController {
         acuerdo.horas = dto.horas;
         acuerdo.fechaCreacion = new Date(dto.fechaCreacion);
         acuerdo.fechaRealizacion = new Date(dto.fechaRealizacion);
-        acuerdo.finalizado = dto.finalizado ?? false;
+        if (dto.estado !== undefined) acuerdo.estado = dto.estado;
         if (dto.postAyudaId) acuerdo.postAyuda = { id: dto.postAyudaId } as any;
         if (dto.solicitudId) acuerdo.solicitud = { id: dto.solicitudId } as any;
         return acuerdo;

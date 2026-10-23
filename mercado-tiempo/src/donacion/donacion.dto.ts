@@ -30,4 +30,8 @@ export class DonacionDto {
     @IsUUID()
     @IsOptional()
     readonly depositoReceptorId?: string;
+
+    @IsUUID()
+    @IsOptional()
+    readonly causaId?: string;
 }

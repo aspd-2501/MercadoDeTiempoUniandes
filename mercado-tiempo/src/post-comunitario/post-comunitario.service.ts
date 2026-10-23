@@ -7,6 +7,7 @@ import { BusinessError, BusinessLogicException } from '../shared/errors/business
 import { PostComunitarioEntity } from './post-comunitario.entity';
 import { UsuarioPostEntity } from './usuario-post.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
+import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
 
 @Injectable()
 export class PostComunitarioService {
@@ -18,19 +19,22 @@ export class PostComunitarioService {
         private readonly perfilMiembroRepository: Repository<PerfilMiembroEntity>,
 
         @InjectRepository(UsuarioPostEntity)
-        private readonly usuarioPostRepository: Repository<UsuarioPostEntity>
+        private readonly usuarioPostRepository: Repository<UsuarioPostEntity>,
+
+        @InjectRepository(AcuerdoEntity)
+        private readonly acuerdoRepository: Repository<AcuerdoEntity>
     ) {}
 
     // --- CRUD de PostComunitario ---
 
     async findAll(): Promise<PostComunitarioEntity[]> {
-        return await this.postComunitarioRepository.find({ relations: { participantes: true } });
+        return await this.postComunitarioRepository.find({ relations: { participantes: true, creador: true, acuerdo: true } });
     }
 
     async findOne(id: string): Promise<PostComunitarioEntity> {
         const post: PostComunitarioEntity | null = await this.postComunitarioRepository.findOne({
             where: { id },
-            relations: { participantes: true }
+            relations: { participantes: true, creador: true, acuerdo: true }
         });
         if (!post)
             throw new BusinessLogicException("The post comunitario with the given id was not found", BusinessError.NOT_FOUND);
@@ -47,7 +51,21 @@ export class PostComunitarioService {
                 throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
         }
 
+        if (!post.creador)
+            throw new BusinessLogicException("A post comunitario must have a creador", BusinessError.PRECONDITION_FAILED);
+        const creador = await this.perfilMiembroRepository.findOne({ where: { id: post.creador.id } });
+        if (!creador)
+            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+
+        if (post.acuerdo) {
+            const acuerdo = await this.acuerdoRepository.findOne({ where: { id: post.acuerdo.id } });
+            if (!acuerdo)
+                throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+        }
+
         post.likes = 0;
+        post.aprobaciones = 0;
+        post.publico = false;
         const nuevoPost = await this.postComunitarioRepository.save(post);
 
         const participantes = perfilIds.map(idPerfil =>
@@ -66,7 +84,10 @@ export class PostComunitarioService {
         const persisted: PostComunitarioEntity | null = await this.postComunitarioRepository.findOne({ where: { id } });
         if (!persisted)
             throw new BusinessLogicException("The post comunitario with the given id was not found", BusinessError.NOT_FOUND);
+        // aprobaciones y publico solo cambian a través de aprobarPost
         post.id = id;
+        post.aprobaciones = persisted.aprobaciones;
+        post.publico = persisted.publico;
         return await this.postComunitarioRepository.save(post);
     }
 
@@ -97,6 +118,7 @@ export class PostComunitarioService {
 
         const participante = this.usuarioPostRepository.create({ idPostComunitario: postId, idPerfil: perfilId });
         await this.usuarioPostRepository.save(participante);
+        await this.recalcularAprobaciones(postId);
 
         const postActualizado: PostComunitarioEntity | null = await this.postComunitarioRepository.findOne({
             where: { id: postId },
@@ -136,5 +158,35 @@ export class PostComunitarioService {
             throw new BusinessLogicException("A post comunitario must keep at least 2 participantes", BusinessError.PRECONDITION_FAILED);
 
         await this.usuarioPostRepository.delete({ idPostComunitario: postId, idPerfil: perfilId });
+        await this.recalcularAprobaciones(postId);
+    }
+
+    // --- Aprobaciones: el post se vuelve público cuando todos los taggeados lo aprueban ---
+
+    async aprobarPost(postId: string, perfilId: string): Promise<PostComunitarioEntity> {
+        const post: PostComunitarioEntity | null = await this.postComunitarioRepository.findOne({
+            where: { id: postId },
+            relations: { participantes: true }
+        });
+        if (!post)
+            throw new BusinessLogicException("The post comunitario with the given id was not found", BusinessError.NOT_FOUND);
+
+        const participante = post.participantes.find(p => p.idPerfil === perfilId);
+        if (!participante)
+            throw new BusinessLogicException("The perfil with the given id is not a participante in the post", BusinessError.PRECONDITION_FAILED);
+        if (participante.aprobado)
+            throw new BusinessLogicException("The perfil already approved the post", BusinessError.PRECONDITION_FAILED);
+
+        participante.aprobado = true;
+        await this.usuarioPostRepository.save(participante);
+        return await this.recalcularAprobaciones(postId);
+    }
+
+    private async recalcularAprobaciones(postId: string): Promise<PostComunitarioEntity> {
+        const post = await this.findOne(postId);
+        const taggeados = post.participantes.length;
+        post.aprobaciones = post.participantes.filter(p => p.aprobado).length;
+        post.publico = taggeados > 0 && post.aprobaciones === taggeados;
+        return await this.postComunitarioRepository.save(post);
     }
 }
