@@ -86,7 +86,7 @@ describe('PerfilOrganizacionService', () => {
             .rejects.toHaveProperty("message", "The perfil organizacion with the given id was not found");
     });
 
-    it('create should return a new organizacion with numMiembros in 0', async () => {
+        it('create should return a new organizacion with its perfil as first miembro', async () => {
         const nuevoPerfil = await createPerfil();
         const nuevaOrganizacion: PerfilOrganizacionEntity = {
             id: "",
@@ -95,7 +95,9 @@ describe('PerfilOrganizacionService', () => {
         } as PerfilOrganizacionEntity;
 
         const result = await service.create(nuevaOrganizacion);
-        expect(result.numMiembros).toBe(0);
+        expect(result.numMiembros).toBe(1);
+        expect(result.miembros.length).toBe(1);
+        expect(result.miembros[0].idPerfil).toBe(nuevoPerfil.id);
     });
 
     it('create should throw an exception without a perfil', async () => {
@@ -190,5 +192,12 @@ describe('PerfilOrganizacionService', () => {
         const nuevoPerfil = await createPerfil();
         await expect(() => service.deleteMiembroOrganizacion(organizacion.id, nuevoPerfil.id))
             .rejects.toHaveProperty("message", "The perfil with the given id is not a miembro of the organizacion");
+    });
+
+    it('deleteMiembroOrganizacion should throw an exception when it would leave 0 miembros', async () => {
+        await service.deleteMiembroOrganizacion(organizacion.id, perfilesList[0].id);
+        await service.deleteMiembroOrganizacion(organizacion.id, perfilesList[1].id);
+        await expect(() => service.deleteMiembroOrganizacion(organizacion.id, perfilesList[2].id))
+            .rejects.toHaveProperty("message", "A perfil organizacion must keep at least 1 miembro");
     });
 });

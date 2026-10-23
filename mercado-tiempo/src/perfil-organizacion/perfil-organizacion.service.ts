@@ -51,8 +51,13 @@ export class PerfilOrganizacionService {
         if (perfil.perfilOrganizacion)
             throw new BusinessLogicException("The perfil already has a perfil organizacion", BusinessError.PRECONDITION_FAILED);
 
-        organizacion.numMiembros = 0;
-        return await this.perfilOrganizacionRepository.save(organizacion);
+        organizacion.numMiembros = 1;
+        const nuevaOrganizacion = await this.perfilOrganizacionRepository.save(organizacion);
+
+        const primerMiembro = this.miembroRepository.create({ idOrganizacion: nuevaOrganizacion.id, idPerfil: perfil.id });
+        await this.miembroRepository.save(primerMiembro);
+
+        return await this.findOne(nuevaOrganizacion.id);
     }
 
     async delete(id: string) {
@@ -120,6 +125,9 @@ export class PerfilOrganizacionService {
         if (!miembro)
             throw new BusinessLogicException("The perfil with the given id is not a miembro of the organizacion", BusinessError.PRECONDITION_FAILED);
 
+        if (organizacion.miembros.length <= 1)
+            throw new BusinessLogicException("A perfil organizacion must keep at least 1 miembro", BusinessError.PRECONDITION_FAILED);
+        
         await this.miembroRepository.delete({ idOrganizacion: organizacionId, idPerfil: perfilId });
 
         await this.perfilOrganizacionRepository.save({ id: organizacionId, numMiembros: organizacion.miembros.length - 1 });
