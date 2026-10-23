@@ -5,7 +5,6 @@ import { BusinessErrorsInterceptor } from '../shared/interceptors/business-error
 import { SolicitudAyudaService } from './solicitud-ayuda.service';
 import { SolicitudAyudaEntity } from './solicitud-ayuda.entity';
 import { SolicitudAyudaDto } from './solicitud-ayuda.dto';
-import { AceptarSolicitudDto } from './aceptar-solicitud.dto';
 
 @Controller('solicitudes-ayuda')
 @UseInterceptors(BusinessErrorsInterceptor)
@@ -41,8 +40,8 @@ export class SolicitudAyudaController {
     }
 
     @Post(':solicitudId/aceptar')
-    async aceptarSolicitud(@Param('solicitudId') solicitudId: string, @Body() dto: AceptarSolicitudDto) {
-        return await this.solicitudAyudaService.aceptarSolicitud(solicitudId, dto.perfilPrestadorId);
+    async aceptarSolicitud(@Param('solicitudId') solicitudId: string) {
+        return await this.solicitudAyudaService.aceptarSolicitud(solicitudId);
     }
 
     // --- Mapeo manual DTO → Entity ---
@@ -53,8 +52,8 @@ export class SolicitudAyudaController {
         solicitud.fechaCreacion = new Date(dto.fechaCreacion);
         solicitud.horas = dto.horas;
         solicitud.perfilAutor = { id: dto.perfilAutorId } as any;
+        solicitud.prestador = { id: dto.prestadorId } as any;
         if (dto.servicioOfrecidoId) solicitud.servicioOfrecido = { id: dto.servicioOfrecidoId } as any;
-        if (dto.aceptada !== undefined) solicitud.aceptada = dto.aceptada;
         return solicitud;
     }
 }

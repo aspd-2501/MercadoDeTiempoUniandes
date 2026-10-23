@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/solicitud-ayuda/solicitud-ayuda.dto.ts */
-import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class SolicitudAyudaDto {
     @IsString()
@@ -23,11 +23,12 @@ export class SolicitudAyudaDto {
     @IsNotEmpty()
     readonly perfilAutorId: string;
 
+    // id del PerfilOrganizacion al que se envía la solicitud
+    @IsUUID()
+    @IsNotEmpty()
+    readonly prestadorId: string;
+
     @IsUUID()
     @IsOptional()
     readonly servicioOfrecidoId?: string;
-
-    @IsBoolean()
-    @IsOptional()
-    readonly aceptada?: boolean;
 }

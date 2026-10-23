@@ -3,6 +3,7 @@
 import { Column, Entity, JoinColumn, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { MiembroOrganizacionEntity } from './miembro-organizacion.entity';
+import { SolicitudAyudaEntity } from '../solicitud-ayuda/solicitud-ayuda.entity';
 
 @Entity()
 export class PerfilOrganizacionEntity {
@@ -20,4 +21,8 @@ export class PerfilOrganizacionEntity {
     // --- Miembros que pertenecen a esta organización (N:M vía MiembroOrganizacion) ---
     @OneToMany(() => MiembroOrganizacionEntity, mo => mo.organizacion)
     miembros: MiembroOrganizacionEntity[];
+
+    // --- Solicitudes de ayuda enviadas a esta organización (como prestador) ---
+    @OneToMany(() => SolicitudAyudaEntity, solicitud => solicitud.prestador)
+    solicitudesRecibidas: SolicitudAyudaEntity[];
 }

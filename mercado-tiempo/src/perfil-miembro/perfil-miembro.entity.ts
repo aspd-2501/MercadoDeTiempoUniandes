@@ -80,12 +80,9 @@ export class PerfilMiembroEntity {
     @OneToMany(() => MensajeEntity, mensaje => mensaje.emisor)
     mensajes: MensajeEntity[];
 
-    // --- Solicitudes de ayuda: creadas y prestadas ---
+    // --- Solicitudes de ayuda creadas (como solicitante) ---
     @OneToMany(() => SolicitudAyudaEntity, solicitud => solicitud.perfilAutor)
-    solicitudesCreadas: SolicitudAyudaEntity[];
-
-    @OneToMany(() => SolicitudAyudaEntity, solicitud => solicitud.perfilPrestador)
-    solicitudesPrestadas: SolicitudAyudaEntity[];
+    solicitudes: SolicitudAyudaEntity[];
 
     // --- Posts de ayuda creados ---
     @OneToMany(() => PostAyudaEntity, post => post.perfilAutor)

@@ -10,6 +10,7 @@ import { SolicitudAyudaEntity } from './solicitud-ayuda.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { UsuarioEntity } from '../usuario/usuario.entity';
 import { ServicioOfrecidoEntity } from '../servicio-ofrecido/servicio-ofrecido.entity';
+import { PerfilOrganizacionEntity } from '../perfil-organizacion/perfil-organizacion.entity';
 
 describe('SolicitudAyudaService', () => {
     let service: SolicitudAyudaService;
@@ -17,9 +18,10 @@ describe('SolicitudAyudaService', () => {
     let perfilRepository: Repository<PerfilMiembroEntity>;
     let usuarioRepository: Repository<UsuarioEntity>;
     let servicioOfrecidoRepository: Repository<ServicioOfrecidoEntity>;
+    let perfilOrganizacionRepository: Repository<PerfilOrganizacionEntity>;
 
     let autor: PerfilMiembroEntity;
-    let prestador: PerfilMiembroEntity;
+    let prestador: PerfilOrganizacionEntity;
     let solicitud: SolicitudAyudaEntity;
 
     beforeEach(async () => {
@@ -33,6 +35,7 @@ describe('SolicitudAyudaService', () => {
         perfilRepository = module.get<Repository<PerfilMiembroEntity>>(getRepositoryToken(PerfilMiembroEntity));
         usuarioRepository = module.get<Repository<UsuarioEntity>>(getRepositoryToken(UsuarioEntity));
         servicioOfrecidoRepository = module.get<Repository<ServicioOfrecidoEntity>>(getRepositoryToken(ServicioOfrecidoEntity));
+        perfilOrganizacionRepository = module.get<Repository<PerfilOrganizacionEntity>>(getRepositoryToken(PerfilOrganizacionEntity));
 
         await seedDatabase();
     });
@@ -55,14 +58,20 @@ describe('SolicitudAyudaService', () => {
         });
     };
 
+    const createOrganizacion = async (): Promise<PerfilOrganizacionEntity> => {
+        const perfilDeLaOrganizacion = await createPerfil();
+        return await perfilOrganizacionRepository.save({ numMiembros: 1, perfil: perfilDeLaOrganizacion });
+    };
+
     const seedDatabase = async () => {
         await solicitudRepository.clear();
         await servicioOfrecidoRepository.clear();
+        await perfilOrganizacionRepository.clear();
         await perfilRepository.clear();
         await usuarioRepository.clear();
 
         autor = await createPerfil();
-        prestador = await createPerfil();
+        prestador = await createOrganizacion();
 
         solicitud = await solicitudRepository.save({
             titulo: faker.lorem.words(3),
@@ -71,6 +80,7 @@ describe('SolicitudAyudaService', () => {
             fechaCreacion: faker.date.recent(),
             horas: 2,
             perfilAutor: autor,
+            prestador,
         });
     };
 
@@ -87,12 +97,84 @@ describe('SolicitudAyudaService', () => {
             fechaCreacion: faker.date.recent(),
             horas: 3,
             perfilAutor: autor,
+            prestador,
         } as SolicitudAyudaEntity;
 
         const result = await service.create(nuevaSolicitud);
         expect(result).not.toBeNull();
         expect(result.aceptada).toBe(false);
-        expect(result.perfilPrestador).toBeFalsy();
+        expect(result.prestador.id).toBe(prestador.id);
+    });
+
+    it('create should throw an exception without a prestador', async () => {
+        const nuevaSolicitud: SolicitudAyudaEntity = {
+            id: "",
+            titulo: faker.lorem.words(3),
+            descripcion: faker.lorem.sentence(),
+            aceptada: false,
+            fechaCreacion: faker.date.recent(),
+            horas: 1,
+            perfilAutor: autor,
+        } as SolicitudAyudaEntity;
+
+        await expect(() => service.create(nuevaSolicitud))
+            .rejects.toHaveProperty("message", "A solicitud ayuda must have a prestador");
+    });
+
+    it('create should throw an exception for an invalid prestador', async () => {
+        const invalidOrganizacion: PerfilOrganizacionEntity = { id: "0" } as PerfilOrganizacionEntity;
+        const nuevaSolicitud: SolicitudAyudaEntity = {
+            id: "",
+            titulo: faker.lorem.words(3),
+            descripcion: faker.lorem.sentence(),
+            aceptada: false,
+            fechaCreacion: faker.date.recent(),
+            horas: 1,
+            perfilAutor: autor,
+            prestador: invalidOrganizacion,
+        } as SolicitudAyudaEntity;
+
+        await expect(() => service.create(nuevaSolicitud))
+            .rejects.toHaveProperty("message", "The perfil organizacion prestador with the given id was not found");
+    });
+
+    it('create should throw an exception when the autor is the perfil of the prestador', async () => {
+        const nuevaSolicitud: SolicitudAyudaEntity = {
+            id: "",
+            titulo: faker.lorem.words(3),
+            descripcion: faker.lorem.sentence(),
+            aceptada: false,
+            fechaCreacion: faker.date.recent(),
+            horas: 1,
+            perfilAutor: prestador.perfil,
+            prestador,
+        } as SolicitudAyudaEntity;
+
+        await expect(() => service.create(nuevaSolicitud))
+            .rejects.toHaveProperty("message", "The perfil autor cannot be the prestador of its own solicitud");
+    });
+
+    it('create should throw an exception when the servicio ofrecido does not belong to the prestador', async () => {
+        const servicioDeOtro = await servicioOfrecidoRepository.save({
+            titulo: faker.lorem.words(2),
+            descripcion: faker.lorem.sentence(),
+            visible: true,
+            perfil: autor,
+        });
+        const nuevaSolicitud: SolicitudAyudaEntity = {
+            id: "",
+            titulo: faker.lorem.words(3),
+            descripcion: faker.lorem.sentence(),
+            aceptada: false,
+            fechaCreacion: faker.date.recent(),
+            horas: 1,
+            perfilAutor: autor,
+            prestador,
+            servicioOfrecido: servicioDeOtro,
+        } as SolicitudAyudaEntity;
+
+        await expect(() => service.create(nuevaSolicitud))
+            .rejects.toHaveProperty("message", "The servicio ofrecido does not belong to the prestador");
     });
 
     it('create should throw an exception without a perfil autor', async () => {
@@ -119,6 +201,7 @@ describe('SolicitudAyudaService', () => {
             fechaCreacion: faker.date.recent(),
             horas: 1,
             perfilAutor: invalidPerfil,
+            prestador,
         } as SolicitudAyudaEntity;
 
         await expect(() => service.create(nuevaSolicitud))
@@ -135,6 +218,7 @@ describe('SolicitudAyudaService', () => {
             fechaCreacion: faker.date.recent(),
             horas: 1,
             perfilAutor: autor,
+            prestador,
             servicioOfrecido: invalidServicio,
         } as SolicitudAyudaEntity;
 
@@ -165,31 +249,20 @@ describe('SolicitudAyudaService', () => {
             .rejects.toHaveProperty("message", "The solicitud ayuda with the given id was not found");
     });
 
-    it('aceptarSolicitud should assign a perfil prestador and mark as aceptada', async () => {
-        const result = await service.aceptarSolicitud(solicitud.id, prestador.id);
+    it('aceptarSolicitud should mark a solicitud as aceptada', async () => {
+        const result = await service.aceptarSolicitud(solicitud.id);
         expect(result.aceptada).toBe(true);
-        expect(result.perfilPrestador.id).toBe(prestador.id);
+        expect(result.prestador.id).toBe(prestador.id);
     });
 
     it('aceptarSolicitud should throw an exception for an invalid solicitud ayuda', async () => {
-        await expect(() => service.aceptarSolicitud("0", prestador.id))
+        await expect(() => service.aceptarSolicitud("0"))
             .rejects.toHaveProperty("message", "The solicitud ayuda with the given id was not found");
     });
 
-    it('aceptarSolicitud should throw an exception for an invalid perfil prestador', async () => {
-        await expect(() => service.aceptarSolicitud(solicitud.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil prestador with the given id was not found");
-    });
-
-    it('aceptarSolicitud should throw an exception when perfil autor tries to be the prestador', async () => {
-        await expect(() => service.aceptarSolicitud(solicitud.id, autor.id))
-            .rejects.toHaveProperty("message", "The perfil autor cannot be the perfil prestador of its own solicitud");
-    });
-
     it('aceptarSolicitud should throw an exception when already aceptada', async () => {
-        await service.aceptarSolicitud(solicitud.id, prestador.id);
-        const otroPrestador = await createPerfil();
-        await expect(() => service.aceptarSolicitud(solicitud.id, otroPrestador.id))
+        await service.aceptarSolicitud(solicitud.id);
+        await expect(() => service.aceptarSolicitud(solicitud.id))
             .rejects.toHaveProperty("message", "The solicitud ayuda is already aceptada");
     });
 

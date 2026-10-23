@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SolicitudAyudaService } from './solicitud-ayuda.service';
 import { SolicitudAyudaEntity } from './solicitud-ayuda.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
+import { PerfilOrganizacionEntity } from '../perfil-organizacion/perfil-organizacion.entity';
 import { ServicioOfrecidoEntity } from '../servicio-ofrecido/servicio-ofrecido.entity';
 import { SolicitudAyudaController } from './solicitud-ayuda.controller';
 
@@ -12,6 +13,7 @@ import { SolicitudAyudaController } from './solicitud-ayuda.controller';
     imports: [TypeOrmModule.forFeature([
         SolicitudAyudaEntity,
         PerfilMiembroEntity,
+        PerfilOrganizacionEntity,
         ServicioOfrecidoEntity,
     ])],
     providers: [SolicitudAyudaService],

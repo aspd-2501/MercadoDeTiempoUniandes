@@ -13,6 +13,7 @@ import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
 import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
 import { EstadoAcuerdo } from '../acuerdo/estado-acuerdo.enum';
 import { SolicitudAyudaEntity } from '../solicitud-ayuda/solicitud-ayuda.entity';
+import { PerfilOrganizacionEntity } from '../perfil-organizacion/perfil-organizacion.entity';
 
 describe('HorarioDisponibleService', () => {
     let service: HorarioDisponibleService;
@@ -22,6 +23,7 @@ describe('HorarioDisponibleService', () => {
     let postAyudaRepository: Repository<PostAyudaEntity>;
     let acuerdoRepository: Repository<AcuerdoEntity>;
     let solicitudRepository: Repository<SolicitudAyudaEntity>;
+    let perfilOrganizacionRepository: Repository<PerfilOrganizacionEntity>;
 
     let perfil: PerfilMiembroEntity;
     let postAyuda: PostAyudaEntity;
@@ -41,6 +43,7 @@ describe('HorarioDisponibleService', () => {
         postAyudaRepository = module.get<Repository<PostAyudaEntity>>(getRepositoryToken(PostAyudaEntity));
         acuerdoRepository = module.get<Repository<AcuerdoEntity>>(getRepositoryToken(AcuerdoEntity));
         solicitudRepository = module.get<Repository<SolicitudAyudaEntity>>(getRepositoryToken(SolicitudAyudaEntity));
+        perfilOrganizacionRepository = module.get<Repository<PerfilOrganizacionEntity>>(getRepositoryToken(PerfilOrganizacionEntity));
 
         await seedDatabase();
     });
@@ -68,6 +71,7 @@ describe('HorarioDisponibleService', () => {
         await postAyudaRepository.clear();
         await acuerdoRepository.clear();
         await solicitudRepository.clear();
+        await perfilOrganizacionRepository.clear();
         await perfilRepository.clear();
         await usuarioRepository.clear();
 
@@ -94,6 +98,7 @@ describe('HorarioDisponibleService', () => {
         });
 
         const autorSolicitud = await createPerfil();
+        const prestador = await perfilOrganizacionRepository.save({ numMiembros: 1, perfil: await createPerfil() });
         solicitud = await solicitudRepository.save({
             titulo: faker.lorem.words(3),
             descripcion: faker.lorem.sentence(),
@@ -101,6 +106,7 @@ describe('HorarioDisponibleService', () => {
             fechaCreacion: faker.date.recent(),
             horas: 1,
             perfilAutor: autorSolicitud,
+            prestador,
         });
     };
 
