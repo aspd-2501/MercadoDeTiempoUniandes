@@ -31,7 +31,7 @@ const NAV_ITEMS_LEFT: NavItem[] = [
 ];
 
 const NAV_ITEMS_RIGHT: NavItem[] = [
-  { id: 'chat', label: 'Chats', icon: MessageCircle },
+  //{ id: 'chat', label: 'Chats', icon: MessageCircle },
   { id: 'calendar', label: 'Calendario', icon: CalendarDays },
   { id: 'profile', label: 'Perfil', icon: UserRound }
 

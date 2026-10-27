@@ -64,9 +64,9 @@ function App() {
         navigate('/perfil');
         break;
 
-      case 'chat':
+      /*case 'chat':
         navigate('/chats');
-        break;
+        break;*/
 
       case 'explore':
         navigate('/explorar');
@@ -110,7 +110,7 @@ function App() {
 
   const activeTab =
     location.pathname.startsWith('/perfil') ? 'profile' :
-    location.pathname.startsWith('/chats') ? 'chat' :
+    /*location.pathname.startsWith('/chats') ? 'chat' :*/
     location.pathname === '/explorar' ? 'explore' :
     location.pathname.startsWith('/calendario') ? 'calendar' :
     'home';

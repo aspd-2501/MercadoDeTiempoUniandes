@@ -30,7 +30,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: 'home', label: 'Inicio', icon: House },
   { id: 'explore', label: 'Explorar', icon: Search },
-  { id: 'chat', label: 'Chats', icon: MessageCircle },
+  //{ id: 'chat', label: 'Chats', icon: MessageCircle },
   { id: 'activity', label: 'Actividad', icon: Activity },
   { id: 'profile', label: 'Perfil', icon: UserRound },
   { id: 'calendar', label: 'Calendario', icon: CalendarDays },
