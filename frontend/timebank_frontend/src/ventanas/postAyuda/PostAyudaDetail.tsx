@@ -15,27 +15,18 @@ import {
 import type { LucideIcon, LucideProps } from 'lucide-react';
 import { MIEMBROS_DEMO } from '../../mocks/miembros.mocks';
 import { PUBLICACIONES_DEMO } from '../../mocks/postsAyuda.mocks';
+import { CalendarioDisponibilidadPostAyuda } from '../../componentes/calendario/CalendarioDisponibilidad';
+import type { DatosPostAyuda } from '../../tipos/postAyuda';
 
 /**
- * Primera migración del mockup de Figma.
+ * Vista actual conectada a /posts/:postId y a los mocks compartidos.
+ * Añade el horario preferido y calendario de disponibilidad de la publicación.
+ * No calcula coincidencias ni crea acuerdos desde el calendario.
  */
 export type TipoPostAyuda = 'help-offer' | 'help-request';
 
-export interface PostAyuda {
-  id: string;
-  userId: string;
-  type: TipoPostAyuda;
-  title: string;
-  description: string;
-  category: string;
-  createdAt: string;
-  image?: string;
-  preferredDate?: string;
-  preferredTime?: string;
-  estimatedHours?: number;
-  maxParticipants?: number;
-  confirmedParticipants?: string[];
-}
+/** Mismo modelo compartido que utiliza la tarjeta PostAyuda y PUBLICACIONES_DEMO. */
+export type PostAyuda = DatosPostAyuda;
 
 export interface AutorPostAyuda {
   id: string;
@@ -52,6 +43,21 @@ export interface PostAyudaDetailProps {
   onVerAcuerdo?: (acuerdoId: string) => void;
   onIrChat?: (chatId: string) => void;
   onVolverInicio?: () => void;
+}
+
+// ─── Formato local para la presentación del horario preferido ───
+// Estas funciones solo transforman textos; no comparan ni asignan disponibilidades.
+function mostrarFechaISO(fecha: string): string {
+  const fechaLocal = new Date(`${fecha}T12:00:00`);
+  if (Number.isNaN(fechaLocal.getTime())) return fecha;
+  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' }).format(fechaLocal);
+}
+
+function mostrarHora24(hora: string): string {
+  const coincidencia = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(hora);
+  if (!coincidencia) return hora;
+  const h = Number(coincidencia[1]);
+  return `${h % 12 || 12}:${coincidencia[2]} ${h < 12 ? 'a. m.' : 'p. m.'}`;
 }
 
 // Iconos y componentes auxiliares.
@@ -196,6 +202,20 @@ export default function PostAyudaDetail({
   const slotsLeft = maxSlots - confirmedCount;
   const isFull = slotsLeft <= 0;
   const currentUserJoined = joined || confirmedParticipants.includes(currentUserId);
+
+  // ─── Datos de disponibilidad del post (proporcionados por los mocks o la API) ───
+  // El calendario solo muestra las franjas registradas. No inventamos intervalos
+  // a partir de preferredDate/preferredTime de los posts antiguos.
+  const franjasPropuestas = post.availability ?? [];
+  const franjaPreferida = franjasPropuestas.find(
+    (franja) => franja.id === post.preferredAvailabilityId,
+  );
+  const fechaPreferida = franjaPreferida
+    ? mostrarFechaISO(franjaPreferida.date)
+    : post.preferredDate;
+  const horaPreferida = franjaPreferida
+    ? `${mostrarHora24(franjaPreferida.startTime)} – ${mostrarHora24(franjaPreferida.endTime)}`
+    : post.preferredTime;
 
   function handleJoin() {
     if (currentUserJoined || isFull) return;
@@ -366,16 +386,21 @@ export default function PostAyudaDetail({
             Detalles
           </h3>
 
-          {/* 04.1 FECHA Y HORA PREFERIDAS (cuando están definidas) */}
-          {(post.preferredDate || post.preferredTime) && (
-            <div data-section="fecha-hora" className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[#E8F5F6] flex items-center justify-center flex-shrink-0">
-                <Icon name="calendar" size={17} className="text-[#3C9DA0]" strokeWidth={2} />
+          {/* 04.1 HORARIO PREFERIDO (propuesta, no horario confirmado) */}
+          {(fechaPreferida || horaPreferida) && (
+            <div data-section="horario-preferido" className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[#FFFDE0] flex items-center justify-center flex-shrink-0">
+                <Icon name="calendar" size={17} className="text-[#5A5A00]" strokeWidth={2} />
               </div>
-              <div>
-                <p className="text-[10px] text-[#9E9E9E] uppercase tracking-wide font-medium">Fecha y hora</p>
-                <p className="text-sm font-semibold text-[#0D0D0D]">
-                  {post.preferredDate}{post.preferredTime ? ` · ${post.preferredTime}` : ''}
+              <div className="min-w-0">
+                <p className="text-[10px] text-[#9E9E9E] uppercase tracking-wide font-medium">
+                  Horario preferido
+                </p>
+                <p className="text-sm font-semibold text-[#0D0D0D] capitalize">
+                  {fechaPreferida}{horaPreferida ? ` · ${horaPreferida}` : ''}
+                </p>
+                <p className="mt-1 text-xs text-[#737373]">
+                  Es una preferencia del autor, no un horario confirmado.
                 </p>
               </div>
             </div>
@@ -425,6 +450,25 @@ export default function PostAyudaDetail({
             </div>
           </div>
         </section>
+
+        {/* 04.4 CALENDARIO DE DISPONIBILIDAD PROPUESTA POR EL AUTOR */}
+        {typeof post.estimatedHours === 'number' && post.estimatedHours > 0 ? (
+          <CalendarioDisponibilidadPostAyuda
+            intervalos={franjasPropuestas}
+            idPreferido={post.preferredAvailabilityId}
+            duracion={post.estimatedHours}
+          />
+        ) : (
+          <section
+            data-section="disponibilidad-sin-duracion"
+            className="rounded-2xl border border-[#E8E8E8] bg-white p-4"
+          >
+            <h3 className="text-sm font-bold text-[#0D0D0D]">Disponibilidad propuesta</h3>
+            <p className="mt-1 text-xs text-[#737373]">
+              Aún no se ha definido una duración para esta publicación.
+            </p>
+          </section>
+        )}
 
         {/* 05. EXPLICACIÓN DE LA PARTICIPACIÓN: ¿dar o recibir ayuda? */}
         <aside

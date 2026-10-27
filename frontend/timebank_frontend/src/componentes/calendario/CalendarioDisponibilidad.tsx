@@ -112,9 +112,11 @@ function etiquetaDuracion(duracion: number): string {
 function VistaCalendarioDisponibilidad({
   fechaInicial,
   eventos,
+  alturaLimitada = false,
 }: {
   fechaInicial: string;
   eventos: EventoCalendario[];
+  alturaLimitada?: boolean;
 }) {
   const [fechaSeleccionada, setFechaSeleccionada] = useState(fechaInicial);
   const fechas = obtenerSemana(fechaSeleccionada);
@@ -145,23 +147,41 @@ function VistaCalendarioDisponibilidad({
           <ChevronRight size={18} aria-hidden="true" />
         </button>
       </div>
-
-      {/* 02.2 VISTA MÓVIL: selector y calendario diario */}
+      
+      {/* 02.2 VISTA MÓVIL */}
       <div className="space-y-3 lg:hidden">
         <SelectorDia
           fechas={fechas}
           fechaSeleccionada={fechaSeleccionada}
           onSeleccionar={setFechaSeleccionada}
         />
+
         <p className="text-xs font-semibold capitalize text-[#0D0D0D]">
           {mostrarFecha(fechaSeleccionada)}
         </p>
-        <CalendarioDiario fecha={fechaSeleccionada} eventos={eventos} />
+
+        <div className={alturaLimitada ? 'h-[50dvh] min-h-0' : ''}>
+          <CalendarioDiario
+            fecha={fechaSeleccionada}
+            eventos={eventos}
+            scrollInterno={alturaLimitada}
+          />
+        </div>
       </div>
 
-      {/* 02.3 VISTA DE ESCRITORIO: calendario semanal */}
-      <div className="hidden lg:block">
-        <CalendarioSemanal fechas={fechas} eventos={eventos} />
+      {/* 02.3 VISTA DE ESCRITORIO */}
+      <div
+        className={
+          alturaLimitada
+            ? 'hidden h-[50dvh] min-h-0 lg:block'
+            : 'hidden lg:block'
+        }
+      >
+        <CalendarioSemanal
+          fechas={fechas}
+          eventos={eventos}
+          scrollInterno={alturaLimitada}
+        />
       </div>
     </div>
   );
@@ -208,6 +228,7 @@ export function CalendarioDisponibilidadPostAyuda({
             key={fechaInicial}
             fechaInicial={fechaInicial}
             eventos={eventos}
+            alturaLimitada
           />
         ) : (
           <p className="rounded-xl bg-[#F6F6F6] p-4 text-sm text-[#737373]" role="status">

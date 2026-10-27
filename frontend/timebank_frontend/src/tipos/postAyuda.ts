@@ -1,3 +1,5 @@
+import type { IntervaloDisponibilidad } from "./disponibilidad";
+
 export type TipoPublicacionAyuda = 'help-request' | 'help-offer';
 
 export interface DatosPostAyuda {
@@ -14,4 +16,6 @@ export interface DatosPostAyuda {
   estimatedHours?: number;
   maxParticipants?: number;
   confirmedParticipants?: string[];
+  availability?: IntervaloDisponibilidad[];
+  preferredAvailabilityId?: string;
 }

@@ -15,6 +15,21 @@ export const PUBLICACIONES_DEMO: DatosPostAyuda[] = [
     estimatedHours: 2,
     maxParticipants: 3,
     confirmedParticipants: ['miembro-demo-2'],
+    availability: [
+      {
+        id: 'franja-1',
+        date: '2026-10-27',
+        startTime: '09:00',
+        endTime: '12:00',
+      },
+      {
+        id: 'franja-2',
+        date: '2026-10-29',
+        startTime: '14:00',
+        endTime: '17:00',
+      },
+    ],
+    preferredAvailabilityId: 'franja-1',
   },
   {
     id: 'post-ayuda-2',
@@ -30,6 +45,21 @@ export const PUBLICACIONES_DEMO: DatosPostAyuda[] = [
     estimatedHours: 1,
     maxParticipants: 2,
     confirmedParticipants: [],
+    availability: [
+      {
+        id: 'franja-3',
+        date: '2026-10-28',
+        startTime: '10:00',
+        endTime: '14:00',
+      },
+      {
+        id: 'franja-4',
+        date: '2026-10-31',
+        startTime: '15:00',
+        endTime: '19:00',
+      },
+    ],
+    preferredAvailabilityId: 'franja-3',
   },
   {
     id: 'post-ayuda-3',
@@ -43,5 +73,20 @@ export const PUBLICACIONES_DEMO: DatosPostAyuda[] = [
     estimatedHours: 1.5,
     maxParticipants: 1,
     confirmedParticipants: [],
+    availability: [
+      {
+        id: 'franja-5',
+        date: '2026-10-30',
+        startTime: '07:00',
+        endTime: '11:00',
+      },
+      {
+        id: 'franja-6',
+        date: '2026-11-01',
+        startTime: '14:00',
+        endTime: '18:00',
+      },
+    ],
+    preferredAvailabilityId: 'franja-6',
   },
 ];

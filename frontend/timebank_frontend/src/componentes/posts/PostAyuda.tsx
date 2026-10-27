@@ -196,6 +196,11 @@ export default function PostAyuda({
           aria-label="Detalles de la publicación"
           className="mb-3 space-y-2 rounded-xl bg-[#F6F6F6] p-3"
         >
+          {(post.preferredDate || post.preferredTime) && (
+            <p className="text-[10px] font-medium uppercase tracking-wide text-[#737373]">
+              Horario preferido
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-4">
             {/* 01.5.1 FECHA Y HORA */}
             {(post.preferredDate || post.preferredTime) && (
