@@ -4,12 +4,13 @@ import {
   Plus,
   Search,
   UserRound,
+  CalendarDays,
   type LucideIcon,
 } from 'lucide-react';
 
 // 00. TIPOS Y CONFIGURACIÓN DE LA BARRA DE NAVEGACIÓN
 // Los callbacks son opcionales: podemos mostrar y probar la interfaz sin implementar rutas.
-export type NavBarMobileTab = 'home' | 'explore' | 'chat' | 'profile';
+export type NavBarMobileTab = 'home' | 'explore' | 'chat' | 'profile' | 'calendar';
 
 interface NavBarMobileProps {
   activeTab?: NavBarMobileTab | null;
@@ -31,7 +32,9 @@ const NAV_ITEMS_LEFT: NavItem[] = [
 
 const NAV_ITEMS_RIGHT: NavItem[] = [
   { id: 'chat', label: 'Chats', icon: MessageCircle },
-  { id: 'profile', label: 'Perfil', icon: UserRound },
+  { id: 'calendar', label: 'Calendario', icon: CalendarDays },
+  { id: 'profile', label: 'Perfil', icon: UserRound }
+
 ];
 
 const BUTTON_FEEDBACK =

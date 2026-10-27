@@ -230,12 +230,17 @@ function ColumnaDia({ eventos }: { eventos: EventoCalendario[] }) {
 export function CalendarioDiario({
   fecha,
   eventos,
+  scrollInterno = false,
 }: {
   fecha: string;
   eventos: EventoCalendario[];
+  scrollInterno?: boolean;
 }) {
   return (
-    <section aria-label={`Calendario del ${fecha}`} className="overflow-hidden rounded-2xl border border-[#E8E8E8] bg-white">
+    <section
+      aria-label={`Calendario del ${fecha}`}
+      className={`rounded-2xl border border-[#E8E8E8] bg-white ${scrollInterno ? 'h-full min-h-0 overflow-y-auto overflow-x-hidden' : 'overflow-hidden'}`}
+    >
       <div className="flex">
         <EjeHoras />
         <div className="min-w-0 flex-1">
@@ -250,17 +255,19 @@ export function CalendarioDiario({
 export function CalendarioSemanal({
   fechas,
   eventos,
+  scrollInterno = false,
 }: {
   fechas: string[];
   eventos: EventoCalendario[];
+  scrollInterno?: boolean;
 }) {
   return (
     <section
       aria-label="Calendario semanal de lunes a domingo"
-      className="overflow-x-auto rounded-2xl border border-[#E8E8E8] bg-white"
+      className={`min-w-0 rounded-2xl border border-[#E8E8E8] bg-white ${scrollInterno ? 'h-full min-h-0 overflow-auto' : 'overflow-x-auto'}`}
     >
       <div className="min-w-[840px]">
-        <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-[#E8E8E8]">
+        <div className={`grid grid-cols-[56px_repeat(7,minmax(0,1fr))] border-b border-[#E8E8E8] ${scrollInterno ? 'sticky top-0 z-30 bg-white' : ''}`}>
           <div aria-hidden="true" />
           {fechas.map((fecha) => {
             const dia = interpretarFechaLocal(fecha);

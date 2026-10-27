@@ -6,12 +6,13 @@ import {
   Search,
   Shield,
   UserRound,
+  CalendarDays,
   type LucideIcon,
 } from 'lucide-react';
 
 // 00. TIPOS Y CONFIGURACIÓN DE LA BARRA DE NAVEGACIÓN
 // Por ahora, las funciones son opcionales: el navbar se puede mostrar sin navegación.
-export type NavBarDesktopTab = 'home' | 'explore' | 'chat' | 'activity' | 'profile';
+export type NavBarDesktopTab = 'home' | 'explore' | 'chat' | 'activity' | 'profile' | 'calendar';
 
 interface NavBarDesktopProps {
   activeTab?: NavBarDesktopTab | null;
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'chat', label: 'Chats', icon: MessageCircle },
   { id: 'activity', label: 'Actividad', icon: Activity },
   { id: 'profile', label: 'Perfil', icon: UserRound },
+  { id: 'calendar', label: 'Calendario', icon: CalendarDays },
 ];
 
 const BUTTON_FEEDBACK =

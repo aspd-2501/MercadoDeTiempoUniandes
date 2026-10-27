@@ -37,7 +37,7 @@ export const SERVICIOS_DEMO: ServicioCatalogo[] = [
     category: 'Diseño',
     description:
       'Aprende las herramientas básicas de edición de imágenes y retoque fotográfico.',
-    estimatedHours: 1.5,
+    estimatedHours: 2,
     isVisible: false,
   },
 
@@ -59,7 +59,7 @@ export const SERVICIOS_DEMO: ServicioCatalogo[] = [
     category: 'Tecnología / Ofimática',
     description:
       'Te ayudo a organizar hojas de cálculo y utilizar fórmulas y tablas básicas.',
-    estimatedHours: 1.5,
+    estimatedHours: 2,
     isVisible: true,
   },
 
@@ -81,7 +81,7 @@ export const SERVICIOS_DEMO: ServicioCatalogo[] = [
     category: 'Académico / Escritura',
     description:
       'Revisamos la claridad, estructura y ortografía de tus escritos universitarios.',
-    estimatedHours: 1.5,
+    estimatedHours: 2,
     isVisible: true,
   },
 

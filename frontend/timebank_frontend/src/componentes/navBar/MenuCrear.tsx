@@ -11,7 +11,7 @@ export type AccionMenuCrear =
 
 interface MenuCrearProps {
   onClose: () => void;
-  onSelect?: (accion: AccionMenuCrear) => void;
+  onSelect: (accion: AccionMenuCrear) => void;
 }
 
 interface OpcionCrear {

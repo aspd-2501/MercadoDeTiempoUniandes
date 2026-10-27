@@ -4,7 +4,7 @@ import { Route, Routes, useNavigate, useLocation } from 'react-router';
 //Componentes Globales
 import NavBarDesktop from './componentes/navBar/NavBarDesktop'
 import NavBarMobile from './componentes/navBar/NavBarMobile'
-import MenuCrear from './componentes/navBar/MenuCrear'
+import MenuCrear, { type AccionMenuCrear } from './componentes/navBar/MenuCrear';
 
 //Ventanas
 import HomeFeed from './ventanas/HomeFeed';
@@ -20,9 +20,10 @@ import ServiciosMiembroDetail from './ventanas/miembro/ServiciosMiembro'
 import ChatList from './ventanas/chats/ChatList'
 import Chat from './ventanas/chats/Chat';
 import Explorar from './ventanas/Explorar'
+import Calendario from './ventanas/Calendario';
+import CrearPostAyuda from './ventanas/postAyuda/CrearPostAyuda';
 
 import './App.css'
-
 
 function App() {
   // 01. ESTADO DEL MENÚ CREAR
@@ -49,10 +50,37 @@ function App() {
         navigate('/explorar');
         break;
 
+      case 'calendar':
+        navigate('/calendario');
+        break;
+
       default:
         // Las demás rutas se implementarán después.
         break;
     }    
+  }
+
+
+
+  // 02.1 MANEJAR ACCIONES DEL MENÚ CREAR
+  function manejarAccionCrear(accion: AccionMenuCrear) {
+    switch (accion) {
+      case 'pedir-ayuda':
+        navigate('/crear-post-ayuda/pide');
+        break;
+
+      case 'ofrecer-ayuda':
+        navigate('/crear-post-ayuda/ofrece');
+        break;
+
+      case 'gestionar-servicios':
+        // Pendiente: conectar con la ventana de servicios.
+        break;
+
+      case 'compartir-experiencia':
+        // Pendiente: implementar esta ventana.
+        break;
+    }
   }
 
   // 03. IDENTIFICAR LA RUTA ACTUAL
@@ -62,6 +90,7 @@ function App() {
     location.pathname.startsWith('/perfil') ? 'profile' :
     location.pathname.startsWith('/chats') ? 'chat' :
     location.pathname === '/explorar' ? 'explore' :
+    location.pathname.startsWith('/calendario') ? 'calendar' :
     'home';
 
     return (
@@ -97,6 +126,12 @@ function App() {
           {/*Posts*/}
           <Route path="/posts/:postId" element={<PostAyudaDetail onBack={() => navigate("/")} onIrChat={(chatId) => navigate(`/chats/${chatId}`)} onVerPerfil={(miembroId) => navigate(`/${miembroId}`)} onVolverInicio={() => navigate('/')} />} />
 
+          {/* CREAR PUBLICACIONES DE AYUDA */}
+
+          <Route path="/crear-post-ayuda/pide" element={<CrearPostAyuda tipo="pide" onVolver={() => navigate(-1)} onVolverInicio={() => navigate('/')}/>}/>
+
+          <Route path="/crear-post-ayuda/ofrece" element={ <CrearPostAyuda tipo="ofrece" onVolver={() => navigate(-1)} onVolverInicio={() => navigate('/')} />} />
+
           {/*Transacciones de Horas*/}
           <Route path="/donar-horas" element={<DonarHoras />} />
           <Route path="/movimientos" element={<HistorialMiembro onDonarHoras={() => navigate('/donar-horas')} />} />
@@ -104,6 +139,10 @@ function App() {
           {/*Chats*/}
           <Route path="/chats" element={<ChatList  onAbrirChat={(chatId) => navigate(`/chats/${chatId}`)} />} />
           <Route path="/chats/:chatId" element={<Chat />} />
+
+          {/*Calendario*/}
+          <Route path="/calendario" element={<Calendario />} />
+
           
         </Routes>
       </main>
@@ -112,6 +151,7 @@ function App() {
       {menuCrearAbierto && (
         <MenuCrear
           onClose={() => setMenuCrearAbierto(false)}
+          onSelect={manejarAccionCrear}
         />
       )}
 
