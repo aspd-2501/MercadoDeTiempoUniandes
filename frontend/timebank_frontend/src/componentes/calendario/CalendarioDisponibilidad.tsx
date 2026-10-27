@@ -41,8 +41,8 @@ export interface EstadoDisponibilidadParticipantesProps {
 export interface DisponibilidadCompartidaProps
   extends EstadoDisponibilidadParticipantesProps {
   duracion: number;
-  /** Respuesta de planificación del backend o un mock con la misma forma. */
   resultado: ResultadoDisponibilidad;
+  alturaLimitada?: boolean;
 }
 
 // ──────────────────── 01. FORMATO PARA LA INTERFAZ ────────────────────
@@ -315,6 +315,7 @@ export function DisponibilidadCompartida({
   nombres,
   duracion,
   resultado,
+  alturaLimitada = false,
 }: DisponibilidadCompartidaProps) {
   // 05.1 CONVERSIÓN DE DATOS A EVENTOS VISUALES
   const enviados = participantes.filter((participante) => participante.submitted);
@@ -387,6 +388,7 @@ export function DisponibilidadCompartida({
         key={fechaInicial}
         fechaInicial={fechaInicial}
         eventos={eventos}
+        alturaLimitada={alturaLimitada}
       />
 
       <div className="flex flex-wrap gap-3 text-[11px] text-[#737373]">

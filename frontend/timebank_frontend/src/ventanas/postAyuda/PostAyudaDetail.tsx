@@ -37,9 +37,18 @@ export interface AutorPostAyuda {
   avatarColor?: string;
 }
 
+export interface ResultadoParticipacion {
+  acuerdoId: string;
+  /** Solo para indicar explícitamente cuando App usa un mock. */
+  esDemostracion?: boolean;
+  chatId?: string;
+}
+
 export interface PostAyudaDetailProps {
   onBack?: () => void;
   onVerPerfil?: (miembroId: string) => void;
+  /** Una API futura registrará la participación y devolverá el ID real. */
+  onParticipar?: (postId: string) => Promise<ResultadoParticipacion>;
   onVerAcuerdo?: (acuerdoId: string) => void;
   onIrChat?: (chatId: string) => void;
   onVolverInicio?: () => void;
@@ -122,6 +131,7 @@ function Chip({ label }: { label: string; size?: 'sm'; color?: 'teal' }) {
 export default function PostAyudaDetail({
   onBack,
   onVerPerfil,
+  onParticipar,
   onVerAcuerdo,
   onIrChat,
   onVolverInicio,
@@ -155,14 +165,18 @@ export default function PostAyudaDetail({
   };
 
   // ─── Estado local de demostración para la participación ───
-  const [joined, setJoined] = useState(false);
+  const [resultadoParticipacion, setResultadoParticipacion] = useState<ResultadoParticipacion | null>(null);
+  const [enviandoParticipacion, setEnviandoParticipacion] = useState(false);
+  const [errorParticipacion, setErrorParticipacion] = useState('');
   const [confirmedParticipants, setConfirmedParticipants] = useState<string[]>(
     post?.confirmedParticipants ?? [],
   );
   
   // 05. REINICIAR LA PARTICIPACIÓN AL CAMBIAR DE POST
   useEffect(() => {
-    setJoined(false);
+    setResultadoParticipacion(null);
+    setEnviandoParticipacion(false);
+    setErrorParticipacion('');
     setConfirmedParticipants(post?.confirmedParticipants ?? []);
   }, [postId, post]);
 
@@ -201,7 +215,7 @@ export default function PostAyudaDetail({
   const maxSlots = post.maxParticipants ?? 1;
   const slotsLeft = maxSlots - confirmedCount;
   const isFull = slotsLeft <= 0;
-  const currentUserJoined = joined || confirmedParticipants.includes(currentUserId);
+  const currentUserJoined = Boolean(resultadoParticipacion) || confirmedParticipants.includes(currentUserId);
 
   // ─── Datos de disponibilidad del post (proporcionados por los mocks o la API) ───
   // El calendario solo muestra las franjas registradas. No inventamos intervalos
@@ -217,14 +231,32 @@ export default function PostAyudaDetail({
     ? `${mostrarHora24(franjaPreferida.startTime)} – ${mostrarHora24(franjaPreferida.endTime)}`
     : post.preferredTime;
 
-  function handleJoin() {
-    if (currentUserJoined || isFull) return;
-    setConfirmedParticipants((prev) => [...prev, currentUserId]);
-    setJoined(true);
+  // 05. SOLICITAR PARTICIPACIÓN: App decide si usa API o un mock.
+  // La vista no crea ni asigna acuerdos, únicamente consume el ID retornado.
+  async function handleJoin() {
+    if (!post) return;
+    if (currentUserJoined || isFull || enviandoParticipacion || !onParticipar) return;
+    setEnviandoParticipacion(true);
+    setErrorParticipacion('');
+    try {
+      const resultado = await onParticipar(post.id);
+      if (!resultado.acuerdoId) {
+        throw new Error('No se recibió el identificador del acuerdo.');
+      }
+      setResultadoParticipacion(resultado);
+      // Actualización temporal de la interfaz; solo la API persistirá participantes.
+      setConfirmedParticipants((anteriores) =>
+        anteriores.includes(currentUserId) ? anteriores : [...anteriores, currentUserId],
+      );
+    } catch {
+      setErrorParticipacion('No fue posible continuar con la participación. Inténtalo nuevamente.');
+    } finally {
+      setEnviandoParticipacion(false);
+    }
   }
 
-  // ─── Vista alternativa: confirmación después de unirse (solo demo) ───
-  if (joined) {
+  // 06. CONFIRMACIÓN: solo aparece cuando se recibió un acuerdo válido.
+  if (resultadoParticipacion) {
     return (
       <main data-section="pantalla-confirmacion" className="min-h-screen bg-[#F6F6F6] flex flex-col">
         <section
@@ -246,30 +278,36 @@ export default function PostAyudaDetail({
           </h2>
           <p className="text-[#737373] mb-6 leading-relaxed">
             {isOffer
-              ? 'Tu lugar está reservado. Se creó un acuerdo de servicio con el organizador.'
-              : 'Confirmaste tu ayuda. Se creó un acuerdo de servicio con quien lo solicitó.'}
+              ? `Puedes consultar el acuerdo de servicio con ${author.firstName}. Las condiciones todavía deben definirse.`
+              : `Puedes consultar el acuerdo de servicio para ayudar a ${author.firstName}. Las condiciones todavía deben definirse.`}
           </p>
-          <p className="text-xs text-[#737373] mb-5 max-w-sm">
-            Modo demostración: la participación y el acuerdo no se han guardado en el servidor.
-          </p>
+          {resultadoParticipacion.esDemostracion && (
+            <p className="text-xs text-[#737373] mb-5 max-w-sm">
+              Modo demostración: esta acción solo abre un acuerdo de prueba. No se ha guardado una participación nueva en el servidor.
+            </p>
+          )}
 
           {/* 07.3 BOTONES DE LA CONFIRMACIÓN */}
           <div data-section="acciones-confirmacion" className="w-full max-w-xs space-y-3">
             <button
               type="button"
-              onClick={() => onVerAcuerdo?.('agreement-demo')}
-              className="w-full py-3 rounded-xl bg-[#3C9DA0] text-white font-semibold text-sm btn-press"
+              onClick={() => onVerAcuerdo?.(resultadoParticipacion.acuerdoId)}
+              disabled={!onVerAcuerdo}
+              className="w-full py-3 rounded-xl bg-[#3C9DA0] text-white font-semibold text-sm btn-press disabled:cursor-not-allowed disabled:opacity-50"
               style={{ fontFamily: 'Outfit, sans-serif' }}
             >
               Ver acuerdo de servicio
             </button>
-            <button
-              type="button"
-              onClick={() => onIrChat?.('chat-demo')}
-              className="w-full py-3 rounded-xl border border-[#E8E8E8] text-[#0D0D0D] font-medium text-sm btn-press"
-            >
-              Ir al chat
-            </button>
+            {resultadoParticipacion.chatId && (
+              <button
+                type="button"
+                onClick={() => onIrChat?.(resultadoParticipacion.chatId!)}
+                disabled={!onIrChat}
+                className="w-full py-3 rounded-xl border border-[#E8E8E8] text-[#0D0D0D] font-medium text-sm btn-press disabled:opacity-50"
+              >
+                Ir al chat
+              </button>
+            )}
             <button type="button" onClick={() => onVolverInicio?.()} className="text-sm text-[#737373]">
               Volver al inicio
             </button>
@@ -515,15 +553,17 @@ export default function PostAyudaDetail({
           <button
             type="button"
             onClick={handleJoin}
-            disabled={isFull || currentUserJoined}
+            disabled={isFull || currentUserJoined || enviandoParticipacion || !onParticipar}
             className={`w-full py-4 rounded-2xl font-bold text-base btn-press transition-all ${
-              isFull || currentUserJoined
+              isFull || currentUserJoined || enviandoParticipacion || !onParticipar
                 ? 'bg-[#F0F0F0] text-[#9E9E9E]'
                 : 'bg-[#3C9DA0] text-white hover:bg-[#2D8B8E] shadow-lg shadow-[#3C9DA0]/20'
             }`}
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
-            {currentUserJoined
+            {enviandoParticipacion
+              ? 'Continuando…'
+              : currentUserJoined
               ? 'Ya estás participando'
               : isFull
                 ? 'Cupos completos'
@@ -531,6 +571,12 @@ export default function PostAyudaDetail({
                   ? 'Quiero recibir ayuda'
                   : 'Quiero ayudar'}
           </button>
+          {errorParticipacion && (
+            <p className="mt-2 text-sm text-[#D32F2F]" role="alert">{errorParticipacion}</p>
+          )}
+          {!onParticipar && (
+            <p className="mt-2 text-xs text-[#737373]">La participación se habilitará al conectar la API.</p>
+          )}
         </section>
       </main>
     </div>

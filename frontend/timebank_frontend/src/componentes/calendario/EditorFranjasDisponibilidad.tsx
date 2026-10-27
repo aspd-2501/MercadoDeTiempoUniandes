@@ -15,6 +15,8 @@ export interface EditorFranjasDisponibilidadProps {
   franjaPreferidaId: string;
   horasEstimadas: number;
   onCambiarPreferida: (id: string) => void;
+  /** En los acuerdos se oculta el selector de preferencia; en CrearPostAyuda permanece visible. */
+  mostrarPreferida?: boolean;
 }
 
 function fechaLocalISO(fecha: Date): string {
@@ -73,6 +75,7 @@ export default function EditorFranjasDisponibilidad({
   franjaPreferidaId,
   horasEstimadas,
   onCambiarPreferida,
+  mostrarPreferida = true,
 }: EditorFranjasDisponibilidadProps) {
   const hoy = fechaLocalISO(new Date());
 
@@ -188,6 +191,7 @@ export default function EditorFranjasDisponibilidad({
               </p>
             )}
 
+            {mostrarPreferida && (
             <label className="mt-3 flex cursor-pointer items-center gap-2 border-t border-[#F0F0F0] pt-3">
               <input
                 type="radio"
@@ -201,6 +205,7 @@ export default function EditorFranjasDisponibilidad({
                 {preferida ? 'Horario preferido' : 'Marcar como horario preferido'}
               </span>
             </label>
+            )}
           </div>
         );
       })}

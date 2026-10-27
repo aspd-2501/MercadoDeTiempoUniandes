@@ -22,10 +22,32 @@ import Chat from './ventanas/chats/Chat';
 import Explorar from './ventanas/Explorar'
 import Calendario from './ventanas/Calendario';
 import CrearPostAyuda from './ventanas/postAyuda/CrearPostAyuda';
+import AcuerdoDetail from './ventanas/acuerdos/AcuerdoDetail';
+
+//Datos de prueba
+import {
+  ACUERDOS_PARA_DETALLE_DEMO,
+  ID_ACUERDO_POR_POST_DEMO,
+} from './mocks/acuerdosPost.mocks';
 
 import './App.css'
 
 function App() {
+  // 00. TEMPORAL: CARGAR ACUERDOS DE PRUEBA EN EL LOCAL STORAGE
+  async function participarEnPostDemo(postId: string) {
+  const acuerdoId = ID_ACUERDO_POR_POST_DEMO[postId];
+
+  if (!acuerdoId || !ACUERDOS_PARA_DETALLE_DEMO[acuerdoId]) {
+    throw new Error('No existe un acuerdo de prueba para este post');
+  }
+
+  return {
+    acuerdoId,
+    esDemostracion: true,
+  };
+}
+
+
   // 01. ESTADO DEL MENÚ CREAR
   const [menuCrearAbierto, setMenuCrearAbierto] = useState(false);
 
@@ -124,14 +146,16 @@ function App() {
           <Route path="/:miembroId" element={<MiembroDetail />} />
 
           {/*Posts*/}
-          <Route path="/posts/:postId" element={<PostAyudaDetail onBack={() => navigate("/")} onIrChat={(chatId) => navigate(`/chats/${chatId}`)} onVerPerfil={(miembroId) => navigate(`/${miembroId}`)} onVolverInicio={() => navigate('/')} />} />
-
+          <Route path="/posts/:postId" element={<PostAyudaDetail onBack={() => navigate("/")} onIrChat={(chatId) => navigate(`/chats/${chatId}`)} onVerPerfil={(miembroId) => navigate(`/${miembroId}`)} onVolverInicio={() => navigate('/')} onParticipar={participarEnPostDemo} onVerAcuerdo={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}`)} />} />
           {/* CREAR PUBLICACIONES DE AYUDA */}
 
           <Route path="/crear-post-ayuda/pide" element={<CrearPostAyuda tipo="pide" onVolver={() => navigate(-1)} onVolverInicio={() => navigate('/')}/>}/>
 
           <Route path="/crear-post-ayuda/ofrece" element={ <CrearPostAyuda tipo="ofrece" onVolver={() => navigate(-1)} onVolverInicio={() => navigate('/')} />} />
 
+          {/* ACUERDOS DE SERVICIO */}
+          <Route path="/acuerdos/:acuerdoId" element={ <AcuerdoDetail acuerdos={ACUERDOS_PARA_DETALLE_DEMO} onVolver={() => navigate(-1)} onVerPost={(postId) => navigate(`/posts/${postId}`)} onIrChat={(chatId) => navigate(`/chats/${chatId}`)} /> } />        
+         
           {/*Transacciones de Horas*/}
           <Route path="/donar-horas" element={<DonarHoras />} />
           <Route path="/movimientos" element={<HistorialMiembro onDonarHoras={() => navigate('/donar-horas')} />} />
@@ -141,8 +165,7 @@ function App() {
           <Route path="/chats/:chatId" element={<Chat />} />
 
           {/*Calendario*/}
-          <Route path="/calendario" element={<Calendario />} />
-
+          <Route path="/calendario" element={<Calendario onVerAcuerdo={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}`)} />} />
           
         </Routes>
       </main>
