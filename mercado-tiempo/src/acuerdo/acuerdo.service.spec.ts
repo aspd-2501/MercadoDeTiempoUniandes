@@ -14,6 +14,7 @@ import { UsuarioEntity } from '../usuario/usuario.entity';
 import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
 import { TransaccionEntity } from '../transaccion/transaccion.entity';
 import { TipoTransaccion } from '../transaccion/tipo-transaccion.enum';
+import { DepositoHorasEntity } from '../deposito-horas/deposito-horas.entity';
 
 describe('AcuerdoService', () => {
     let service: AcuerdoService;
@@ -23,6 +24,7 @@ describe('AcuerdoService', () => {
     let usuarioRepository: Repository<UsuarioEntity>;
     let postAyudaRepository: Repository<PostAyudaEntity>;
     let transaccionRepository: Repository<TransaccionEntity>;
+    let depositoHorasRepository: Repository<DepositoHorasEntity>;
 
     let acuerdo: AcuerdoEntity;
     let perfilesList: PerfilMiembroEntity[];
@@ -40,6 +42,7 @@ describe('AcuerdoService', () => {
         usuarioRepository = module.get<Repository<UsuarioEntity>>(getRepositoryToken(UsuarioEntity));
         postAyudaRepository = module.get<Repository<PostAyudaEntity>>(getRepositoryToken(PostAyudaEntity));
         transaccionRepository = module.get<Repository<TransaccionEntity>>(getRepositoryToken(TransaccionEntity));
+        depositoHorasRepository = module.get<Repository<DepositoHorasEntity>>(getRepositoryToken(DepositoHorasEntity));
 
         await seedDatabase();
     });
@@ -64,6 +67,7 @@ describe('AcuerdoService', () => {
 
     const seedDatabase = async () => {
         await transaccionRepository.clear();
+        await depositoHorasRepository.clear();
         await participanteRepository.clear();
         await acuerdoRepository.clear();
         await postAyudaRepository.clear();
@@ -262,8 +266,9 @@ describe('AcuerdoService', () => {
         expect(delReceptor.horas).toBe(-acuerdo.horas);
     });
 
-    it('confirmarPrestacion should charge every RECEPTOR and pay the PRESTADOR only the horas of the acuerdo', async () => {
+    it('confirmarPrestacion should send the extra horas of a grupal acuerdo to the fondo comunitario', async () => {
         await prepararParaConfirmar();
+        const fondo = await depositoHorasRepository.save({ saldo: 5 });
         const otroReceptor = await createPerfil();
         await service.addParticipanteAcuerdo(acuerdo.id, otroReceptor.id, RolParticipante.RECEPTOR);
         const saldoPrestador = await saldoDe(perfilesList[0]);
@@ -272,8 +277,50 @@ describe('AcuerdoService', () => {
         await confirmarTodos();
         await service.confirmarPrestacion(acuerdo.id, otroReceptor.id);
 
+        // 1 prestador, 2 receptores: cada receptor paga las horas, el prestador recibe las horas, el fondo el resto
         expect(await saldoDe(perfilesList[0])).toBe(saldoPrestador + acuerdo.horas);
         expect(await saldoDe(otroReceptor)).toBe(saldoOtro - acuerdo.horas);
+        expect((await depositoHorasRepository.findOne({ where: { id: fondo.id } }))!.saldo).toBe(5 + acuerdo.horas);
+
+        const aporte = await transaccionRepository.findOne({ where: { tipo: TipoTransaccion.APORTE_FONDO }, relations: { deposito: true } });
+        expect(aporte!.deposito.id).toBe(fondo.id);
+        expect(aporte!.horas).toBe(acuerdo.horas);
+    });
+
+    it('confirmarPrestacion should create the fondo comunitario when it does not exist', async () => {
+        await prepararParaConfirmar();
+        const otroReceptor = await createPerfil();
+        await service.addParticipanteAcuerdo(acuerdo.id, otroReceptor.id, RolParticipante.RECEPTOR);
+
+        await confirmarTodos();
+        await service.confirmarPrestacion(acuerdo.id, otroReceptor.id);
+
+        const depositos = await depositoHorasRepository.find();
+        expect(depositos.length).toBe(1);
+        expect(depositos[0].saldo).toBe(acuerdo.horas);
+    });
+
+    it('confirmarPrestacion should charge the RECEPTOR for every PRESTADOR when there are more prestadores', async () => {
+        await prepararParaConfirmar();
+        const otroPrestador = await createPerfil();
+        await service.addParticipanteAcuerdo(acuerdo.id, otroPrestador.id, RolParticipante.PRESTADOR);
+        const saldoReceptor = await saldoDe(perfilesList[1]);
+        const saldoOtroPrestador = await saldoDe(otroPrestador);
+
+        await confirmarTodos();
+        await service.confirmarPrestacion(acuerdo.id, otroPrestador.id);
+
+        // 2 prestadores, 1 receptor: el receptor paga 2 veces las horas y cada prestador recibe las horas
+        expect(await saldoDe(perfilesList[1])).toBe(saldoReceptor - 2 * acuerdo.horas);
+        expect(await saldoDe(otroPrestador)).toBe(saldoOtroPrestador + acuerdo.horas);
+        expect(await depositoHorasRepository.count()).toBe(0);
+    });
+
+    it('addParticipanteAcuerdo should throw an exception for a PRESTADOR when the RECEPTOR cannot pay the extra share', async () => {
+        await perfilRepository.update(perfilesList[1].id, { saldo: acuerdo.horas });
+        const otroPrestador = await createPerfil();
+        await expect(() => service.addParticipanteAcuerdo(acuerdo.id, otroPrestador.id, RolParticipante.PRESTADOR))
+            .rejects.toHaveProperty("message", "A RECEPTOR does not have enough saldo to pay its share of the acuerdo");
     });
 
     it('confirmarPrestacion should throw an exception for an invalid acuerdo', async () => {
@@ -326,7 +373,7 @@ describe('AcuerdoService', () => {
         const sinSaldo = await createPerfil();
         await perfilRepository.update(sinSaldo.id, { saldo: acuerdo.horas - 1 });
         await expect(() => service.addParticipanteAcuerdo(acuerdo.id, sinSaldo.id, RolParticipante.RECEPTOR))
-            .rejects.toHaveProperty("message", "The perfil does not have enough saldo to be a RECEPTOR in the acuerdo");
+            .rejects.toHaveProperty("message", "A RECEPTOR does not have enough saldo to pay its share of the acuerdo");
     });
 
     it('addParticipanteAcuerdo should let a PRESTADOR without saldo join', async () => {
@@ -340,7 +387,7 @@ describe('AcuerdoService', () => {
         await perfilRepository.update(perfilesList[1].id, { saldo: acuerdo.horas });
         const cambios = { ...acuerdo, horas: acuerdo.horas + 1, estado: undefined } as unknown as AcuerdoEntity;
         await expect(() => service.update(acuerdo.id, cambios))
-            .rejects.toHaveProperty("message", "The perfil does not have enough saldo to be a RECEPTOR in the acuerdo");
+            .rejects.toHaveProperty("message", "A RECEPTOR does not have enough saldo to pay its share of the acuerdo");
     });
 
     // --- Estado 4: cancelado ---

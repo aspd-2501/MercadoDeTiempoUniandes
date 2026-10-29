@@ -5,10 +5,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TransaccionService } from './transaccion.service';
 import { TransaccionEntity } from './transaccion.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
+import { DepositoHorasEntity } from '../deposito-horas/deposito-horas.entity';
 import { TransaccionController } from './transaccion.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([TransaccionEntity, PerfilMiembroEntity])],
+    imports: [TypeOrmModule.forFeature([TransaccionEntity, PerfilMiembroEntity, DepositoHorasEntity])],
     providers: [TransaccionService],
     controllers: [TransaccionController],
 })

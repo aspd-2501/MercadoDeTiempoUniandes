@@ -159,7 +159,7 @@ describe('SolicitudModificacionService', () => {
     it('create should throw an exception when a RECEPTOR cannot pay the new horas', async () => {
         await perfilRepository.update(participantes[1].id, { saldo: 3 });
         await expect(() => service.create(acuerdo.id, modificacion(participantes[0], 4)))
-            .rejects.toHaveProperty("message", "A RECEPTOR of the acuerdo does not have enough saldo for the new horas");
+            .rejects.toHaveProperty("message", "A RECEPTOR does not have enough saldo to pay its share of the acuerdo");
     });
 
     // --- aprobar: modificación ---

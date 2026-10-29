@@ -12,6 +12,8 @@ import { HorarioDisponibleEntity } from '../horario-disponible/horario-disponibl
 import { ChatEntity } from '../chat/chat.entity';
 import { TransaccionEntity } from '../transaccion/transaccion.entity';
 import { TipoTransaccion } from '../transaccion/tipo-transaccion.enum';
+import { DepositoHorasEntity } from '../deposito-horas/deposito-horas.entity';
+import { calcularReparto, ParticipanteReparto, validarSaldosReceptores } from './reparto-horas';
 
 @Injectable()
 export class AcuerdoService {
@@ -77,9 +79,9 @@ export class AcuerdoService {
         if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
             throw new BusinessLogicException("An acuerdo can only be cancelado through a solicitud de cancelacion", BusinessError.PRECONDITION_FAILED);
 
-        // Si cambian las horas, todos los receptores deben poder pagarlas
+        // Si cambian las horas, todos los receptores deben poder pagar su nueva cuota
         if (acuerdo.horas != null && acuerdo.horas !== persisted.horas)
-            await this.validarSaldoReceptores(id, acuerdo.horas);
+            validarSaldosReceptores(acuerdo.horas, await this.participantesConSaldo(id));
 
         acuerdo.estado = acuerdo.estado ?? persisted.estado;
 
@@ -113,8 +115,9 @@ export class AcuerdoService {
         if (yaParticipa)
             throw new BusinessLogicException("The perfil is already a participant in the acuerdo", BusinessError.PRECONDITION_FAILED);
 
-        if (rol === RolParticipante.RECEPTOR)
-            this.validarSaldoReceptor(perfil, acuerdo.horas);
+        // Un receptor nuevo o un prestador nuevo cambian las cuotas: todos deben poder pagar
+        const actuales = await this.participantesConSaldo(acuerdoId);
+        validarSaldosReceptores(acuerdo.horas, [...actuales, { idPerfil: perfilId, rol, saldo: perfil.saldo }]);
 
         const participante = this.participanteRepository.create({ idAcuerdo: acuerdoId, idPerfil: perfilId, rol });
         await this.participanteRepository.save(participante);
@@ -168,13 +171,14 @@ export class AcuerdoService {
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
         this.validarAcuerdoActivo(acuerdo);
 
+        const nuevos: ParticipanteReparto[] = [];
         for (const p of participantes) {
             const perfil = await this.perfilMiembroRepository.findOne({ where: { id: p.perfilId } });
             if (!perfil)
                 throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
-            if (p.rol === RolParticipante.RECEPTOR)
-                this.validarSaldoReceptor(perfil, acuerdo.horas);
+            nuevos.push({ idPerfil: perfil.id, rol: p.rol, saldo: perfil.saldo });
         }
+        validarSaldosReceptores(acuerdo.horas, nuevos);
 
         await this.participanteRepository.delete({ idAcuerdo: acuerdoId });
 
@@ -316,32 +320,46 @@ export class AcuerdoService {
     }
 
     // --- Transferencia de horas (RF-046 a RF-049) ---
-    // Cada RECEPTOR paga las horas del acuerdo y cada PRESTADOR recibe las horas del acuerdo.
+    // Las cuotas salen de calcularReparto (reparto-horas.ts). Lo que sobra va al fondo comunitario.
     // Se ejecuta dentro de la transacción de confirmarPrestacion: o se mueven todas las horas o ninguna.
 
     private async transferirHoras(manager: EntityManager, acuerdoId: string) {
         const acuerdo = await manager.findOne(AcuerdoEntity, {
             where: { id: acuerdoId },
-            relations: { participantes: true }
+            relations: { participantes: { perfil: true } }
         });
         if (!acuerdo)
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
 
+        const reparto = calcularReparto(acuerdo.horas, acuerdo.participantes.map(p => ({
+            idPerfil: p.idPerfil, rol: p.rol, saldo: p.perfil.saldo,
+        })));
+
         for (const participante of acuerdo.participantes) {
-            const perfil = await manager.findOne(PerfilMiembroEntity, { where: { id: participante.idPerfil } });
-            if (!perfil)
-                throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
-
             const esReceptor = participante.rol === RolParticipante.RECEPTOR;
-            const horas = esReceptor ? -acuerdo.horas : acuerdo.horas;
-            const saldoResultante = perfil.saldo + horas;
+            const horas = esReceptor ? -(reparto.cuotas.get(participante.idPerfil) ?? 0) : reparto.pagoPrestador;
+            const saldoResultante = participante.perfil.saldo + horas;
 
-            await manager.update(PerfilMiembroEntity, perfil.id, { saldo: saldoResultante });
+            await manager.update(PerfilMiembroEntity, participante.idPerfil, { saldo: saldoResultante });
             await manager.save(TransaccionEntity, manager.create(TransaccionEntity, {
                 tipo: esReceptor ? TipoTransaccion.SERVICIO_RECIBIDO : TipoTransaccion.SERVICIO_PRESTADO,
                 horas,
                 saldoResultante,
-                perfil: { id: perfil.id },
+                perfil: { id: participante.idPerfil },
+                acuerdo: { id: acuerdo.id },
+            }));
+        }
+
+        if (reparto.aporteFondo > 0) {
+            const fondo = await this.obtenerFondoComunitario(manager);
+            const saldoResultante = fondo.saldo + reparto.aporteFondo;
+
+            await manager.update(DepositoHorasEntity, fondo.id, { saldo: saldoResultante });
+            await manager.save(TransaccionEntity, manager.create(TransaccionEntity, {
+                tipo: TipoTransaccion.APORTE_FONDO,
+                horas: reparto.aporteFondo,
+                saldoResultante,
+                deposito: { id: fondo.id },
                 acuerdo: { id: acuerdo.id },
             }));
         }
@@ -349,20 +367,25 @@ export class AcuerdoService {
         await manager.update(AcuerdoEntity, acuerdo.id, { estado: EstadoAcuerdo.REALIZADO });
     }
 
-    // --- Saldo: un RECEPTOR debe tener al menos las horas del acuerdo al entrar (RF-043) ---
+    // --- Fondo comunitario: el único DepositoHoras (se crea con saldo 0 si aún no existe) ---
 
-    private validarSaldoReceptor(perfil: PerfilMiembroEntity, horas: number) {
-        if (perfil.saldo < horas)
-            throw new BusinessLogicException("The perfil does not have enough saldo to be a RECEPTOR in the acuerdo", BusinessError.PRECONDITION_FAILED);
+    private async obtenerFondoComunitario(manager: EntityManager): Promise<DepositoHorasEntity> {
+        const depositos = await manager.find(DepositoHorasEntity);
+        if (depositos.length > 1)
+            throw new BusinessLogicException("There must be exactly one deposito horas: the fondo comunitario", BusinessError.PRECONDITION_FAILED);
+        if (depositos.length === 1)
+            return depositos[0];
+        return await manager.save(DepositoHorasEntity, manager.create(DepositoHorasEntity, { saldo: 0 }));
     }
 
-    private async validarSaldoReceptores(acuerdoId: string, horas: number) {
-        const receptores = await this.participanteRepository.find({
-            where: { idAcuerdo: acuerdoId, rol: RolParticipante.RECEPTOR },
+    // --- Participantes actuales con su saldo, para validar cuotas (RF-043) ---
+
+    private async participantesConSaldo(acuerdoId: string): Promise<ParticipanteReparto[]> {
+        const participantes = await this.participanteRepository.find({
+            where: { idAcuerdo: acuerdoId },
             relations: { perfil: true }
         });
-        for (const receptor of receptores)
-            this.validarSaldoReceptor(receptor.perfil, horas);
+        return participantes.map(p => ({ idPerfil: p.idPerfil, rol: p.rol, saldo: p.perfil.saldo }));
     }
 
     // --- Un acuerdo realizado (2) o cancelado (4) ya no se puede modificar ---

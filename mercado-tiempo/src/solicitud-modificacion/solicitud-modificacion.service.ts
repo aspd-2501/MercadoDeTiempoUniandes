@@ -9,7 +9,8 @@ import { AprobacionModificacionEntity } from './aprobacion-modificacion.entity';
 import { EstadoSolicitudModificacion, TipoSolicitudModificacion } from './estado-solicitud-modificacion.enum';
 import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
 import { EstadoAcuerdo } from '../acuerdo/estado-acuerdo.enum';
-import { ParticipanteAcuerdoEntity, RolParticipante } from '../acuerdo/participante-acuerdo.entity';
+import { ParticipanteAcuerdoEntity } from '../acuerdo/participante-acuerdo.entity';
+import { validarSaldosReceptores } from '../acuerdo/reparto-horas';
 
 @Injectable()
 export class SolicitudModificacionService {
@@ -183,14 +184,13 @@ export class SolicitudModificacionService {
         return solicitud;
     }
 
-    // Todos los receptores deben poder pagar las nuevas horas (RF-043)
+    // Todos los receptores deben poder pagar su cuota con las nuevas horas (RF-043)
     private async validarSaldoReceptores(acuerdoId: string, horas: number) {
-        const receptores = await this.participanteRepository.find({
-            where: { idAcuerdo: acuerdoId, rol: RolParticipante.RECEPTOR },
+        const participantes = await this.participanteRepository.find({
+            where: { idAcuerdo: acuerdoId },
             relations: { perfil: true }
         });
-        if (receptores.some(r => r.perfil.saldo < horas))
-            throw new BusinessLogicException("A RECEPTOR of the acuerdo does not have enough saldo for the new horas", BusinessError.PRECONDITION_FAILED);
+        validarSaldosReceptores(horas, participantes.map(p => ({ idPerfil: p.idPerfil, rol: p.rol, saldo: p.perfil.saldo })));
     }
 
     private async validarParticipante(acuerdoId: string, perfilId: string) {
