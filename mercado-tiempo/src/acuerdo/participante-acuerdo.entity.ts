@@ -17,8 +17,16 @@ export class ParticipanteAcuerdoEntity {
     @PrimaryColumn()
     idPerfil: string;
 
-    @Column({ type: 'enum', enum: RolParticipante })
+    // simple-enum funciona igual en Postgres y en SQLite (pruebas)
+    @Column({ type: 'simple-enum', enum: RolParticipante })
     rol: RolParticipante;
+
+    // --- Confirmación de que el servicio se prestó (RF-044, RF-045) ---
+    @Column({ default: false })
+    confirmoPrestacion: boolean;
+
+    @Column({ nullable: true })
+    fechaConfirmacion: Date;
 
     @ManyToOne(() => AcuerdoEntity, acuerdo => acuerdo.participantes, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'idAcuerdo' })

@@ -9,7 +9,7 @@ import { AprobacionModificacionEntity } from './aprobacion-modificacion.entity';
 import { EstadoSolicitudModificacion, TipoSolicitudModificacion } from './estado-solicitud-modificacion.enum';
 import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
 import { EstadoAcuerdo } from '../acuerdo/estado-acuerdo.enum';
-import { ParticipanteAcuerdoEntity } from '../acuerdo/participante-acuerdo.entity';
+import { ParticipanteAcuerdoEntity, RolParticipante } from '../acuerdo/participante-acuerdo.entity';
 
 @Injectable()
 export class SolicitudModificacionService {
@@ -75,6 +75,8 @@ export class SolicitudModificacionService {
                 throw new BusinessLogicException("A modificacion must change the horas or the fechaRealizacion", BusinessError.PRECONDITION_FAILED);
             if (solicitud.horas != null && solicitud.horas <= 0)
                 throw new BusinessLogicException("The horas of a solicitud de modificacion must be positive", BusinessError.PRECONDITION_FAILED);
+            if (solicitud.horas != null)
+                await this.validarSaldoReceptores(acuerdoId, solicitud.horas);
         } else if (solicitud.tipo === TipoSolicitudModificacion.CANCELACION) {
             solicitud.horas = null;
             solicitud.fechaRealizacion = null as unknown as Date;
@@ -179,6 +181,16 @@ export class SolicitudModificacionService {
         if (solicitud.estado !== EstadoSolicitudModificacion.PENDIENTE)
             throw new BusinessLogicException("The solicitud de modificacion is no longer pending", BusinessError.PRECONDITION_FAILED);
         return solicitud;
+    }
+
+    // Todos los receptores deben poder pagar las nuevas horas (RF-043)
+    private async validarSaldoReceptores(acuerdoId: string, horas: number) {
+        const receptores = await this.participanteRepository.find({
+            where: { idAcuerdo: acuerdoId, rol: RolParticipante.RECEPTOR },
+            relations: { perfil: true }
+        });
+        if (receptores.some(r => r.perfil.saldo < horas))
+            throw new BusinessLogicException("A RECEPTOR of the acuerdo does not have enough saldo for the new horas", BusinessError.PRECONDITION_FAILED);
     }
 
     private async validarParticipante(acuerdoId: string, perfilId: string) {

@@ -61,7 +61,7 @@ describe('SolicitudModificacionService', () => {
             edad: faker.number.int({ min: 18, max: 60 }),
             afiliacionUniandes: "Estudiante",
             estadoActividad: true,
-            saldo: faker.number.int({ min: 0, max: 100 }),
+            saldo: faker.number.int({ min: 20, max: 100 }),
             usuario,
         });
     };
@@ -154,6 +154,12 @@ describe('SolicitudModificacionService', () => {
         await acuerdoRepository.update(acuerdo.id, { estado: EstadoAcuerdo.CANCELADO });
         await expect(() => service.create(acuerdo.id, modificacion(participantes[0])))
             .rejects.toHaveProperty("message", "The acuerdo is cancelado and cannot be modified");
+    });
+
+    it('create should throw an exception when a RECEPTOR cannot pay the new horas', async () => {
+        await perfilRepository.update(participantes[1].id, { saldo: 3 });
+        await expect(() => service.create(acuerdo.id, modificacion(participantes[0], 4)))
+            .rejects.toHaveProperty("message", "A RECEPTOR of the acuerdo does not have enough saldo for the new horas");
     });
 
     // --- aprobar: modificación ---

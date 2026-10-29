@@ -27,6 +27,7 @@ import { ActividadComunitariaModule } from './actividad-comunitaria/actividad-co
 import { OrganizacionInstitucionalModule } from './organizacion-institucional/organizacion-institucional.module';
 import { AuthModule } from './auth/auth.module';
 import { SolicitudModificacionModule } from './solicitud-modificacion/solicitud-modificacion.module';
+import { TransaccionModule } from './transaccion/transaccion.module';
 
 // Entidades
 import { UsuarioEntity } from './usuario/usuario.entity';
@@ -59,6 +60,7 @@ import { ActividadComunitariaEntity } from './actividad-comunitaria/actividad-co
 import { InscripcionActividadEntity } from './actividad-comunitaria/inscripcion-actividad.entity';
 import { OrganizacionInstitucionalEntity } from './organizacion-institucional/organizacion-institucional.entity';
 import { AprobacionModificacionEntity } from './solicitud-modificacion/aprobacion-modificacion.entity';
+import { TransaccionEntity } from './transaccion/transaccion.entity';
 
 @Module({
   imports: [
@@ -83,6 +85,7 @@ import { AprobacionModificacionEntity } from './solicitud-modificacion/aprobacio
     ActividadComunitariaModule,
     OrganizacionInstitucionalModule,
     SolicitudModificacionModule,
+    TransaccionModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
@@ -121,6 +124,7 @@ import { AprobacionModificacionEntity } from './solicitud-modificacion/aprobacio
         InscripcionActividadEntity,
         OrganizacionInstitucionalEntity,
         AprobacionModificacionEntity,
+        TransaccionEntity,
       ],
       synchronize: true,
     }),

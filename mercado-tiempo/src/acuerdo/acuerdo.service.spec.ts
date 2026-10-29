@@ -12,6 +12,8 @@ import { ParticipanteAcuerdoEntity, RolParticipante } from './participante-acuer
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { UsuarioEntity } from '../usuario/usuario.entity';
 import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
+import { TransaccionEntity } from '../transaccion/transaccion.entity';
+import { TipoTransaccion } from '../transaccion/tipo-transaccion.enum';
 
 describe('AcuerdoService', () => {
     let service: AcuerdoService;
@@ -20,6 +22,7 @@ describe('AcuerdoService', () => {
     let participanteRepository: Repository<ParticipanteAcuerdoEntity>;
     let usuarioRepository: Repository<UsuarioEntity>;
     let postAyudaRepository: Repository<PostAyudaEntity>;
+    let transaccionRepository: Repository<TransaccionEntity>;
 
     let acuerdo: AcuerdoEntity;
     let perfilesList: PerfilMiembroEntity[];
@@ -36,6 +39,7 @@ describe('AcuerdoService', () => {
         participanteRepository = module.get<Repository<ParticipanteAcuerdoEntity>>(getRepositoryToken(ParticipanteAcuerdoEntity));
         usuarioRepository = module.get<Repository<UsuarioEntity>>(getRepositoryToken(UsuarioEntity));
         postAyudaRepository = module.get<Repository<PostAyudaEntity>>(getRepositoryToken(PostAyudaEntity));
+        transaccionRepository = module.get<Repository<TransaccionEntity>>(getRepositoryToken(TransaccionEntity));
 
         await seedDatabase();
     });
@@ -53,12 +57,13 @@ describe('AcuerdoService', () => {
             edad: faker.number.int({ min: 18, max: 60 }),
             afiliacionUniandes: "Estudiante",
             estadoActividad: true,
-            saldo: faker.number.int({ min: 0, max: 100 }),
+            saldo: faker.number.int({ min: 20, max: 100 }),
             usuario,
         });
     };
 
     const seedDatabase = async () => {
+        await transaccionRepository.clear();
         await participanteRepository.clear();
         await acuerdoRepository.clear();
         await postAyudaRepository.clear();
@@ -206,32 +211,136 @@ describe('AcuerdoService', () => {
             .rejects.toHaveProperty("message", "The perfil with the given id is not a participant in the acuerdo");
     });
 
-    it('finalizarAcuerdo should mark an acuerdo as realizado when it has both roles', async () => {
-        const result = await service.finalizarAcuerdo(acuerdo.id);
-        expect(result.estado).toBe(EstadoAcuerdo.REALIZADO);
+    // --- Confirmación de prestación y transferencia de horas ---
+
+    // Deja el acuerdo listo para confirmar: acordado y con la fecha ya pasada
+    const prepararParaConfirmar = async () => {
+        await acuerdoRepository.update(acuerdo.id, { estado: EstadoAcuerdo.ACORDADO, fechaRealizacion: faker.date.recent() });
+    };
+
+    const confirmarTodos = async () => {
+        for (const perfil of perfilesList)
+            await service.confirmarPrestacion(acuerdo.id, perfil.id);
+    };
+
+    const saldoDe = async (perfil: PerfilMiembroEntity) =>
+        (await perfilRepository.findOne({ where: { id: perfil.id } }))!.saldo;
+
+    it('confirmarPrestacion should register the confirmation without moving horas', async () => {
+        await prepararParaConfirmar();
+        const saldoAntes = await saldoDe(perfilesList[1]);
+
+        const result = await service.confirmarPrestacion(acuerdo.id, perfilesList[0].id);
+        expect(result.estado).toBe(EstadoAcuerdo.ACORDADO);
+        expect(result.participantes.find(p => p.idPerfil === perfilesList[0].id)!.confirmoPrestacion).toBe(true);
+        expect(await saldoDe(perfilesList[1])).toBe(saldoAntes);
     });
 
-    it('finalizarAcuerdo should throw an exception for an invalid acuerdo', async () => {
-        await expect(() => service.finalizarAcuerdo("0"))
+    it('confirmarPrestacion should transfer the horas when all participantes confirm', async () => {
+        await prepararParaConfirmar();
+        const [prestador, receptor] = perfilesList;
+        const saldoPrestador = await saldoDe(prestador);
+        const saldoReceptor = await saldoDe(receptor);
+
+        await confirmarTodos();
+
+        const stored = await acuerdoRepository.findOne({ where: { id: acuerdo.id } });
+        expect(stored!.estado).toBe(EstadoAcuerdo.REALIZADO);
+        expect(await saldoDe(prestador)).toBe(saldoPrestador + acuerdo.horas);
+        expect(await saldoDe(receptor)).toBe(saldoReceptor - acuerdo.horas);
+    });
+
+    it('confirmarPrestacion should save one transaccion per participante', async () => {
+        await prepararParaConfirmar();
+        await confirmarTodos();
+
+        const transacciones = await transaccionRepository.find({ relations: { perfil: true } });
+        expect(transacciones.length).toBe(2);
+
+        const delReceptor = transacciones.find(t => t.perfil.id === perfilesList[1].id)!;
+        expect(delReceptor.tipo).toBe(TipoTransaccion.SERVICIO_RECIBIDO);
+        expect(delReceptor.horas).toBe(-acuerdo.horas);
+    });
+
+    it('confirmarPrestacion should charge every RECEPTOR and pay the PRESTADOR only the horas of the acuerdo', async () => {
+        await prepararParaConfirmar();
+        const otroReceptor = await createPerfil();
+        await service.addParticipanteAcuerdo(acuerdo.id, otroReceptor.id, RolParticipante.RECEPTOR);
+        const saldoPrestador = await saldoDe(perfilesList[0]);
+        const saldoOtro = await saldoDe(otroReceptor);
+
+        await confirmarTodos();
+        await service.confirmarPrestacion(acuerdo.id, otroReceptor.id);
+
+        expect(await saldoDe(perfilesList[0])).toBe(saldoPrestador + acuerdo.horas);
+        expect(await saldoDe(otroReceptor)).toBe(saldoOtro - acuerdo.horas);
+    });
+
+    it('confirmarPrestacion should throw an exception for an invalid acuerdo', async () => {
+        await expect(() => service.confirmarPrestacion("0", perfilesList[0].id))
             .rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
     });
 
-    it('finalizarAcuerdo should throw an exception when already realizado', async () => {
-        await service.finalizarAcuerdo(acuerdo.id);
-        await expect(() => service.finalizarAcuerdo(acuerdo.id))
-            .rejects.toHaveProperty("message", "The acuerdo is already realizado");
+    it('confirmarPrestacion should throw an exception when the acuerdo is not acordado', async () => {
+        await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
+            .rejects.toHaveProperty("message", "The acuerdo must be acordado to confirm the prestacion");
     });
 
-    it('finalizarAcuerdo should throw an exception without a PRESTADOR', async () => {
-        await service.deleteParticipanteAcuerdo(acuerdo.id, perfilesList[0].id);
-        await expect(() => service.finalizarAcuerdo(acuerdo.id))
-            .rejects.toHaveProperty("message", "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be realizado");
+    it('confirmarPrestacion should throw an exception before the fechaRealizacion', async () => {
+        await acuerdoRepository.update(acuerdo.id, { estado: EstadoAcuerdo.ACORDADO, fechaRealizacion: faker.date.future() });
+        await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
+            .rejects.toHaveProperty("message", "The prestacion cannot be confirmed before the fechaRealizacion");
     });
 
-    it('finalizarAcuerdo should throw an exception without a RECEPTOR', async () => {
+    it('confirmarPrestacion should throw an exception for a perfil that is not a participant', async () => {
+        await prepararParaConfirmar();
+        const ajeno = await createPerfil();
+        await expect(() => service.confirmarPrestacion(acuerdo.id, ajeno.id))
+            .rejects.toHaveProperty("message", "The perfil with the given id is not a participant in the acuerdo");
+    });
+
+    it('confirmarPrestacion should throw an exception when the perfil already confirmed', async () => {
+        await prepararParaConfirmar();
+        await service.confirmarPrestacion(acuerdo.id, perfilesList[0].id);
+        await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
+            .rejects.toHaveProperty("message", "The perfil already confirmed the prestacion");
+    });
+
+    it('confirmarPrestacion should throw an exception without a RECEPTOR', async () => {
         await service.deleteParticipanteAcuerdo(acuerdo.id, perfilesList[1].id);
-        await expect(() => service.finalizarAcuerdo(acuerdo.id))
+        await prepararParaConfirmar();
+        await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
             .rejects.toHaveProperty("message", "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be realizado");
+    });
+
+    it('confirmarPrestacion should throw an exception for a realizado acuerdo', async () => {
+        await prepararParaConfirmar();
+        await confirmarTodos();
+        await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
+            .rejects.toHaveProperty("message", "The acuerdo is realizado and cannot be modified");
+    });
+
+    // --- Saldo de los receptores (RF-043) ---
+
+    it('addParticipanteAcuerdo should throw an exception for a RECEPTOR without enough saldo', async () => {
+        const sinSaldo = await createPerfil();
+        await perfilRepository.update(sinSaldo.id, { saldo: acuerdo.horas - 1 });
+        await expect(() => service.addParticipanteAcuerdo(acuerdo.id, sinSaldo.id, RolParticipante.RECEPTOR))
+            .rejects.toHaveProperty("message", "The perfil does not have enough saldo to be a RECEPTOR in the acuerdo");
+    });
+
+    it('addParticipanteAcuerdo should let a PRESTADOR without saldo join', async () => {
+        const sinSaldo = await createPerfil();
+        await perfilRepository.update(sinSaldo.id, { saldo: 0 });
+        const result = await service.addParticipanteAcuerdo(acuerdo.id, sinSaldo.id, RolParticipante.PRESTADOR);
+        expect(result.participantes.length).toBe(3);
+    });
+
+    it('update should throw an exception when a RECEPTOR cannot pay the new horas', async () => {
+        await perfilRepository.update(perfilesList[1].id, { saldo: acuerdo.horas });
+        const cambios = { ...acuerdo, horas: acuerdo.horas + 1, estado: undefined } as unknown as AcuerdoEntity;
+        await expect(() => service.update(acuerdo.id, cambios))
+            .rejects.toHaveProperty("message", "The perfil does not have enough saldo to be a RECEPTOR in the acuerdo");
     });
 
     // --- Estado 4: cancelado ---
@@ -240,9 +349,9 @@ describe('AcuerdoService', () => {
         await acuerdoRepository.update(acuerdo.id, { estado: EstadoAcuerdo.CANCELADO });
     };
 
-    it('finalizarAcuerdo should throw an exception for a cancelado acuerdo', async () => {
+    it('confirmarPrestacion should throw an exception for a cancelado acuerdo', async () => {
         await cancelarDirectamente();
-        await expect(() => service.finalizarAcuerdo(acuerdo.id))
+        await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
             .rejects.toHaveProperty("message", "The acuerdo is cancelado and cannot be modified");
     });
 
@@ -254,7 +363,8 @@ describe('AcuerdoService', () => {
     });
 
     it('addParticipanteAcuerdo should throw an exception for a realizado acuerdo', async () => {
-        await service.finalizarAcuerdo(acuerdo.id);
+        await prepararParaConfirmar();
+        await confirmarTodos();
         const newPerfil = await createPerfil();
         await expect(() => service.addParticipanteAcuerdo(acuerdo.id, newPerfil.id, RolParticipante.RECEPTOR))
             .rejects.toHaveProperty("message", "The acuerdo is realizado and cannot be modified");

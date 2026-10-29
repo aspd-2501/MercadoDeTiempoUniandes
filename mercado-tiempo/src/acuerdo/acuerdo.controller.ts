@@ -41,9 +41,11 @@ export class AcuerdoController {
         return await this.acuerdoService.delete(acuerdoId);
     }
 
-    @Post(':acuerdoId/finalizar')
-    async finalizarAcuerdo(@Param('acuerdoId') acuerdoId: string) {
-        return await this.acuerdoService.finalizarAcuerdo(acuerdoId);
+    // --- Confirmación de prestación: cuando todos confirman, se transfieren las horas ---
+
+    @Post(':acuerdoId/confirmaciones/:perfilId')
+    async confirmarPrestacion(@Param('acuerdoId') acuerdoId: string, @Param('perfilId') perfilId: string) {
+        return await this.acuerdoService.confirmarPrestacion(acuerdoId, perfilId);
     }
 
     // --- Horario acordado ---

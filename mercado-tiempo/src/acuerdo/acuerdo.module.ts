@@ -8,10 +8,11 @@ import { ParticipanteAcuerdoEntity } from './participante-acuerdo.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { HorarioDisponibleEntity } from '../horario-disponible/horario-disponible.entity';
 import { ChatEntity } from '../chat/chat.entity';
+import { TransaccionEntity } from '../transaccion/transaccion.entity';
 import { AcuerdoController } from './acuerdo.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([AcuerdoEntity, ParticipanteAcuerdoEntity, PerfilMiembroEntity, HorarioDisponibleEntity, ChatEntity])],
+    imports: [TypeOrmModule.forFeature([AcuerdoEntity, ParticipanteAcuerdoEntity, PerfilMiembroEntity, HorarioDisponibleEntity, ChatEntity, TransaccionEntity])],
     providers: [AcuerdoService],
     controllers: [AcuerdoController],
 })

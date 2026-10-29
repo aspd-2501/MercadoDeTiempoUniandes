@@ -2,7 +2,7 @@
 /* archivo: src/acuerdo/acuerdo.service.ts */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { BusinessError, BusinessLogicException } from '../shared/errors/business-errors';
 import { AcuerdoEntity } from './acuerdo.entity';
 import { EstadoAcuerdo } from './estado-acuerdo.enum';
@@ -10,6 +10,8 @@ import { ParticipanteAcuerdoEntity, RolParticipante } from './participante-acuer
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { HorarioDisponibleEntity } from '../horario-disponible/horario-disponible.entity';
 import { ChatEntity } from '../chat/chat.entity';
+import { TransaccionEntity } from '../transaccion/transaccion.entity';
+import { TipoTransaccion } from '../transaccion/tipo-transaccion.enum';
 
 @Injectable()
 export class AcuerdoService {
@@ -53,7 +55,7 @@ export class AcuerdoService {
             throw new BusinessLogicException("An acuerdo must have either a postAyuda or a solicitud, but not both", BusinessError.PRECONDITION_FAILED);
 
         if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
-            throw new BusinessLogicException("Use finalizarAcuerdo to mark an acuerdo as realizado", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("An acuerdo becomes realizado only when all participantes confirm the prestacion", BusinessError.PRECONDITION_FAILED);
 
         if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
             throw new BusinessLogicException("An acuerdo cannot be created as cancelado", BusinessError.PRECONDITION_FAILED);
@@ -70,10 +72,14 @@ export class AcuerdoService {
         this.validarAcuerdoActivo(persisted);
 
         if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
-            throw new BusinessLogicException("Use finalizarAcuerdo to mark an acuerdo as realizado", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("An acuerdo becomes realizado only when all participantes confirm the prestacion", BusinessError.PRECONDITION_FAILED);
 
         if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
             throw new BusinessLogicException("An acuerdo can only be cancelado through a solicitud de cancelacion", BusinessError.PRECONDITION_FAILED);
+
+        // Si cambian las horas, todos los receptores deben poder pagarlas
+        if (acuerdo.horas != null && acuerdo.horas !== persisted.horas)
+            await this.validarSaldoReceptores(id, acuerdo.horas);
 
         acuerdo.estado = acuerdo.estado ?? persisted.estado;
 
@@ -106,6 +112,9 @@ export class AcuerdoService {
         const yaParticipa = acuerdo.participantes.some(p => p.idPerfil === perfilId);
         if (yaParticipa)
             throw new BusinessLogicException("The perfil is already a participant in the acuerdo", BusinessError.PRECONDITION_FAILED);
+
+        if (rol === RolParticipante.RECEPTOR)
+            this.validarSaldoReceptor(perfil, acuerdo.horas);
 
         const participante = this.participanteRepository.create({ idAcuerdo: acuerdoId, idPerfil: perfilId, rol });
         await this.participanteRepository.save(participante);
@@ -163,6 +172,8 @@ export class AcuerdoService {
             const perfil = await this.perfilMiembroRepository.findOne({ where: { id: p.perfilId } });
             if (!perfil)
                 throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            if (p.rol === RolParticipante.RECEPTOR)
+                this.validarSaldoReceptor(perfil, acuerdo.horas);
         }
 
         await this.participanteRepository.delete({ idAcuerdo: acuerdoId });
@@ -255,33 +266,103 @@ export class AcuerdoService {
         return await this.findOne(acuerdoId);
     }
 
-    // --- Finalización (estado 2: realizado): exige al menos 1 PRESTADOR y 1 RECEPTOR ---
+    // --- Confirmación de prestación (RF-044, RF-045) ---
+    // Cuando TODOS los participantes confirman, se transfieren las horas y el acuerdo queda realizado (RF-046).
 
-    async finalizarAcuerdo(id: string): Promise<AcuerdoEntity> {
+    async confirmarPrestacion(acuerdoId: string, perfilId: string): Promise<AcuerdoEntity> {
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
-            where: { id },
+            where: { id: acuerdoId },
             relations: { participantes: true }
         });
         if (!acuerdo)
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+        this.validarAcuerdoActivo(acuerdo);
 
-        if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
-            throw new BusinessLogicException("The acuerdo is already realizado", BusinessError.PRECONDITION_FAILED);
+        if (acuerdo.estado !== EstadoAcuerdo.ACORDADO)
+            throw new BusinessLogicException("The acuerdo must be acordado to confirm the prestacion", BusinessError.PRECONDITION_FAILED);
 
-        if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
-            throw new BusinessLogicException("The acuerdo is cancelado and cannot be modified", BusinessError.PRECONDITION_FAILED);
+        if (new Date(acuerdo.fechaRealizacion).getTime() > Date.now())
+            throw new BusinessLogicException("The prestacion cannot be confirmed before the fechaRealizacion", BusinessError.PRECONDITION_FAILED);
+
+        const participante = acuerdo.participantes.find(p => p.idPerfil === perfilId);
+        if (!participante)
+            throw new BusinessLogicException("The perfil with the given id is not a participant in the acuerdo", BusinessError.PRECONDITION_FAILED);
+
+        if (participante.confirmoPrestacion)
+            throw new BusinessLogicException("The perfil already confirmed the prestacion", BusinessError.PRECONDITION_FAILED);
 
         const tienePrestador = acuerdo.participantes.some(p => p.rol === RolParticipante.PRESTADOR);
         const tieneReceptor = acuerdo.participantes.some(p => p.rol === RolParticipante.RECEPTOR);
-
         if (!tienePrestador || !tieneReceptor)
             throw new BusinessLogicException(
                 "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be realizado",
                 BusinessError.PRECONDITION_FAILED
             );
 
-        acuerdo.estado = EstadoAcuerdo.REALIZADO;
-        return await this.acuerdoRepository.save(acuerdo);
+        const todosConfirmaron = acuerdo.participantes.every(p => p.idPerfil === perfilId || p.confirmoPrestacion);
+
+        // La confirmación y la transferencia van en la misma transacción de BD:
+        // si la transferencia falla, la confirmación tampoco queda guardada y se puede reintentar.
+        await this.acuerdoRepository.manager.transaction(async manager => {
+            await manager.update(ParticipanteAcuerdoEntity, { idAcuerdo: acuerdoId, idPerfil: perfilId }, {
+                confirmoPrestacion: true,
+                fechaConfirmacion: new Date(),
+            });
+            if (todosConfirmaron)
+                await this.transferirHoras(manager, acuerdoId);
+        });
+
+        return await this.findOne(acuerdoId);
+    }
+
+    // --- Transferencia de horas (RF-046 a RF-049) ---
+    // Cada RECEPTOR paga las horas del acuerdo y cada PRESTADOR recibe las horas del acuerdo.
+    // Se ejecuta dentro de la transacción de confirmarPrestacion: o se mueven todas las horas o ninguna.
+
+    private async transferirHoras(manager: EntityManager, acuerdoId: string) {
+        const acuerdo = await manager.findOne(AcuerdoEntity, {
+            where: { id: acuerdoId },
+            relations: { participantes: true }
+        });
+        if (!acuerdo)
+            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+
+        for (const participante of acuerdo.participantes) {
+            const perfil = await manager.findOne(PerfilMiembroEntity, { where: { id: participante.idPerfil } });
+            if (!perfil)
+                throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+
+            const esReceptor = participante.rol === RolParticipante.RECEPTOR;
+            const horas = esReceptor ? -acuerdo.horas : acuerdo.horas;
+            const saldoResultante = perfil.saldo + horas;
+
+            await manager.update(PerfilMiembroEntity, perfil.id, { saldo: saldoResultante });
+            await manager.save(TransaccionEntity, manager.create(TransaccionEntity, {
+                tipo: esReceptor ? TipoTransaccion.SERVICIO_RECIBIDO : TipoTransaccion.SERVICIO_PRESTADO,
+                horas,
+                saldoResultante,
+                perfil: { id: perfil.id },
+                acuerdo: { id: acuerdo.id },
+            }));
+        }
+
+        await manager.update(AcuerdoEntity, acuerdo.id, { estado: EstadoAcuerdo.REALIZADO });
+    }
+
+    // --- Saldo: un RECEPTOR debe tener al menos las horas del acuerdo al entrar (RF-043) ---
+
+    private validarSaldoReceptor(perfil: PerfilMiembroEntity, horas: number) {
+        if (perfil.saldo < horas)
+            throw new BusinessLogicException("The perfil does not have enough saldo to be a RECEPTOR in the acuerdo", BusinessError.PRECONDITION_FAILED);
+    }
+
+    private async validarSaldoReceptores(acuerdoId: string, horas: number) {
+        const receptores = await this.participanteRepository.find({
+            where: { idAcuerdo: acuerdoId, rol: RolParticipante.RECEPTOR },
+            relations: { perfil: true }
+        });
+        for (const receptor of receptores)
+            this.validarSaldoReceptor(receptor.perfil, horas);
     }
 
     // --- Un acuerdo realizado (2) o cancelado (4) ya no se puede modificar ---

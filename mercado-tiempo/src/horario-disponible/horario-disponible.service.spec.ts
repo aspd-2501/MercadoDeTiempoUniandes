@@ -110,6 +110,12 @@ describe('HorarioDisponibleService', () => {
         });
     };
 
+    // Franja de 2 horas que empieza pronto (fechaFin siempre después de fechaInicio)
+    const franjaValida = () => {
+        const fechaInicio = faker.date.soon();
+        return { fechaInicio, fechaFin: new Date(fechaInicio.getTime() + 2 * 60 * 60 * 1000) };
+    };
+
     it('should be defined', () => {
         expect(service).toBeDefined();
     });
@@ -117,8 +123,7 @@ describe('HorarioDisponibleService', () => {
     it('create should save a horario with acuerdo as origen', async () => {
         const horario: HorarioDisponibleEntity = {
             id: "",
-            fechaInicio: faker.date.soon(),
-            fechaFin: faker.date.soon({ days: 2 }),
+            ...franjaValida(),
             perfil,
             acuerdo,
         } as HorarioDisponibleEntity;
@@ -133,8 +138,7 @@ describe('HorarioDisponibleService', () => {
     it('create should save a horario with solicitud as origen', async () => {
         const horario: HorarioDisponibleEntity = {
             id: "",
-            fechaInicio: faker.date.soon(),
-            fechaFin: faker.date.soon({ days: 2 }),
+            ...franjaValida(),
             perfil,
             solicitud,
         } as HorarioDisponibleEntity;
@@ -147,8 +151,7 @@ describe('HorarioDisponibleService', () => {
     it('create should save a horario with postAyuda as origen', async () => {
         const horario: HorarioDisponibleEntity = {
             id: "",
-            fechaInicio: faker.date.soon(),
-            fechaFin: faker.date.soon({ days: 2 }),
+            ...franjaValida(),
             perfil,
             postAyuda,
         } as HorarioDisponibleEntity;
@@ -161,8 +164,7 @@ describe('HorarioDisponibleService', () => {
     it('create should throw an exception without a perfil', async () => {
         const horario: HorarioDisponibleEntity = {
             id: "",
-            fechaInicio: faker.date.soon(),
-            fechaFin: faker.date.soon({ days: 2 }),
+            ...franjaValida(),
             acuerdo,
         } as HorarioDisponibleEntity;
 
@@ -174,8 +176,7 @@ describe('HorarioDisponibleService', () => {
         const invalidPerfil: PerfilMiembroEntity = { ...perfil, id: "0" } as PerfilMiembroEntity;
         const horario: HorarioDisponibleEntity = {
             id: "",
-            fechaInicio: faker.date.soon(),
-            fechaFin: faker.date.soon({ days: 2 }),
+            ...franjaValida(),
             perfil: invalidPerfil,
             acuerdo,
         } as HorarioDisponibleEntity;
@@ -185,10 +186,11 @@ describe('HorarioDisponibleService', () => {
     });
 
     it('create should throw an exception when fechaFin is before fechaInicio', async () => {
+        const { fechaInicio, fechaFin } = franjaValida();
         const horario: HorarioDisponibleEntity = {
             id: "",
-            fechaInicio: faker.date.soon({ days: 2 }),
-            fechaFin: faker.date.soon(),
+            fechaInicio: fechaFin,
+            fechaFin: fechaInicio,
             perfil,
             acuerdo,
         } as HorarioDisponibleEntity;
@@ -200,8 +202,7 @@ describe('HorarioDisponibleService', () => {
     it('create should throw an exception with no origen', async () => {
         const horario: HorarioDisponibleEntity = {
             id: "",
-            fechaInicio: faker.date.soon(),
-            fechaFin: faker.date.soon({ days: 2 }),
+            ...franjaValida(),
             perfil,
         } as HorarioDisponibleEntity;
 
@@ -212,8 +213,7 @@ describe('HorarioDisponibleService', () => {
     it('create should throw an exception with more than one origen', async () => {
         const horario: HorarioDisponibleEntity = {
             id: "",
-            fechaInicio: faker.date.soon(),
-            fechaFin: faker.date.soon({ days: 2 }),
+            ...franjaValida(),
             perfil,
             acuerdo,
             solicitud,
@@ -227,8 +227,7 @@ describe('HorarioDisponibleService', () => {
         const invalidAcuerdo: AcuerdoEntity = { ...acuerdo, id: "0" } as AcuerdoEntity;
         const horario: HorarioDisponibleEntity = {
             id: "",
-            fechaInicio: faker.date.soon(),
-            fechaFin: faker.date.soon({ days: 2 }),
+            ...franjaValida(),
             perfil,
             acuerdo: invalidAcuerdo,
         } as HorarioDisponibleEntity;
@@ -239,8 +238,7 @@ describe('HorarioDisponibleService', () => {
 
     it('findOne should return a horario by id', async () => {
         const saved = await horarioRepository.save({
-            fechaInicio: faker.date.soon(),
-            fechaFin: faker.date.soon({ days: 2 }),
+            ...franjaValida(),
             perfil,
             acuerdo,
         });
@@ -256,8 +254,7 @@ describe('HorarioDisponibleService', () => {
 
     it('delete should remove a horario', async () => {
         const saved = await horarioRepository.save({
-            fechaInicio: faker.date.soon(),
-            fechaFin: faker.date.soon({ days: 2 }),
+            ...franjaValida(),
             perfil,
             acuerdo,
         });
