@@ -233,4 +233,43 @@ describe('AcuerdoService', () => {
         await expect(() => service.finalizarAcuerdo(acuerdo.id))
             .rejects.toHaveProperty("message", "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be realizado");
     });
+
+    // --- Estado 4: cancelado ---
+
+    const cancelarDirectamente = async () => {
+        await acuerdoRepository.update(acuerdo.id, { estado: EstadoAcuerdo.CANCELADO });
+    };
+
+    it('finalizarAcuerdo should throw an exception for a cancelado acuerdo', async () => {
+        await cancelarDirectamente();
+        await expect(() => service.finalizarAcuerdo(acuerdo.id))
+            .rejects.toHaveProperty("message", "The acuerdo is cancelado and cannot be modified");
+    });
+
+    it('addParticipanteAcuerdo should throw an exception for a cancelado acuerdo', async () => {
+        await cancelarDirectamente();
+        const newPerfil = await createPerfil();
+        await expect(() => service.addParticipanteAcuerdo(acuerdo.id, newPerfil.id, RolParticipante.RECEPTOR))
+            .rejects.toHaveProperty("message", "The acuerdo is cancelado and cannot be modified");
+    });
+
+    it('addParticipanteAcuerdo should throw an exception for a realizado acuerdo', async () => {
+        await service.finalizarAcuerdo(acuerdo.id);
+        const newPerfil = await createPerfil();
+        await expect(() => service.addParticipanteAcuerdo(acuerdo.id, newPerfil.id, RolParticipante.RECEPTOR))
+            .rejects.toHaveProperty("message", "The acuerdo is realizado and cannot be modified");
+    });
+
+    it('update should throw an exception when trying to set estado cancelado', async () => {
+        const cambios = { ...acuerdo, estado: EstadoAcuerdo.CANCELADO } as AcuerdoEntity;
+        await expect(() => service.update(acuerdo.id, cambios))
+            .rejects.toHaveProperty("message", "An acuerdo can only be cancelado through a solicitud de cancelacion");
+    });
+
+    it('update should throw an exception for a cancelado acuerdo', async () => {
+        await cancelarDirectamente();
+        const cambios = { ...acuerdo, horas: 5, estado: undefined } as unknown as AcuerdoEntity;
+        await expect(() => service.update(acuerdo.id, cambios))
+            .rejects.toHaveProperty("message", "The acuerdo is cancelado and cannot be modified");
+    });
 });

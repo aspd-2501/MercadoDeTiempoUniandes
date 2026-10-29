@@ -17,7 +17,7 @@ export { EstadoAcuerdo };
     (CASE WHEN "idPostAyuda" IS NOT NULL THEN 1 ELSE 0 END) +
     (CASE WHEN "idSolicitud" IS NOT NULL THEN 1 ELSE 0 END) = 1
 `)
-@Check(`"estado" IN (0, 1, 2, 3)`)
+@Check(`"estado" IN (0, 1, 2, 3, 4)`)
 export class AcuerdoEntity {
     @PrimaryGeneratedColumn('uuid')
     id: string;
@@ -31,7 +31,7 @@ export class AcuerdoEntity {
     @Column()
     fechaRealizacion: Date;
 
-    // 0: en creación, 1: acordado, 2: realizado, 3: en modificación
+    // 0: en creación, 1: acordado, 2: realizado, 3: en modificación y 4: cancelado (ver enum EstadoAcuerdo)
     @Column({ type: 'int', default: EstadoAcuerdo.EN_CREACION })
     estado: EstadoAcuerdo;
 

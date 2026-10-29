@@ -7,4 +7,5 @@ export enum EstadoAcuerdo {
     ACORDADO = 1,
     REALIZADO = 2,
     EN_MODIFICACION = 3,
+    CANCELADO = 4,
 }

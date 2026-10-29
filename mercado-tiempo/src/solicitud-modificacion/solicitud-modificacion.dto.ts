@@ -1,23 +1,26 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/solicitud-modificacion/solicitud-modificacion.dto.ts */
-import { IsDateString, IsInt, IsNotEmpty, IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsUUID, Min } from 'class-validator';
+import { TipoSolicitudModificacion } from './estado-solicitud-modificacion.enum';
 
 export class SolicitudModificacionDto {
-    @IsNumber()
+    @IsEnum(TipoSolicitudModificacion)
     @IsNotEmpty()
-    readonly horas: number;
+    readonly tipo: TipoSolicitudModificacion;
 
-    @IsDateString()
+    // Participante que hace la propuesta
+    @IsUUID()
     @IsNotEmpty()
-    readonly fechaCreacion: string;
+    readonly solicitanteId: string;
 
-    @IsDateString()
-    @IsNotEmpty()
-    readonly fechaRealizacion: string;
-
+    // Solo para MODIFICACION
     @IsInt()
-    @Min(0)
-    @Max(3)
+    @Min(1)
     @IsOptional()
-    readonly estado?: number;
+    readonly horas?: number;
+
+    // Solo para MODIFICACION
+    @IsDateString()
+    @IsOptional()
+    readonly fechaRealizacion?: string;
 }

@@ -55,6 +55,9 @@ export class AcuerdoService {
         if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
             throw new BusinessLogicException("Use finalizarAcuerdo to mark an acuerdo as realizado", BusinessError.PRECONDITION_FAILED);
 
+        if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
+            throw new BusinessLogicException("An acuerdo cannot be created as cancelado", BusinessError.PRECONDITION_FAILED);
+
         acuerdo.estado = acuerdo.estado ?? EstadoAcuerdo.EN_CREACION;
         return await this.acuerdoRepository.save(acuerdo);
     }
@@ -64,8 +67,13 @@ export class AcuerdoService {
         if (!persisted)
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
 
-        if (acuerdo.estado === EstadoAcuerdo.REALIZADO && persisted.estado !== EstadoAcuerdo.REALIZADO)
+        this.validarAcuerdoActivo(persisted);
+
+        if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
             throw new BusinessLogicException("Use finalizarAcuerdo to mark an acuerdo as realizado", BusinessError.PRECONDITION_FAILED);
+
+        if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
+            throw new BusinessLogicException("An acuerdo can only be cancelado through a solicitud de cancelacion", BusinessError.PRECONDITION_FAILED);
 
         acuerdo.estado = acuerdo.estado ?? persisted.estado;
 
@@ -93,6 +101,7 @@ export class AcuerdoService {
         });
         if (!acuerdo)
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+        this.validarAcuerdoActivo(acuerdo);
 
         const yaParticipa = acuerdo.participantes.some(p => p.idPerfil === perfilId);
         if (yaParticipa)
@@ -148,6 +157,7 @@ export class AcuerdoService {
         });
         if (!acuerdo)
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+        this.validarAcuerdoActivo(acuerdo);
 
         for (const p of participantes) {
             const perfil = await this.perfilMiembroRepository.findOne({ where: { id: p.perfilId } });
@@ -180,6 +190,7 @@ export class AcuerdoService {
         });
         if (!acuerdo)
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+        this.validarAcuerdoActivo(acuerdo);
 
         const participante = acuerdo.participantes.find(p => p.idPerfil === perfilId);
         if (!participante)
@@ -197,6 +208,7 @@ export class AcuerdoService {
         });
         if (!acuerdo)
             throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+        this.validarAcuerdoActivo(acuerdo);
 
         const horario: HorarioDisponibleEntity | null = await this.horarioRepository.findOne({
             where: { id: horarioId },
@@ -219,6 +231,7 @@ export class AcuerdoService {
 
     async deleteHorarioAcordado(acuerdoId: string): Promise<AcuerdoEntity> {
         const acuerdo = await this.findOne(acuerdoId);
+        this.validarAcuerdoActivo(acuerdo);
         acuerdo.horarioAcordado = null;
         await this.acuerdoRepository.save(acuerdo);
         return await this.findOne(acuerdoId);
@@ -255,6 +268,9 @@ export class AcuerdoService {
         if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
             throw new BusinessLogicException("The acuerdo is already realizado", BusinessError.PRECONDITION_FAILED);
 
+        if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
+            throw new BusinessLogicException("The acuerdo is cancelado and cannot be modified", BusinessError.PRECONDITION_FAILED);
+
         const tienePrestador = acuerdo.participantes.some(p => p.rol === RolParticipante.PRESTADOR);
         const tieneReceptor = acuerdo.participantes.some(p => p.rol === RolParticipante.RECEPTOR);
 
@@ -266,5 +282,14 @@ export class AcuerdoService {
 
         acuerdo.estado = EstadoAcuerdo.REALIZADO;
         return await this.acuerdoRepository.save(acuerdo);
+    }
+
+    // --- Un acuerdo realizado (2) o cancelado (4) ya no se puede modificar ---
+
+    private validarAcuerdoActivo(acuerdo: AcuerdoEntity) {
+        if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
+            throw new BusinessLogicException("The acuerdo is realizado and cannot be modified", BusinessError.PRECONDITION_FAILED);
+        if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
+            throw new BusinessLogicException("The acuerdo is cancelado and cannot be modified", BusinessError.PRECONDITION_FAILED);
     }
 }

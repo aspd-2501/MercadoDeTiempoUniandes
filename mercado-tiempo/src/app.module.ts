@@ -58,6 +58,7 @@ import { ReconocimientoOtorgadoEntity } from './reconocimiento/reconocimiento-ot
 import { ActividadComunitariaEntity } from './actividad-comunitaria/actividad-comunitaria.entity';
 import { InscripcionActividadEntity } from './actividad-comunitaria/inscripcion-actividad.entity';
 import { OrganizacionInstitucionalEntity } from './organizacion-institucional/organizacion-institucional.entity';
+import { AprobacionModificacionEntity } from './solicitud-modificacion/aprobacion-modificacion.entity';
 
 @Module({
   imports: [
@@ -119,6 +120,7 @@ import { OrganizacionInstitucionalEntity } from './organizacion-institucional/or
         ActividadComunitariaEntity,
         InscripcionActividadEntity,
         OrganizacionInstitucionalEntity,
+        AprobacionModificacionEntity,
       ],
       synchronize: true,
     }),
