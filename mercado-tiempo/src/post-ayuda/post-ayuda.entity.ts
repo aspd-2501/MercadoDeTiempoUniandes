@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/post-de-ayuda/post-de-ayuda.entity.ts */
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { PostAyudaCategoriaEntity } from './post-ayuda-categoria.entity';
 import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
@@ -46,6 +46,7 @@ export class PostAyudaEntity {
     @OneToMany(() => AcuerdoEntity, acuerdo => acuerdo.postAyuda)
     acuerdos: AcuerdoEntity[];
 
-    @OneToOne(() => HorarioDisponibleEntity, horario => horario.postAyuda)
-    horario: HorarioDisponibleEntity;
+    // --- Franjas de disponibilidad propuestas por el autor (RF-036) ---
+    @OneToMany(() => HorarioDisponibleEntity, horario => horario.postAyuda)
+    horariosDisponibles: HorarioDisponibleEntity[];
 }

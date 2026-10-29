@@ -34,7 +34,8 @@ export class HorarioDisponibleEntity {
     @JoinColumn({ name: 'idSolicitud' })
     solicitud: SolicitudAyudaEntity;
 
-    @OneToOne(() => PostAyudaEntity, post => post.horario, { nullable: true })
+    // Un post de ayuda puede proponer varias franjas (horariosDisponibles)
+    @ManyToOne(() => PostAyudaEntity, post => post.horariosDisponibles, { nullable: true, onDelete: 'CASCADE' })
     @JoinColumn({ name: 'idPostAyuda' })
     postAyuda: PostAyudaEntity;
 

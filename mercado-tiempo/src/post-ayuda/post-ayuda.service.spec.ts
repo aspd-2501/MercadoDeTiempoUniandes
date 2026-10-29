@@ -5,12 +5,13 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { faker } from '@faker-js/faker';
 import { TypeOrmTestingConfig } from '../shared/testing-utils/typeorm-testing-config';
-import { PostAyudaService } from './post-ayuda.service';
+import { FranjaHoraria, PostAyudaService } from './post-ayuda.service';
 import { PostAyudaEntity } from './post-ayuda.entity';
 import { PostAyudaCategoriaEntity } from './post-ayuda-categoria.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { UsuarioEntity } from '../usuario/usuario.entity';
 import { CategoriaEntity } from '../categoria/categoria.entity';
+import { HorarioDisponibleEntity } from '../horario-disponible/horario-disponible.entity';
 
 describe('PostAyudaService', () => {
     let service: PostAyudaService;
@@ -19,6 +20,7 @@ describe('PostAyudaService', () => {
     let usuarioRepository: Repository<UsuarioEntity>;
     let categoriaRepository: Repository<CategoriaEntity>;
     let postCategoriaRepository: Repository<PostAyudaCategoriaEntity>;
+    let horarioRepository: Repository<HorarioDisponibleEntity>;
 
     let perfil: PerfilMiembroEntity;
     let categoriasList: CategoriaEntity[];
@@ -36,6 +38,7 @@ describe('PostAyudaService', () => {
         usuarioRepository = module.get<Repository<UsuarioEntity>>(getRepositoryToken(UsuarioEntity));
         categoriaRepository = module.get<Repository<CategoriaEntity>>(getRepositoryToken(CategoriaEntity));
         postCategoriaRepository = module.get<Repository<PostAyudaCategoriaEntity>>(getRepositoryToken(PostAyudaCategoriaEntity));
+        horarioRepository = module.get<Repository<HorarioDisponibleEntity>>(getRepositoryToken(HorarioDisponibleEntity));
 
         await seedDatabase();
     });
@@ -58,7 +61,15 @@ describe('PostAyudaService', () => {
         });
     };
 
+    // Franja que empieza mañana y dura `duracionHoras` horas
+    const crearFranja = (duracionHoras: number): FranjaHoraria => {
+        const fechaInicio = faker.date.soon({ days: 30 });
+        const fechaFin = new Date(fechaInicio.getTime() + duracionHoras * 60 * 60 * 1000);
+        return { fechaInicio, fechaFin };
+    };
+
     const seedDatabase = async () => {
+        await horarioRepository.clear();
         await postCategoriaRepository.clear();
         await postAyudaRepository.clear();
         await categoriaRepository.clear();
@@ -86,6 +97,8 @@ describe('PostAyudaService', () => {
 
         await postCategoriaRepository.save({ idPostAyuda: post.id, idCategoria: categoriasList[0].id });
         await postCategoriaRepository.save({ idPostAyuda: post.id, idCategoria: categoriasList[1].id });
+
+        await horarioRepository.save({ ...crearFranja(post.horas), postAyuda: post, perfil });
     };
 
     it('should be defined', () => {
@@ -106,9 +119,83 @@ describe('PostAyudaService', () => {
             perfilAutor: perfil,
         } as PostAyudaEntity;
 
-        const result = await service.create(nuevoPost, [categoriasList[2].id]);
+        const result = await service.create(nuevoPost, [categoriasList[2].id], [crearFranja(nuevoPost.horas)]);
         expect(result).not.toBeNull();
         expect(result.categorias.length).toBe(1);
+        expect(result.horariosDisponibles.length).toBe(1);
+    });
+
+    it('create should save several horarios disponibles', async () => {
+        const nuevoPost: PostAyudaEntity = {
+            id: "",
+            titulo: faker.lorem.words(3),
+            descripcion: faker.lorem.sentence(),
+            imagen: faker.image.url(),
+            ofrece: true,
+            cupo: 1,
+            cupoLleno: false,
+            horas: 2,
+            fechaCreacion: faker.date.recent(),
+            perfilAutor: perfil,
+        } as PostAyudaEntity;
+
+        const result = await service.create(nuevoPost, [categoriasList[2].id], [crearFranja(2), crearFranja(3), crearFranja(5)]);
+        expect(result.horariosDisponibles.length).toBe(3);
+    });
+
+    it('create should throw an exception without horarios', async () => {
+        const nuevoPost: PostAyudaEntity = {
+            id: "",
+            titulo: faker.lorem.words(3),
+            descripcion: faker.lorem.sentence(),
+            imagen: faker.image.url(),
+            ofrece: true,
+            cupo: 1,
+            cupoLleno: false,
+            horas: 2,
+            fechaCreacion: faker.date.recent(),
+            perfilAutor: perfil,
+        } as PostAyudaEntity;
+
+        await expect(() => service.create(nuevoPost, [categoriasList[2].id], []))
+            .rejects.toHaveProperty("message", "A post ayuda must have at least 1 horario disponible");
+    });
+
+    it('create should throw an exception for a horario shorter than the horas of the post', async () => {
+        const nuevoPost: PostAyudaEntity = {
+            id: "",
+            titulo: faker.lorem.words(3),
+            descripcion: faker.lorem.sentence(),
+            imagen: faker.image.url(),
+            ofrece: true,
+            cupo: 1,
+            cupoLleno: false,
+            horas: 3,
+            fechaCreacion: faker.date.recent(),
+            perfilAutor: perfil,
+        } as PostAyudaEntity;
+
+        await expect(() => service.create(nuevoPost, [categoriasList[2].id], [crearFranja(3), crearFranja(1)]))
+            .rejects.toHaveProperty("message", "Each horario must last at least the horas of the post ayuda");
+    });
+
+    it('create should throw an exception for a horario that ends before it starts', async () => {
+        const nuevoPost: PostAyudaEntity = {
+            id: "",
+            titulo: faker.lorem.words(3),
+            descripcion: faker.lorem.sentence(),
+            imagen: faker.image.url(),
+            ofrece: true,
+            cupo: 1,
+            cupoLleno: false,
+            horas: 1,
+            fechaCreacion: faker.date.recent(),
+            perfilAutor: perfil,
+        } as PostAyudaEntity;
+        const { fechaInicio, fechaFin } = crearFranja(2);
+
+        await expect(() => service.create(nuevoPost, [categoriasList[2].id], [{ fechaInicio: fechaFin, fechaFin: fechaInicio }]))
+            .rejects.toHaveProperty("message", "The fechaFin of a horario must be after its fechaInicio");
     });
 
     it('create should throw an exception without a perfil autor', async () => {
@@ -124,7 +211,7 @@ describe('PostAyudaService', () => {
             fechaCreacion: faker.date.recent(),
         } as PostAyudaEntity;
 
-        await expect(() => service.create(nuevoPost, [categoriasList[2].id]))
+        await expect(() => service.create(nuevoPost, [categoriasList[2].id], [crearFranja(nuevoPost.horas)]))
             .rejects.toHaveProperty("message", "A post ayuda must have a perfil autor");
     });
 
@@ -143,7 +230,7 @@ describe('PostAyudaService', () => {
             perfilAutor: invalidPerfil,
         } as PostAyudaEntity;
 
-        await expect(() => service.create(nuevoPost, [categoriasList[2].id]))
+        await expect(() => service.create(nuevoPost, [categoriasList[2].id], [crearFranja(nuevoPost.horas)]))
             .rejects.toHaveProperty("message", "The perfil autor with the given id was not found");
     });
 
@@ -161,7 +248,7 @@ describe('PostAyudaService', () => {
             perfilAutor: perfil,
         } as PostAyudaEntity;
 
-        await expect(() => service.create(nuevoPost, []))
+        await expect(() => service.create(nuevoPost, [], [crearFranja(nuevoPost.horas)]))
             .rejects.toHaveProperty("message", "A post ayuda must have between 1 and 3 categorias");
     });
 
@@ -180,7 +267,7 @@ describe('PostAyudaService', () => {
         } as PostAyudaEntity;
 
         const ids = categoriasList.slice(0, 4).map(c => c.id);
-        await expect(() => service.create(nuevoPost, ids))
+        await expect(() => service.create(nuevoPost, ids, [crearFranja(nuevoPost.horas)]))
             .rejects.toHaveProperty("message", "A post ayuda must have between 1 and 3 categorias");
     });
 
@@ -198,7 +285,7 @@ describe('PostAyudaService', () => {
             perfilAutor: perfil,
         } as PostAyudaEntity;
 
-        await expect(() => service.create(nuevoPost, ["0"]))
+        await expect(() => service.create(nuevoPost, ["0"], [crearFranja(nuevoPost.horas)]))
             .rejects.toHaveProperty("message", "The categoria with the given id was not found");
     });
 
@@ -260,5 +347,44 @@ describe('PostAyudaService', () => {
     it('delete should throw an exception for an invalid post ayuda', async () => {
         await expect(() => service.delete("0"))
             .rejects.toHaveProperty("message", "The post ayuda with the given id was not found");
+    });
+
+    it('findHorariosByPostId should return the horarios of a post', async () => {
+        const horarios = await service.findHorariosByPostId(post.id);
+        expect(horarios.length).toBe(1);
+    });
+
+    it('findHorariosByPostId should throw an exception for an invalid post ayuda', async () => {
+        await expect(() => service.findHorariosByPostId("0"))
+            .rejects.toHaveProperty("message", "The post ayuda with the given id was not found");
+    });
+
+    it('addHorarioPost should add a horario to a post', async () => {
+        const result = await service.addHorarioPost(post.id, crearFranja(post.horas));
+        expect(result.horariosDisponibles.length).toBe(2);
+    });
+
+    it('addHorarioPost should throw an exception for a horario shorter than the horas of the post', async () => {
+        await service.update(post.id, { ...post, horas: 4 });
+        await expect(() => service.addHorarioPost(post.id, crearFranja(2)))
+            .rejects.toHaveProperty("message", "Each horario must last at least the horas of the post ayuda");
+    });
+
+    it('deleteHorarioPost should remove a horario from a post', async () => {
+        const conDos = await service.addHorarioPost(post.id, crearFranja(post.horas));
+        await service.deleteHorarioPost(post.id, conDos.horariosDisponibles[0].id);
+        const horarios = await service.findHorariosByPostId(post.id);
+        expect(horarios.length).toBe(1);
+    });
+
+    it('deleteHorarioPost should throw an exception when it would leave 0 horarios', async () => {
+        const [unico] = await service.findHorariosByPostId(post.id);
+        await expect(() => service.deleteHorarioPost(post.id, unico.id))
+            .rejects.toHaveProperty("message", "A post ayuda must keep at least 1 horario disponible");
+    });
+
+    it('deleteHorarioPost should throw an exception for a horario of another post', async () => {
+        await expect(() => service.deleteHorarioPost(post.id, "0"))
+            .rejects.toHaveProperty("message", "The horario disponible is not associated with the post ayuda");
     });
 });

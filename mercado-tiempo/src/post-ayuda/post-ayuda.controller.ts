@@ -7,6 +7,7 @@ import { PostAyudaEntity } from './post-ayuda.entity';
 import { PostAyudaDto } from './post-ayuda.dto';
 import { CrearPostAyudaDto } from './crear-post-ayuda.dto';
 import { AsociarCategoriasDto } from './asociar-categorias.dto';
+import { FranjaHorariaDto } from './franja-horaria.dto';
 
 @Controller('posts-ayuda')
 @UseInterceptors(BusinessErrorsInterceptor)
@@ -23,10 +24,11 @@ export class PostAyudaController {
         return await this.postAyudaService.findOne(postId);
     }
 
-    @Post()
+        @Post()
     async create(@Body() dto: CrearPostAyudaDto) {
         const post: PostAyudaEntity = this.dtoToEntity(dto);
-        return await this.postAyudaService.create(post, dto.categoriaIds);
+        const horarios = dto.horarios.map(f => ({ fechaInicio: new Date(f.fechaInicio), fechaFin: new Date(f.fechaFin) }));
+        return await this.postAyudaService.create(post, dto.categoriaIds, horarios);
     }
 
     @Put(':postId')
@@ -39,6 +41,25 @@ export class PostAyudaController {
     @HttpCode(204)
     async delete(@Param('postId') postId: string) {
         return await this.postAyudaService.delete(postId);
+    }
+
+    // --- Horarios disponibles (RF-036) ---
+
+    @Get(':postId/horarios')
+    async findHorariosByPostId(@Param('postId') postId: string) {
+        return await this.postAyudaService.findHorariosByPostId(postId);
+    }
+
+    @Post(':postId/horarios')
+    async addHorarioPost(@Param('postId') postId: string, @Body() dto: FranjaHorariaDto) {
+        const franja = { fechaInicio: new Date(dto.fechaInicio), fechaFin: new Date(dto.fechaFin) };
+        return await this.postAyudaService.addHorarioPost(postId, franja);
+    }
+
+    @Delete(':postId/horarios/:horarioId')
+    @HttpCode(204)
+    async deleteHorarioPost(@Param('postId') postId: string, @Param('horarioId') horarioId: string) {
+        return await this.postAyudaService.deleteHorarioPost(postId, horarioId);
     }
 
     // --- Categorías (1 a 3) ---
