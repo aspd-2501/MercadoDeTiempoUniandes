@@ -5,13 +5,13 @@ import { RolParticipante } from './participante-acuerdo.entity';
 
 // --- Cómo se mueven las horas de un acuerdo realizado ---
 //
-// - Cada PRESTADOR recibe las horas del acuerdo.
-// - Cada RECEPTOR paga al menos las horas del acuerdo.
-// - Si hay más receptores que prestadores, lo que sobra va al fondo comunitario.
-//     Ej.: 1 tutor, 3 estudiantes, 2 h -> cada estudiante paga 2 h, el tutor recibe 2 h, el fondo 4 h.
-// - Si hay más prestadores que receptores, los receptores cubren entre todos lo de los prestadores.
-//     Ej.: 2 tutores, 1 estudiante, 2 h -> el estudiante paga 4 h y cada tutor recibe 2 h.
-//   Si no se puede dividir exacto, los primeros receptores pagan 1 h más.
+// Composiciones permitidas (nunca varios prestadores con varios receptores):
+//   - 1 prestador y 1 receptor:  el receptor paga las horas y el prestador las recibe.
+//   - 1 prestador y N receptores: cada receptor paga las horas, el prestador recibe las horas
+//                                 y el resto va al fondo comunitario.
+//       Ej.: 1 tutor, 3 estudiantes, 2 h -> cada estudiante paga 2 h, el tutor recibe 2 h, el fondo 4 h.
+//   - N prestadores y 1 receptor: el receptor paga las horas de cada prestador.
+//       Ej.: 2 tutores, 1 estudiante, 2 h -> el estudiante paga 4 h y cada tutor recibe 2 h.
 
 export interface ParticipanteReparto {
     idPerfil: string;
@@ -25,26 +25,31 @@ export interface RepartoHoras {
     aporteFondo: number;           // horas que van al fondo comunitario
 }
 
-export function calcularReparto(horas: number, participantes: ParticipanteReparto[]): RepartoHoras {
+// Un acuerdo puede tener varios prestadores o varios receptores, pero no ambos a la vez
+export function validarComposicion(participantes: ParticipanteReparto[]) {
     const prestadores = participantes.filter(p => p.rol === RolParticipante.PRESTADOR).length;
-    const receptores = participantes
-        .filter(p => p.rol === RolParticipante.RECEPTOR)
-        .map(p => p.idPerfil)
-        .sort();
-
-    const cuotas = new Map<string, number>();
-    if (receptores.length === 0)
-        return { cuotas, pagoPrestador: horas, aporteFondo: 0 };
-
-    const totalPagado = Math.max(receptores.length, prestadores) * horas;
-    const base = Math.floor(totalPagado / receptores.length);
-    const resto = totalPagado % receptores.length;
-    receptores.forEach((idPerfil, i) => cuotas.set(idPerfil, base + (i < resto ? 1 : 0)));
-
-    return { cuotas, pagoPrestador: horas, aporteFondo: totalPagado - prestadores * horas };
+    const receptores = participantes.filter(p => p.rol === RolParticipante.RECEPTOR).length;
+    if (prestadores > 1 && receptores > 1)
+        throw new BusinessLogicException("An acuerdo can have several PRESTADORES or several RECEPTORES, but not both", BusinessError.PRECONDITION_FAILED);
 }
 
-// Cada receptor debe tener saldo para su cuota (RF-043)
+export function calcularReparto(horas: number, participantes: ParticipanteReparto[]): RepartoHoras {
+    validarComposicion(participantes);
+
+    const prestadores = participantes.filter(p => p.rol === RolParticipante.PRESTADOR).length;
+    const receptores = participantes.filter(p => p.rol === RolParticipante.RECEPTOR).map(p => p.idPerfil);
+
+    // Con un solo receptor, paga las horas de cada prestador; con varios, cada uno paga las horas
+    const cuota = receptores.length === 1 ? horas * Math.max(prestadores, 1) : horas;
+
+    const cuotas = new Map<string, number>();
+    receptores.forEach(idPerfil => cuotas.set(idPerfil, cuota));
+
+    const aporteFondo = receptores.length > 0 ? cuota * receptores.length - prestadores * horas : 0;
+    return { cuotas, pagoPrestador: horas, aporteFondo: Math.max(aporteFondo, 0) };
+}
+
+// Composición válida y cada receptor con saldo para su cuota (RF-043)
 export function validarSaldosReceptores(horas: number, participantes: ParticipanteReparto[]) {
     const { cuotas } = calcularReparto(horas, participantes);
     for (const p of participantes) {

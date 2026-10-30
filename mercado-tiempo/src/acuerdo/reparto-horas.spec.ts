@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/acuerdo/reparto-horas.spec.ts */
-import { calcularReparto, ParticipanteReparto, validarSaldosReceptores } from './reparto-horas';
+import { calcularReparto, ParticipanteReparto, validarComposicion, validarSaldosReceptores } from './reparto-horas';
 import { RolParticipante } from './participante-acuerdo.entity';
 
 const prestador = (id: string, saldo = 0): ParticipanteReparto => ({ idPerfil: id, rol: RolParticipante.PRESTADOR, saldo });
@@ -21,24 +21,43 @@ describe('calcularReparto', () => {
         expect(r.aporteFondo).toBe(4);
     });
 
-    it('2 prestadores y 1 receptor: el receptor paga lo de ambos prestadores', () => {
-        const r = calcularReparto(2, [prestador('p'), prestador('q'), receptor('a')]);
-        expect(r.cuotas.get('a')).toBe(4);
+    it('3 prestadores y 1 receptor: el receptor paga las horas de cada prestador', () => {
+        const r = calcularReparto(2, [prestador('p'), prestador('q'), prestador('s'), receptor('a')]);
+        expect(r.cuotas.get('a')).toBe(6);
         expect(r.pagoPrestador).toBe(2);
         expect(r.aporteFondo).toBe(0);
     });
 
-    it('3 prestadores y 2 receptores: el total se reparte y los primeros pagan 1 hora más', () => {
-        const r = calcularReparto(1, [prestador('p'), prestador('q'), prestador('s'), receptor('a'), receptor('b')]);
-        expect(r.cuotas.get('a')).toBe(2);
-        expect(r.cuotas.get('b')).toBe(1);
-        expect(r.aporteFondo).toBe(0);
+    it('lanza error con varios prestadores y varios receptores', () => {
+        expect(() => calcularReparto(1, [prestador('p'), prestador('q'), receptor('a'), receptor('b')]))
+            .toThrow("An acuerdo can have several PRESTADORES or several RECEPTORES, but not both");
     });
 
-    it('las horas que salen siempre son iguales a las que entran', () => {
-        const r = calcularReparto(3, [prestador('p'), prestador('q'), receptor('a'), receptor('b'), receptor('c'), receptor('d')]);
-        const pagado = [...r.cuotas.values()].reduce((x, y) => x + y, 0);
-        expect(pagado).toBe(2 * r.pagoPrestador + r.aporteFondo);
+    it('en toda composición permitida las horas que salen son iguales a las que entran', () => {
+        for (let horas = 1; horas <= 5; horas++)
+            for (let n = 1; n <= 6; n++)
+                for (const [p, rec] of [[1, n], [n, 1]]) {
+                    const participantes = [
+                        ...Array.from({ length: p }, (_, i) => prestador(`p${i}`)),
+                        ...Array.from({ length: rec }, (_, i) => receptor(`r${i}`)),
+                    ];
+                    const r = calcularReparto(horas, participantes);
+                    const pagado = [...r.cuotas.values()].reduce((x, y) => x + y, 0);
+                    expect(pagado).toBe(p * r.pagoPrestador + r.aporteFondo);
+                }
+    });
+});
+
+describe('validarComposicion', () => {
+    it('permite 1 a 1, 1 a varios y varios a 1', () => {
+        expect(() => validarComposicion([prestador('p'), receptor('a')])).not.toThrow();
+        expect(() => validarComposicion([prestador('p'), receptor('a'), receptor('b')])).not.toThrow();
+        expect(() => validarComposicion([prestador('p'), prestador('q'), receptor('a')])).not.toThrow();
+    });
+
+    it('no permite varios a varios', () => {
+        expect(() => validarComposicion([prestador('p'), prestador('q'), receptor('a'), receptor('b')]))
+            .toThrow("An acuerdo can have several PRESTADORES or several RECEPTORES, but not both");
     });
 });
 
@@ -47,7 +66,7 @@ describe('validarSaldosReceptores', () => {
         expect(() => validarSaldosReceptores(2, [prestador('p'), receptor('a', 2)])).not.toThrow();
     });
 
-    it('lanza error si un receptor no puede pagar su cuota', () => {
+    it('lanza error si el receptor no puede pagar las horas de todos los prestadores', () => {
         expect(() => validarSaldosReceptores(2, [prestador('p'), prestador('q'), receptor('a', 3)]))
             .toThrow("A RECEPTOR does not have enough saldo to pay its share of the acuerdo");
     });

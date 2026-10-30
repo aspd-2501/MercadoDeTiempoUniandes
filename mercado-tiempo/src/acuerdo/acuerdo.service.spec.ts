@@ -316,6 +316,26 @@ describe('AcuerdoService', () => {
         expect(await depositoHorasRepository.count()).toBe(0);
     });
 
+    it('addParticipanteAcuerdo should throw an exception when it would have several PRESTADORES and several RECEPTORES', async () => {
+        const otroReceptor = await createPerfil();
+        await service.addParticipanteAcuerdo(acuerdo.id, otroReceptor.id, RolParticipante.RECEPTOR);
+        const otroPrestador = await createPerfil();
+        await expect(() => service.addParticipanteAcuerdo(acuerdo.id, otroPrestador.id, RolParticipante.PRESTADOR))
+            .rejects.toHaveProperty("message", "An acuerdo can have several PRESTADORES or several RECEPTORES, but not both");
+    });
+
+    it('associateParticipantesAcuerdo should throw an exception for several PRESTADORES and several RECEPTORES', async () => {
+        const nuevos = [await createPerfil(), await createPerfil()];
+        const participantes = [
+            { perfilId: perfilesList[0].id, rol: RolParticipante.PRESTADOR },
+            { perfilId: nuevos[0].id, rol: RolParticipante.PRESTADOR },
+            { perfilId: perfilesList[1].id, rol: RolParticipante.RECEPTOR },
+            { perfilId: nuevos[1].id, rol: RolParticipante.RECEPTOR },
+        ];
+        await expect(() => service.associateParticipantesAcuerdo(acuerdo.id, participantes))
+            .rejects.toHaveProperty("message", "An acuerdo can have several PRESTADORES or several RECEPTORES, but not both");
+    });
+
     it('addParticipanteAcuerdo should throw an exception for a PRESTADOR when the RECEPTOR cannot pay the extra share', async () => {
         await perfilRepository.update(perfilesList[1].id, { saldo: acuerdo.horas });
         const otroPrestador = await createPerfil();
