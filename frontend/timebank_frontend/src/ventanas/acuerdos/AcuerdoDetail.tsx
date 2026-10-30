@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronRight,
+  Clock3,
   Edit3,
   Heart,
   MessageCircle,
@@ -419,6 +420,87 @@ export default function AcuerdoDetail({
         <main className="mx-auto max-w-2xl space-y-4 px-4 py-4">
           {/* 06. MENSAJES DE ESTADO Y RETROALIMENTACIÓN */}
           {aviso && <div className="rounded-xl border border-[#B2DFE0] bg-[#E8F5F6] p-3 text-sm text-[#2D7B7E]" role="status">{aviso}</div>}
+
+          {/* 06.1 MODIFICACIÓN PENDIENTE: se muestra completa, sin desplegables. */}
+          {propuesta && propuesta.estado === 'pendiente' && (
+            <section
+              data-section="aviso-modificacion-pendiente"
+              aria-label="Modificación del acuerdo pendiente"
+              className="rounded-xl border border-[#E8CA50] bg-[#FFF7B2] p-3 shadow-sm"
+            >
+              <div className="mb-3 flex items-center gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#FFE46B] text-[#705900]">
+                  <Clock3 size={17} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="text-sm font-bold text-[#0D0D0D]">
+                    {propuestaAjena ? 'Modificación pendiente de tu respuesta' : 'Tu modificación está pendiente'}
+                  </h2>
+                  <p className="text-xs text-[#665600]">
+                    {propuestaAjena
+                      ? `${nombreMiembro(propuesta.autorId)} propuso cambiar las condiciones.`
+                      : 'Esperando la respuesta de los demás participantes.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Comparación visible de inmediato; no sustituye el acuerdo vigente. */}
+              <div className="space-y-1.5 rounded-lg bg-white/55 px-3 py-2.5 text-xs sm:text-sm">
+                <div className="grid grid-cols-[70px_minmax(0,1fr)] gap-2">
+                  <span className="text-[#655D44]">Actual</span>
+                  <span className="text-[#0D0D0D]">
+                    {mostrarFecha(acuerdo.fechaProgramada)} · {mostrarHora(acuerdo.horaInicio)} – {mostrarHora(acuerdo.horaFin)} ({acuerdo.duracionHoras} h)
+                  </span>
+                </div>
+                <div className="grid grid-cols-[70px_minmax(0,1fr)] gap-2">
+                  <span className="font-bold text-[#705900]">Propuesto</span>
+                  <span className="font-semibold text-[#0D0D0D]">
+                    {mostrarFecha(propuesta.fecha)} · {mostrarHora(propuesta.horaInicio)} – {mostrarHora(propuesta.horaFin)} ({propuesta.duracionHoras} h)
+                  </span>
+                </div>
+              </div>
+
+              {propuesta.motivo && (
+                <p className="mt-2 text-xs leading-relaxed text-[#665600]">
+                  <span className="font-semibold">Motivo:</span> {propuesta.motivo}
+                </p>
+              )}
+
+              <p className="mt-2 text-[11px] leading-snug text-[#705900]">
+                El acuerdo actual sigue vigente hasta que se apruebe la propuesta.
+              </p>
+
+              {propuestaAjena && (
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    disabled={!onResponderPropuesta || procesando}
+                    onClick={() => onResponderPropuesta && void ejecutar(
+                      () => onResponderPropuesta(acuerdo.id, propuesta.id, 'rechazada'),
+                      'Respuesta enviada. Espera a que se actualice el estado del acuerdo.',
+                    )}
+                    className={`${ESTILO_ACCION} flex-1 border border-[#D8B946] bg-white py-2.5 text-[#D32F2F]`}
+                  >
+                    Rechazar cambio
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!onResponderPropuesta || procesando}
+                    onClick={() => onResponderPropuesta && void ejecutar(
+                      () => onResponderPropuesta(acuerdo.id, propuesta.id, 'aceptada'),
+                      'Respuesta enviada. Espera a que se actualice el estado del acuerdo.',
+                    )}
+                    className={`${ESTILO_ACCION} flex-1 bg-[#3C9DA0] py-2.5 text-white`}
+                  >
+                    Aceptar cambio
+                  </button>
+                </div>
+              )}
+              {!onResponderPropuesta && propuestaAjena && (
+                <p className="mt-1 text-xs text-[#665600]">Las decisiones se habilitarán al conectar la API.</p>
+              )}
+            </section>
+          )}
           {acuerdo.estado === 'completed' && (
             <div className="rounded-2xl bg-[#FFFF00] p-4 text-center">
               <p className="text-lg font-bold text-[#0D0D0D]">¡Intercambio completado!</p>
@@ -523,7 +605,6 @@ export default function AcuerdoDetail({
                   nombres={nombres}
                   duracion={acuerdo.duracionHoras}
                   resultado={acuerdo.resultadoDisponibilidad ?? { estado: 'pendiente' }}
-                  alturaLimitada
                 />
               </Panel>
               <MiDisponibilidad
@@ -535,50 +616,6 @@ export default function AcuerdoDetail({
                   : undefined}
               />
             </>
-          )}
-
-          {/* 11. PROPUESTAS DE CAMBIO */}
-          {propuesta && propuesta.estado === 'pendiente' && (
-            <Panel titulo={propuestaAjena ? `${nombreMiembro(propuesta.autorId)} propuso un cambio` : 'Tu propuesta está pendiente'}>
-              <div className="space-y-2 text-sm">
-                <div className="grid grid-cols-[70px_1fr] gap-2">
-                  <span className="text-[#9E9E9E]">Actual</span>
-                  <span className="text-[#0D0D0D]">{mostrarFecha(acuerdo.fechaProgramada)} · {mostrarHora(acuerdo.horaInicio)} – {mostrarHora(acuerdo.horaFin)}</span>
-                </div>
-                <div className="grid grid-cols-[70px_1fr] gap-2">
-                  <span className="font-semibold text-[#3C9DA0]">Propuesta</span>
-                  <span className="font-semibold text-[#0D0D0D]">{mostrarFecha(propuesta.fecha)} · {mostrarHora(propuesta.horaInicio)} – {mostrarHora(propuesta.horaFin)} ({propuesta.duracionHoras} h)</span>
-                </div>
-                {propuesta.motivo && <p className="rounded-xl bg-[#F6F6F6] p-3 text-xs text-[#737373]">{propuesta.motivo}</p>}
-              </div>
-              {propuestaAjena && (
-                <div className="mt-4 flex gap-2">
-                  <button
-                    type="button"
-                    disabled={!onResponderPropuesta || procesando}
-                    onClick={() => onResponderPropuesta && void ejecutar(
-                      () => onResponderPropuesta(acuerdo.id, propuesta.id, 'rechazada'),
-                      'Respuesta enviada. Espera a que se actualice el estado del acuerdo.',
-                    )}
-                    className={`${ESTILO_ACCION} flex-1 border border-[#E8E8E8] text-[#D32F2F]`}
-                  >
-                    Rechazar cambio
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!onResponderPropuesta || procesando}
-                    onClick={() => onResponderPropuesta && void ejecutar(
-                      () => onResponderPropuesta(acuerdo.id, propuesta.id, 'aceptada'),
-                      'Respuesta enviada. Espera a que se actualice el estado del acuerdo.',
-                    )}
-                    className={`${ESTILO_ACCION} flex-1 bg-[#3C9DA0] text-white`}
-                  >
-                    Aceptar cambio
-                  </button>
-                </div>
-              )}
-              {!onResponderPropuesta && propuestaAjena && <p className="mt-2 text-xs text-[#737373]">Las decisiones se habilitarán al conectar la API.</p>}
-            </Panel>
           )}
 
           {/* 12. ACCIONES PRINCIPALES */}

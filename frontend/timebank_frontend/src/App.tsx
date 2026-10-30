@@ -23,6 +23,7 @@ import Explorar from './ventanas/Explorar'
 import Calendario from './ventanas/Calendario';
 import CrearPostAyuda from './ventanas/postAyuda/CrearPostAyuda';
 import AcuerdoDetail from './ventanas/acuerdos/AcuerdoDetail';
+import Actividad from './ventanas/Actividad';
 
 //Datos de prueba
 import {
@@ -76,6 +77,10 @@ function App() {
         navigate('/calendario');
         break;
 
+      case 'activity':
+        navigate('/actividad');
+        break;
+
       default:
         // Las demás rutas se implementarán después.
         break;
@@ -113,6 +118,7 @@ function App() {
     /*location.pathname.startsWith('/chats') ? 'chat' :*/
     location.pathname === '/explorar' ? 'explore' :
     location.pathname.startsWith('/calendario') ? 'calendar' :
+    location.pathname === '/actividad' ? 'activity' :
     'home';
 
     return (
@@ -140,6 +146,9 @@ function App() {
           
           {/*Explorar*/}
           <Route path="explorar" element={<Explorar onVerDetallePost={(postId) => navigate(`/posts/${postId}`)} onVerPerfil={(miembroId) => navigate(`/${miembroId}`)} />} />
+
+          {/*Actividad*/}
+          <Route path="/actividad" element={<Actividad onVerAcuerdo={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}`)} onExplorar={() => navigate('/explorar')} />} />
 
           {/*Info Miembros*/}
           <Route path="/perfil" element={<MiembroProfile onDonarHoras={() => navigate('/donar-horas')} onVerMovimientos={() => navigate('/movimientos')} />} />

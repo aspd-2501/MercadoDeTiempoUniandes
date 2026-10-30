@@ -5,7 +5,6 @@ import type { AcuerdoServicio } from '../tipos/acuerdo';
  * Las fechas dinámicas hacen que los ejemplos sigan siendo fáciles de probar.
  * Los IDs acuerdo-demo-1..4 son los mismos del calendario personal.
  *
- * Ubicación: src/mocks/acuerdos.mocks.ts
  */
 function fechaRelativa(dias: number): string {
   const fecha = new Date();
@@ -160,6 +159,36 @@ export const ACUERDOS_DEMO: Record<string, AcuerdoServicio> = {
       estado: 'pendiente',
     },
   },
+  // Acuerdo ya aceptado. La nueva propuesta no modifica aún el horario vigente.
+  'acuerdo-demo-propuesta-2': {
+    id: 'acuerdo-demo-propuesta-2',
+    servicio: 'Revisión de presentación académica',
+    proveedorId: 'miembro-demo-3',
+    solicitanteId: 'miembro-demo-1',
+    estado: 'accepted',
+    estadoHorario: 'scheduled',
+    duracionHoras: 2,
+    creditosHoras: 2,
+    resumenParticipantes: 'Camila Torres',
+    fechaProgramada: fechaRelativa(7),
+    horaInicio: '08:00',
+    horaFin: '10:00',
+    propuestaCambio: {
+      id: 'propuesta-demo-2',
+      autorId: 'miembro-demo-3',
+      fecha: fechaRelativa(8),
+      horaInicio: '16:00',
+      horaFin: '18:00',
+      duracionHoras: 2,
+      motivo: 'La hora inicial se cruza con una clase.',
+      estado: 'pendiente',
+    },
+    confirmaciones: {
+      proveedorConfirmo: false,
+      solicitanteConfirmo: false,
+      habilitada: false,
+    },
+  },
   'acuerdo-demo-por-confirmar': {
     id: 'acuerdo-demo-por-confirmar',
     servicio: 'Repaso de matemáticas',
@@ -192,6 +221,26 @@ export const ACUERDOS_DEMO: Record<string, AcuerdoServicio> = {
     fechaProgramada: fechaRelativa(-3),
     horaInicio: '15:00',
     horaFin: '17:00',
+    confirmaciones: {
+      proveedorConfirmo: true,
+      solicitanteConfirmo: true,
+      habilitada: false,
+    },
+  },
+  'acuerdo-demo-completado-2': {
+    id: 'acuerdo-demo-completado-2',
+    servicio: 'Asesoría de Excel para finanzas',
+    proveedorId: 'miembro-demo-2',
+    solicitanteId: 'miembro-demo-1',
+    estado: 'completed',
+    estadoHorario: 'scheduled',
+    duracionHoras: 3,
+    creditosHoras: 3,
+    resumenParticipantes: 'Carlos Martínez',
+    fechaProgramada: fechaRelativa(-7),
+    horaInicio: '14:00',
+    horaFin: '17:00',
+    notas: 'Se resolvieron dudas sobre tablas dinámicas y fórmulas de Excel.',
     confirmaciones: {
       proveedorConfirmo: true,
       solicitanteConfirmo: true,

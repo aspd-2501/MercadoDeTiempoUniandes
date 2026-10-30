@@ -10,7 +10,7 @@ import {
 
 // 00. TIPOS Y CONFIGURACIÓN DE LA BARRA DE NAVEGACIÓN
 // Los callbacks son opcionales: podemos mostrar y probar la interfaz sin implementar rutas.
-export type NavBarMobileTab = 'home' | 'explore' | 'chat' | 'profile' | 'calendar';
+export type NavBarMobileTab = 'home' | 'explore' | 'chat' | 'profile' | 'calendar' | 'activity' ;
 
 interface NavBarMobileProps {
   activeTab?: NavBarMobileTab | null;
