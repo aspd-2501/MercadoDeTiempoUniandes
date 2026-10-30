@@ -605,6 +605,7 @@ export default function AcuerdoDetail({
                   nombres={nombres}
                   duracion={acuerdo.duracionHoras}
                   resultado={acuerdo.resultadoDisponibilidad ?? { estado: 'pendiente' }}
+                  alturaLimitada
                 />
               </Panel>
               <MiDisponibilidad
