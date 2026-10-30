@@ -6,11 +6,12 @@ import { DonacionService } from './donacion.service';
 import { DonacionEntity } from './donacion.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { CausaEntity } from '../causa/causa.entity';
+import { TransaccionEntity } from '../transaccion/transaccion.entity';
 import { DepositoHorasEntity } from '../deposito-horas/deposito-horas.entity';
 import { DonacionController } from './donacion.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([DonacionEntity, PerfilMiembroEntity, DepositoHorasEntity, CausaEntity])],
+    imports: [TypeOrmModule.forFeature([DonacionEntity, PerfilMiembroEntity, DepositoHorasEntity, CausaEntity, TransaccionEntity])],
     providers: [DonacionService],
     controllers: [DonacionController],
 })

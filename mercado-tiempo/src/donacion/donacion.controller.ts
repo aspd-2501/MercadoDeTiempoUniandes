@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/donacion/donacion.controller.ts */
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseInterceptors } from '@nestjs/common';
 import { BusinessErrorsInterceptor } from '../shared/interceptors/business-errors.interceptor';
 import { DonacionService } from './donacion.service';
 import { DonacionEntity } from './donacion.entity';
@@ -27,11 +27,6 @@ export class DonacionController {
         return await this.donacionService.create(donacion);
     }
 
-    @Delete(':donacionId')
-    @HttpCode(204)
-    async delete(@Param('donacionId') donacionId: string) {
-        return await this.donacionService.delete(donacionId);
-    }
 
     // --- Mapeo manual DTO → Entity (4 FKs opcionales, exactamente una por lado) ---
     private dtoToEntity(dto: DonacionDto): DonacionEntity {

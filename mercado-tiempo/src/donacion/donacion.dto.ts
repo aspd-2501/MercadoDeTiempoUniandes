@@ -1,9 +1,10 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/donacion/donacion.dto.ts */
-import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsDateString, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class DonacionDto {
-    @IsNumber()
+    @IsInt()
+    @Min(1)
     @IsNotEmpty()
     readonly horasDonadas: number;
 

@@ -30,7 +30,7 @@ export class TransaccionService {
 
         return await this.transaccionRepository.find({
             where: { perfil: { id: perfilId } },
-            relations: { acuerdo: true },
+            relations: { acuerdo: true, donacion: true },
             order: { fecha: 'DESC' }
         });
     }
@@ -44,7 +44,7 @@ export class TransaccionService {
 
         return await this.transaccionRepository.find({
             where: { deposito: { id: depositoId } },
-            relations: { acuerdo: true },
+            relations: { acuerdo: true, donacion: true },
             order: { fecha: 'DESC' }
         });
     }

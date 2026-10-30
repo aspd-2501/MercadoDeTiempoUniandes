@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/deposito-horas/deposito-horas.controller.ts */
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, UseInterceptors } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { BusinessErrorsInterceptor } from '../shared/interceptors/business-errors.interceptor';
 import { DepositoHorasService } from './deposito-horas.service';
@@ -17,6 +17,12 @@ export class DepositoHorasController {
         return await this.depositoHorasService.findAll();
     }
 
+    // Debe ir antes de ':depositoId' para que "fondo" no se lea como un id
+    @Get('fondo')
+    async findFondo() {
+        return await this.depositoHorasService.findFondo();
+    }
+
     @Get(':depositoId')
     async findOne(@Param('depositoId') depositoId: string) {
         return await this.depositoHorasService.findOne(depositoId);
@@ -26,12 +32,6 @@ export class DepositoHorasController {
     async create(@Body() depositoDto: DepositoHorasDto) {
         const deposito: DepositoHorasEntity = plainToInstance(DepositoHorasEntity, depositoDto);
         return await this.depositoHorasService.create(deposito);
-    }
-
-    @Put(':depositoId')
-    async update(@Param('depositoId') depositoId: string, @Body() depositoDto: DepositoHorasDto) {
-        const deposito: DepositoHorasEntity = plainToInstance(DepositoHorasEntity, depositoDto);
-        return await this.depositoHorasService.update(depositoId, deposito);
     }
 
     @Delete(':depositoId')

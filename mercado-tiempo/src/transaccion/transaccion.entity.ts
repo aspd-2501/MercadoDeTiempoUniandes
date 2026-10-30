@@ -4,11 +4,12 @@ import { Check, Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, Primary
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
 import { DepositoHorasEntity } from '../deposito-horas/deposito-horas.entity';
+import { DonacionEntity } from '../donacion/donacion.entity';
 import { TipoTransaccion } from './tipo-transaccion.enum';
 
 // --- Un movimiento de horas en la cuenta de un miembro o del fondo comunitario (RF-046, RF-049, RF-056) ---
 @Entity()
-@Check(`"tipo" IN ('SERVICIO_RECIBIDO', 'SERVICIO_PRESTADO', 'APORTE_FONDO')`)
+@Check(`"tipo" IN ('SERVICIO_RECIBIDO', 'SERVICIO_PRESTADO', 'APORTE_FONDO', 'DONACION_ENVIADA', 'DONACION_RECIBIDA')`)
 @Check(`
     (CASE WHEN "idPerfil" IS NOT NULL THEN 1 ELSE 0 END) +
     (CASE WHEN "idDeposito" IS NOT NULL THEN 1 ELSE 0 END) = 1
@@ -44,4 +45,9 @@ export class TransaccionEntity {
     @ManyToOne(() => AcuerdoEntity, { nullable: true, onDelete: 'SET NULL' })
     @JoinColumn({ name: 'idAcuerdo' })
     acuerdo: AcuerdoEntity;
+
+    // --- Donación que originó el movimiento (RF-050) ---
+    @ManyToOne(() => DonacionEntity, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'idDonacion' })
+    donacion: DonacionEntity;
 }

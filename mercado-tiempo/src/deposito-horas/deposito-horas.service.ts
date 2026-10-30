@@ -6,6 +6,10 @@ import { Repository } from 'typeorm';
 import { BusinessError, BusinessLogicException } from '../shared/errors/business-errors';
 import { DepositoHorasEntity } from './deposito-horas.entity';
 
+// --- El DepositoHoras es el fondo comunitario: existe uno solo ---
+// Su saldo solo cambia con movimientos (aportes de acuerdos grupales y donaciones),
+// por eso no hay un endpoint para editarlo directamente.
+
 @Injectable()
 export class DepositoHorasService {
     constructor(
@@ -29,19 +33,22 @@ export class DepositoHorasService {
         return deposito;
     }
 
+    // Devuelve el fondo comunitario
+    async findFondo(): Promise<DepositoHorasEntity> {
+        const [fondo] = await this.depositoHorasRepository.find({ take: 1 });
+        if (!fondo)
+            throw new BusinessLogicException("The fondo comunitario has not been created", BusinessError.NOT_FOUND);
+        return fondo;
+    }
+
     async create(deposito: DepositoHorasEntity): Promise<DepositoHorasEntity> {
         if (deposito.saldo < 0)
             throw new BusinessLogicException("The saldo of a deposito horas cannot be negative", BusinessError.PRECONDITION_FAILED);
-        return await this.depositoHorasRepository.save(deposito);
-    }
 
-    async update(id: string, deposito: DepositoHorasEntity): Promise<DepositoHorasEntity> {
-        const persisted: DepositoHorasEntity | null = await this.depositoHorasRepository.findOne({ where: { id } });
-        if (!persisted)
-            throw new BusinessLogicException("The deposito horas with the given id was not found", BusinessError.NOT_FOUND);
-        if (deposito.saldo < 0)
-            throw new BusinessLogicException("The saldo of a deposito horas cannot be negative", BusinessError.PRECONDITION_FAILED);
-        deposito.id = id;
+        const existentes = await this.depositoHorasRepository.count();
+        if (existentes > 0)
+            throw new BusinessLogicException("The fondo comunitario already exists; there can only be one deposito horas", BusinessError.PRECONDITION_FAILED);
+
         return await this.depositoHorasRepository.save(deposito);
     }
 
@@ -49,6 +56,8 @@ export class DepositoHorasService {
         const deposito: DepositoHorasEntity | null = await this.depositoHorasRepository.findOne({ where: { id } });
         if (!deposito)
             throw new BusinessLogicException("The deposito horas with the given id was not found", BusinessError.NOT_FOUND);
+        if (deposito.saldo !== 0)
+            throw new BusinessLogicException("The fondo comunitario cannot be deleted while it has saldo", BusinessError.PRECONDITION_FAILED);
         await this.depositoHorasRepository.remove(deposito);
     }
 }

@@ -2,12 +2,14 @@
 /* archivo: src/donacion/donacion.service.ts */
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { BusinessError, BusinessLogicException } from '../shared/errors/business-errors';
 import { DonacionEntity } from './donacion.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { DepositoHorasEntity } from '../deposito-horas/deposito-horas.entity';
 import { CausaEntity } from '../causa/causa.entity';
+import { TransaccionEntity } from '../transaccion/transaccion.entity';
+import { TipoTransaccion } from '../transaccion/tipo-transaccion.enum';
 
 @Injectable()
 export class DonacionService {
@@ -41,7 +43,13 @@ export class DonacionService {
         return donacion;
     }
 
+    // --- Donar horas (RF-050): descuenta al donante, acredita al receptor y deja ambos movimientos ---
+    // Las donaciones no se borran ni se editan: ya movieron horas y forman parte del historial (RF-056).
+
     async create(donacion: DonacionEntity): Promise<DonacionEntity> {
+        if (!donacion.horasDonadas || donacion.horasDonadas <= 0 || !Number.isInteger(donacion.horasDonadas))
+            throw new BusinessLogicException("The horasDonadas must be a positive integer", BusinessError.PRECONDITION_FAILED);
+
         await this.validarDonante(donacion);
         await this.validarReceptor(donacion);
         await this.validarDistintos(donacion);
@@ -50,14 +58,56 @@ export class DonacionService {
             if (!causa)
                 throw new BusinessLogicException("The causa with the given id was not found", BusinessError.NOT_FOUND);
         }
-        return await this.donacionRepository.save(donacion);
+
+        // Todo en una sola transacción de BD: o se mueven las horas y se guarda la donación, o nada
+        const id = await this.donacionRepository.manager.transaction(async manager => {
+            const nueva = await manager.save(DonacionEntity, donacion);
+
+            await this.moverHoras(manager, nueva, -donacion.horasDonadas, TipoTransaccion.DONACION_ENVIADA,
+                donacion.perfilDonante, donacion.depositoDonante);
+            await this.moverHoras(manager, nueva, donacion.horasDonadas, TipoTransaccion.DONACION_RECIBIDA,
+                donacion.perfilReceptor, donacion.depositoReceptor);
+
+            return nueva.id;
+        });
+
+        return await this.findOne(id);
     }
 
-    async delete(id: string) {
-        const donacion: DonacionEntity | null = await this.donacionRepository.findOne({ where: { id } });
-        if (!donacion)
-            throw new BusinessLogicException("The donacion with the given id was not found", BusinessError.NOT_FOUND);
-        await this.donacionRepository.remove(donacion);
+    // Suma o resta horas a un perfil o al fondo, y registra la transacción
+    private async moverHoras(
+        manager: EntityManager,
+        donacion: DonacionEntity,
+        horas: number,
+        tipo: TipoTransaccion,
+        perfil?: PerfilMiembroEntity,
+        deposito?: DepositoHorasEntity
+    ) {
+        if (perfil) {
+            const actual = await manager.findOne(PerfilMiembroEntity, { where: { id: perfil.id } });
+            if (!actual)
+                throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            if (actual.saldo + horas < 0)
+                throw new BusinessLogicException("The perfil donante does not have enough saldo", BusinessError.PRECONDITION_FAILED);
+
+            const saldoResultante = actual.saldo + horas;
+            await manager.update(PerfilMiembroEntity, actual.id, { saldo: saldoResultante });
+            await manager.save(TransaccionEntity, manager.create(TransaccionEntity, {
+                tipo, horas, saldoResultante, perfil: { id: actual.id }, donacion: { id: donacion.id },
+            }));
+        } else if (deposito) {
+            const actual = await manager.findOne(DepositoHorasEntity, { where: { id: deposito.id } });
+            if (!actual)
+                throw new BusinessLogicException("The deposito horas with the given id was not found", BusinessError.NOT_FOUND);
+            if (actual.saldo + horas < 0)
+                throw new BusinessLogicException("The fondo comunitario does not have enough saldo", BusinessError.PRECONDITION_FAILED);
+
+            const saldoResultante = actual.saldo + horas;
+            await manager.update(DepositoHorasEntity, actual.id, { saldo: saldoResultante });
+            await manager.save(TransaccionEntity, manager.create(TransaccionEntity, {
+                tipo, horas, saldoResultante, deposito: { id: actual.id }, donacion: { id: donacion.id },
+            }));
+        }
     }
 
     // --- Validaciones de negocio (espejo de los CHECK a nivel de BD) ---
