@@ -28,6 +28,10 @@ export class ParticipanteAcuerdoEntity {
     @Column({ nullable: true })
     fechaConfirmacion: Date;
 
+    // --- Si ya envió sus franjas de disponibilidad para el acuerdo (RF-037) ---
+    @Column({ default: false })
+    envioDisponibilidad: boolean;
+
     @ManyToOne(() => AcuerdoEntity, acuerdo => acuerdo.participantes, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'idAcuerdo' })
     acuerdo: AcuerdoEntity;

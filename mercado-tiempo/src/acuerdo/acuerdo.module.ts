@@ -10,10 +10,12 @@ import { HorarioDisponibleEntity } from '../horario-disponible/horario-disponibl
 import { ChatEntity } from '../chat/chat.entity';
 import { TransaccionEntity } from '../transaccion/transaccion.entity';
 import { AcuerdoController } from './acuerdo.controller';
+import { DisponibilidadAcuerdoService } from './disponibilidad-acuerdo.service';
+import { DisponibilidadAcuerdoController } from './disponibilidad-acuerdo.controller';
 
 @Module({
     imports: [TypeOrmModule.forFeature([AcuerdoEntity, ParticipanteAcuerdoEntity, PerfilMiembroEntity, HorarioDisponibleEntity, ChatEntity, TransaccionEntity])],
-    providers: [AcuerdoService],
-    controllers: [AcuerdoController],
+    providers: [AcuerdoService, DisponibilidadAcuerdoService],
+    controllers: [AcuerdoController, DisponibilidadAcuerdoController],
 })
 export class AcuerdoModule {}
