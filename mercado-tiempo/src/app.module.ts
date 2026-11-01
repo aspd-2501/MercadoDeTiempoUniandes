@@ -28,6 +28,7 @@ import { OrganizacionInstitucionalModule } from './organizacion-institucional/or
 import { AuthModule } from './auth/auth.module';
 import { SolicitudModificacionModule } from './solicitud-modificacion/solicitud-modificacion.module';
 import { TransaccionModule } from './transaccion/transaccion.module';
+import { AgendaMiembroModule } from './agenda-miembro/agenda-miembro.module';
 
 // Entidades
 import { UsuarioEntity } from './usuario/usuario.entity';
@@ -86,6 +87,7 @@ import { TransaccionEntity } from './transaccion/transaccion.entity';
     OrganizacionInstitucionalModule,
     SolicitudModificacionModule,
     TransaccionModule,
+    AgendaMiembroModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
