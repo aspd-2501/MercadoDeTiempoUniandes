@@ -25,6 +25,10 @@ import CrearPostAyuda from './ventanas/postAyuda/CrearPostAyuda';
 import AcuerdoDetail from './ventanas/acuerdos/AcuerdoDetail';
 import Actividad from './ventanas/Actividad';
 
+//Login y Registro
+import Login from './ventanas/LoginYRegistro/Login';
+import Onboarding from './ventanas/LoginYRegistro/Onboarding';
+
 //Datos de prueba
 import {
   ACUERDOS_PARA_DETALLE_DEMO,
@@ -113,6 +117,10 @@ function App() {
   // 03. IDENTIFICAR LA RUTA ACTUAL
   const location = useLocation();
 
+  const esRutaPublica =
+    location.pathname === '/login' ||
+    location.pathname === '/onboarding';
+
   const activeTab =
     location.pathname.startsWith('/perfil') ? 'profile' :
     /*location.pathname.startsWith('/chats') ? 'chat' :*/
@@ -125,22 +133,39 @@ function App() {
       <div className="min-h-screen bg-[#F6F6F6]">
 
       {/* 04. BARRAS DE NAVEGACIÓN */}
-      <NavBarDesktop
-        activeTab={activeTab}
-        onNavigate={cambiarPestana}
-        onCreate={() => setMenuCrearAbierto(true)}
-      />
+      {!esRutaPublica && (
+        <>
+          <NavBarDesktop
+            activeTab={activeTab}
+            onNavigate={cambiarPestana}
+            onCreate={() => setMenuCrearAbierto(true)}
+          />
 
-      <NavBarMobile
-        activeTab={activeTab}
-        onNavigate={cambiarPestana}
-        onCreate={() => setMenuCrearAbierto(true)}
-      />
+          <NavBarMobile
+            activeTab={activeTab}
+            onNavigate={cambiarPestana}
+            onCreate={() => setMenuCrearAbierto(true)}
+          />
 
-      {/* 05. CONTENIDO PRINCIPAL */}
-      <main className="min-h-screen min-w-0 pb-24 lg:ml-60 lg:pb-0">
+          {/* 05. MENÚ EMERGENTE CREAR */}
+          {menuCrearAbierto && (
+            <MenuCrear
+              onClose={() => setMenuCrearAbierto(false)}
+              onSelect={manejarAccionCrear}
+            />)}
+        </>
+      )}  
+
+      {/* 06. CONTENIDO PRINCIPAL */}
+      <main className={esRutaPublica ? '' : 'min-h-screen min-w-0 pb-24 lg:ml-60 lg:pb-0'}>
         <Routes>
 
+          {/*Login*/}
+          <Route path="/login" element={<Login onContinuar={() => navigate('/')} onCrearCuenta={() => navigate('/onboarding')} />} />
+
+          {/* REGISTRO / ONBOARDING */}
+          <Route path="/onboarding" element={<Onboarding onFinalizar={() => navigate('/')} onOmitir={() => navigate('/')} /> }/>
+          
           {/*HomeFeed*/}
           <Route path="/" element={<HomeFeed onDonarHoras={() => navigate('/donar-horas')} onVerMovimientos={() => navigate('/movimientos')} onVerAutorPost={(miembroId) => navigate(`/${miembroId}`)} onVerDetallePost={(postId) => navigate(`/posts/${postId}`)}/>} />
           
@@ -178,14 +203,6 @@ function App() {
           
         </Routes>
       </main>
-
-      {/* 06. MENÚ EMERGENTE CREAR */}
-      {menuCrearAbierto && (
-        <MenuCrear
-          onClose={() => setMenuCrearAbierto(false)}
-          onSelect={manejarAccionCrear}
-        />
-      )}
 
     </div>
   );
