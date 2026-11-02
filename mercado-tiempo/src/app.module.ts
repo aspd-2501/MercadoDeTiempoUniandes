@@ -30,6 +30,7 @@ import { SolicitudModificacionModule } from './solicitud-modificacion/solicitud-
 import { TransaccionModule } from './transaccion/transaccion.module';
 import { AgendaMiembroModule } from './agenda-miembro/agenda-miembro.module';
 import { BusquedaModule } from './busqueda/busqueda.module';
+import { FeedModule } from './feed/feed.module';
 
 // Entidades
 import { UsuarioEntity } from './usuario/usuario.entity';
@@ -90,6 +91,7 @@ import { TransaccionEntity } from './transaccion/transaccion.entity';
     TransaccionModule,
     AgendaMiembroModule,
     BusquedaModule,
+    FeedModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: 'localhost',
