@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/servicio-ofrecido/servicio-ofrecido.controller.ts */
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query, UseInterceptors } from '@nestjs/common';
 import { BusinessErrorsInterceptor } from '../shared/interceptors/business-errors.interceptor';
 import { ServicioOfrecidoService } from './servicio-ofrecido.service';
 import { ServicioOfrecidoEntity } from './servicio-ofrecido.entity';
@@ -58,8 +58,23 @@ export class ServicioOfrecidoController {
         const servicio = new ServicioOfrecidoEntity();
         servicio.titulo = dto.titulo;
         servicio.descripcion = dto.descripcion;
+        servicio.imagen = dto.imagen ?? null;
         servicio.visible = dto.visible ?? true;
         servicio.perfil = { id: dto.perfilId } as any;
         return servicio;
+    }
+}
+
+// --- Servicios de un miembro, para su perfil (RF-008) ---
+// GET /perfiles-miembro/:perfilId/servicios-ofrecidos            -> solo los visibles
+// GET /perfiles-miembro/:perfilId/servicios-ofrecidos?ocultos=true -> también los ocultos (vista del propio miembro)
+@Controller('perfiles-miembro/:perfilId/servicios-ofrecidos')
+@UseInterceptors(BusinessErrorsInterceptor)
+export class ServiciosPerfilController {
+    constructor(private readonly servicioOfrecidoService: ServicioOfrecidoService) {}
+
+    @Get()
+    async findByPerfilId(@Param('perfilId') perfilId: string, @Query('ocultos') ocultos?: string) {
+        return await this.servicioOfrecidoService.findByPerfilId(perfilId, ocultos === 'true');
     }
 }

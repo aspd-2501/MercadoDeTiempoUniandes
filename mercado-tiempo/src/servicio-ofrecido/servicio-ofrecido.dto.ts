@@ -11,6 +11,10 @@ export class ServicioOfrecidoDto {
     @IsNotEmpty()
     readonly descripcion: string;
 
+    @IsString()
+    @IsOptional()
+    readonly imagen?: string;
+
     @IsBoolean()
     @IsOptional()
     readonly visible?: boolean;

@@ -146,4 +146,10 @@ describe('BusquedaService', () => {
         expect((await service.buscarServicios('fotografia')).length).toBe(0);
         expect((await service.buscarServicios('integrales')).length).toBe(1);
     });
+
+    it('buscarMiembros should not return inactive miembros (RF-006)', async () => {
+        await perfilRepository.update(tomas.id, { estadoActividad: false });
+        expect((await service.buscarMiembros('tomas')).length).toBe(0);
+        expect((await service.buscarMiembros('')).map(p => p.nombre)).toEqual(['Ana Martínez', 'Sofía Padilla']);
+    });
 });

@@ -193,4 +193,13 @@ describe('FeedService', () => {
         await expect(() => service.findFeed({ perfilId: "0" }))
             .rejects.toHaveProperty("message", "The perfil with the given id was not found");
     });
+
+    it('findFeed should hide the publicaciones of inactive miembros (RF-006)', async () => {
+        await crearPostAyuda('De un miembro activo', 1);
+        const inactivo = await createPerfil('Inactivo');
+        await perfilRepository.update(inactivo.id, { estadoActividad: false });
+        await crearPostAyuda('De un miembro inactivo', 2, undefined, { perfilAutor: inactivo });
+
+        expect(await titulos()).toEqual(['De un miembro activo']);
+    });
 });

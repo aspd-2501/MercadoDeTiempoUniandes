@@ -20,7 +20,7 @@ export interface PublicacionFeed {
     descripcion: string;
     imagen: string;
     fecha: Date;
-    autor: { id: string; nombre: string; imagen: string } | null;
+    autor: { id: string; nombre: string; imagen: string; activo: boolean } | null;
     categorias: string[];
     relevante: boolean;        // coincide con los intereses o los servicios del miembro (RF-021)
     ofrece?: boolean;          // solo posts de ayuda: true = ofrecimiento, false = solicitud
@@ -44,6 +44,7 @@ export interface FiltrosFeed {
 // --- Feed de publicaciones (RF-019, RF-020, RF-021) ---
 //
 // Mezcla posts de ayuda (sin cupo lleno), posts comunitarios públicos y causas.
+// No muestra publicaciones de miembros inactivos (RF-006).
 // Primero van las publicaciones relevantes para el miembro y, dentro de cada grupo, las más nuevas.
 
 @Injectable()
@@ -78,6 +79,7 @@ export class FeedService {
             ...(await this.causas()),
         ]
             .filter(p => !filtros.perfilId || p.autor?.id !== filtros.perfilId)
+            .filter(p => p.autor?.activo !== false)
             .filter(p => !filtros.categoria || p.categorias.some(c => normalizar(c) === normalizar(filtros.categoria)))
             .filter(p => coincide(filtros.q, [p.titulo, p.descripcion, ...p.categorias, p.autor?.nombre]))
             .map(p => ({ ...p, relevante: p.categorias.some(c => categoriasDeInteres.has(normalizar(c))) }))
@@ -114,7 +116,7 @@ export class FeedService {
     }
 
     private autor(perfil?: PerfilMiembroEntity | null) {
-        return perfil ? { id: perfil.id, nombre: perfil.nombre, imagen: perfil.imagen } : null;
+        return perfil ? { id: perfil.id, nombre: perfil.nombre, imagen: perfil.imagen, activo: perfil.estadoActividad } : null;
     }
 
     private async postsAyuda(): Promise<PublicacionFeed[]> {

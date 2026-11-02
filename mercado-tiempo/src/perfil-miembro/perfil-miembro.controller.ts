@@ -6,6 +6,7 @@ import { PerfilMiembroService } from './perfil-miembro.service';
 import { PerfilMiembroEntity } from './perfil-miembro.entity';
 import { PerfilMiembroDto } from './perfil-miembro.dto';
 import { AsociarInteresesDto } from './asociar-intereses.dto';
+import { EstadoActividadDto } from './estado-actividad.dto';
 
 @Controller('perfiles-miembro')
 @UseInterceptors(BusinessErrorsInterceptor)
@@ -46,6 +47,17 @@ async findOne(@Param('perfilId') perfilId: string) {
     }
 
     // --- Intereses (categorías) ---
+
+    // PUT /perfiles-miembro/:perfilId/estado-actividad  { "activo": false }  (RF-006)
+    @Put(':perfilId/estado-actividad')
+    async cambiarEstadoActividad(@Param('perfilId') perfilId: string, @Body() dto: EstadoActividadDto) {
+        const perfil = await this.perfilMiembroService.cambiarEstadoActividad(perfilId, dto.activo);
+        if (perfil.usuario) {
+            const { contrasenia, ...usuarioSinContrasenia } = perfil.usuario;
+            return { ...perfil, usuario: usuarioSinContrasenia };
+        }
+        return perfil;
+    }
 
     @Get(':perfilId/intereses')
     async findIntereses(@Param('perfilId') perfilId: string) {

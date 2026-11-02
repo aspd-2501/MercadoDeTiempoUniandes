@@ -187,4 +187,17 @@ describe('PerfilMiembroService', () => {
         await expect(() => service.delete("0"))
             .rejects.toHaveProperty("message", "The perfil miembro with the given id was not found");
     });
+
+    // --- Estado de actividad (RF-006) ---
+
+    it('cambiarEstadoActividad should deactivate and reactivate a perfil', async () => {
+        const perfil = perfilesList[0];
+        expect((await service.cambiarEstadoActividad(perfil.id, false)).estadoActividad).toBe(false);
+        expect((await service.cambiarEstadoActividad(perfil.id, true)).estadoActividad).toBe(true);
+    });
+
+    it('cambiarEstadoActividad should throw an exception for an invalid perfil', async () => {
+        await expect(() => service.cambiarEstadoActividad("0", false))
+            .rejects.toHaveProperty("message", "The perfil miembro with the given id was not found");
+    });
 });

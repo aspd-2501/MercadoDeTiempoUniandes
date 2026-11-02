@@ -16,6 +16,10 @@ export class ServicioOfrecidoEntity {
     @Column()
     descripcion: string;
 
+    // URL de la imagen del servicio (RF-010), opcional
+    @Column({ type: 'varchar', nullable: true })
+    imagen: string | null;
+
     @Column({ default: true })
     visible: boolean;
 

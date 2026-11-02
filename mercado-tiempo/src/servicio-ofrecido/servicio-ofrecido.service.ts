@@ -33,6 +33,20 @@ export class ServicioOfrecidoService {
         });
     }
 
+    // Servicios de un miembro para mostrar en su perfil (RF-008).
+    // Por defecto solo los visibles; el propio miembro puede pedir también los ocultos.
+    async findByPerfilId(perfilId: string, incluirOcultos = false): Promise<ServicioOfrecidoEntity[]> {
+        const perfil = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
+        if (!perfil)
+            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+
+        return await this.servicioOfrecidoRepository.find({
+            where: incluirOcultos ? { perfil: { id: perfilId } } : { perfil: { id: perfilId }, visible: true },
+            relations: { categorias: { categoria: true } },
+            order: { titulo: 'ASC' }
+        });
+    }
+
     async findOne(id: string): Promise<ServicioOfrecidoEntity> {
         const servicio: ServicioOfrecidoEntity | null = await this.servicioOfrecidoRepository.findOne({
             where: { id },

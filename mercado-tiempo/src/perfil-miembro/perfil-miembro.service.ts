@@ -110,4 +110,16 @@ export class PerfilMiembroService {
             throw new BusinessLogicException("The categoria is not an interes of the perfil miembro", BusinessError.PRECONDITION_FAILED);
         await this.perfilInteresRepository.remove(relacion);
     }
+
+    // --- Estado de actividad (RF-006) ---
+    // Un miembro inactivo no aparece en la búsqueda de miembros y sus publicaciones no salen en el feed.
+
+    async cambiarEstadoActividad(perfilId: string, activo: boolean): Promise<PerfilMiembroEntity> {
+        const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
+        if (!perfil)
+            throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
+
+        await this.perfilMiembroRepository.update(perfilId, { estadoActividad: activo });
+        return await this.findOne(perfilId);
+    }
 }

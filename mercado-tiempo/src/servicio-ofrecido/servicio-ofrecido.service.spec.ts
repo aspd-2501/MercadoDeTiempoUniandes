@@ -219,4 +219,30 @@ describe('ServicioOfrecidoService', () => {
         await expect(() => service.delete("0"))
             .rejects.toHaveProperty("message", "The servicio ofrecido with the given id was not found");
     });
+
+    // --- Imagen (RF-010) y servicios del perfil (RF-008) ---
+
+    it('create should save the imagen of the servicio', async () => {
+        const nuevo = { titulo: 'Fotografía', descripcion: 'Fotos de eventos', imagen: 'https://img/foto.png', perfil } as ServicioOfrecidoEntity;
+        const result = await service.create(nuevo, [categoriasList[2].id]);
+        const stored = await servicioOfrecidoRepository.findOne({ where: { id: result.id } });
+        expect(stored!.imagen).toBe('https://img/foto.png');
+    });
+
+    it('findByPerfilId should return only the visible servicios of the perfil', async () => {
+        await servicioOfrecidoRepository.save({ titulo: 'Oculto', descripcion: 'd', visible: false, perfil });
+        const result = await service.findByPerfilId(perfil.id);
+        expect(result.map(s => s.id)).toEqual([servicio.id]);
+    });
+
+    it('findByPerfilId should include the hidden servicios when asked', async () => {
+        await servicioOfrecidoRepository.save({ titulo: 'Oculto', descripcion: 'd', visible: false, perfil });
+        const result = await service.findByPerfilId(perfil.id, true);
+        expect(result.length).toBe(2);
+    });
+
+    it('findByPerfilId should throw an exception for an invalid perfil', async () => {
+        await expect(() => service.findByPerfilId("0"))
+            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+    });
 });
