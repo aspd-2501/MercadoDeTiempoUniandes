@@ -4,7 +4,7 @@
  * Ejecuta las pruebas *.spec.ts sin Jest.
  *
  * Por qué existe: Jest 29 no puede cargar los paquetes de NestJS 12, que se publican como
- * módulos ES. Node sí puede, así que este script compila el proyecto con TypeScript y corre
+ * módulos ES. Node sí puede, así que este script compila src/ con TypeScript y corre
  * las pruebas con el mismo `expect` de Jest. Soporta describe (anidado), it/test,
  * beforeAll, beforeEach, afterEach y afterAll.
  *
@@ -26,11 +26,8 @@ console.log('Compilando...');
 try {
     execFileSync(process.execPath, [
         require.resolve('typescript/bin/tsc', { paths: [raiz] }),
-        '-p', path.join(raiz, 'tsconfig.json'),
-        '--outDir', salida,
-        '--incremental', 'false',
-        '--declaration', 'false',
-        '--sourceMap', 'false',
+        // Solo compila src/ (ver test/tsconfig.test-node.json): así no le afectan dist/ ni otras carpetas
+        '-p', path.join(__dirname, 'tsconfig.test-node.json'),
     ], { stdio: 'inherit', cwd: raiz });
 } catch {
     console.error('\nLa compilación falló: corrige los errores de TypeScript de arriba.');
