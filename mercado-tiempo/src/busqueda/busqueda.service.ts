@@ -63,6 +63,7 @@ export class BusquedaService {
         });
 
         return posts
+            .filter(p => p.perfilAutor?.estadoActividad !== false)
             .filter(p => tipo !== TipoPostBusqueda.SOLICITUD || !p.ofrece)
             .filter(p => tipo !== TipoPostBusqueda.OFRECIMIENTO || p.ofrece)
             .filter(p => coincide(consulta, [
@@ -81,6 +82,7 @@ export class BusquedaService {
         });
 
         return servicios
+            .filter(s => s.perfil?.estadoActividad !== false)
             .filter(s => coincide(consulta, [
                 s.titulo,
                 s.descripcion,

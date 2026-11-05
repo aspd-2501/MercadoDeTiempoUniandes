@@ -152,4 +152,16 @@ describe('BusquedaService', () => {
         expect((await service.buscarMiembros('tomas')).length).toBe(0);
         expect((await service.buscarMiembros('')).map(p => p.nombre)).toEqual(['Ana Martínez', 'Sofía Padilla']);
     });
+
+        it('buscarServicios should not return the servicios of inactive miembros (RF-006)', async () => {
+        await perfilRepository.update(ana.id, { estadoActividad: false });
+        expect((await service.buscarServicios('calculo')).length).toBe(0);
+        expect((await service.buscarServicios('')).length).toBe(0);
+    });
+
+    it('buscarPostsAyuda should not return the posts of inactive autores (RF-006)', async () => {
+        await perfilRepository.update(ana.id, { estadoActividad: false });
+        const result = await service.buscarPostsAyuda('clases');
+        expect(result.map(p => p.titulo)).toEqual(['Clases de guitarra']);
+    });
 });
