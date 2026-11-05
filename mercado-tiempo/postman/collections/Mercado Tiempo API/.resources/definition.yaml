@@ -18,6 +18,17 @@ variables:
   perfilA: ""
   acuerdo1: ""
   acuerdo2: ""
+  ahora: ""
+  pasadoInicio: ""
+  pasadoFin: ""
+  pasadoCoincInicio: ""
+  pasadoCoincFin: ""
+  pasadoCorto: ""
+  futuroInicio: ""
+  futuroFin: ""
+  futuroOtro: ""
+  desde: ""
+  hasta: ""
 scripts:
   - type: http:afterResponse
     code: |-
