@@ -104,8 +104,29 @@ describe('FeedService', () => {
         await postComunitarioRepository.save({ titulo: 'Logramos la jornada', descripcion: 'Gracias', imagen: 'i', fechaCreacion: fecha(2), likes: 0, publico: true, aprobaciones: 2, creador: autor });
         await causaRepository.save({ nombre: 'Recolección de libros', descripcion: 'Para la biblioteca', imagen: 'i', perfilCreador: autor, perfilReceptor: autor });
 
-        const result = await service.findFeed({ perfilId: lector.id });
+        const result = await service.findFeed({ perfilId: lector.id, tipos: ['POST_AYUDA', 'POST_COMUNITARIO', 'CAUSA'] });
         expect(result.publicaciones.map(p => p.tipo).sort()).toEqual(['CAUSA', 'POST_AYUDA', 'POST_COMUNITARIO']);
+    });
+
+    it('findFeed should not include causas unless they are asked for', async () => {
+        await crearPostAyuda('Clases de guitarra', 3, musica);
+        await causaRepository.save({ nombre: 'Recolección de libros', descripcion: 'Para la biblioteca', imagen: 'i', perfilCreador: autor, perfilReceptor: autor });
+
+        const result = await service.findFeed({ perfilId: lector.id });
+        expect(result.publicaciones.map(p => p.tipo)).toEqual(['POST_AYUDA']);
+    });
+
+    it('findFeed should return only the tipos asked for', async () => {
+        await crearPostAyuda('Clases de guitarra', 3, musica);
+        await causaRepository.save({ nombre: 'Recolección de libros', descripcion: 'Para la biblioteca', imagen: 'i', perfilCreador: autor, perfilReceptor: autor });
+
+        const result = await service.findFeed({ perfilId: lector.id, tipos: ['CAUSA'] });
+        expect(result.publicaciones.map(p => p.titulo)).toEqual(['Recolección de libros']);
+    });
+
+    it('findFeed should throw an exception for an invalid tipo', async () => {
+        await expect(() => service.findFeed({ tipos: ['EVENTO' as never] }))
+            .rejects.toHaveProperty("message", "The tipos must be POST_AYUDA, POST_COMUNITARIO or CAUSA");
     });
 
     it('findFeed should hide private posts comunitarios, posts with cupo lleno and the miembro own publicaciones', async () => {

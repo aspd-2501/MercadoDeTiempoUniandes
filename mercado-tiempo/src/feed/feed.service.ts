@@ -12,6 +12,11 @@ import { coincide, normalizar } from '../busqueda/texto-busqueda';
 
 export type TipoPublicacion = 'POST_AYUDA' | 'POST_COMUNITARIO' | 'CAUSA';
 
+export const TIPOS_PUBLICACION: TipoPublicacion[] = ['POST_AYUDA', 'POST_COMUNITARIO', 'CAUSA'];
+
+// Tipos que trae el feed si no se piden otros: las causas se piden explícitamente con `tipos`
+export const TIPOS_POR_DEFECTO: TipoPublicacion[] = ['POST_AYUDA', 'POST_COMUNITARIO'];
+
 // --- Una publicación del feed, con la misma forma para los tres tipos ---
 export interface PublicacionFeed {
     tipo: TipoPublicacion;
@@ -39,11 +44,12 @@ export interface FiltrosFeed {
     q?: string;                // palabras clave
     pagina?: number;           // empieza en 1
     tamano?: number;           // entre 1 y 50, por defecto 10
+    tipos?: TipoPublicacion[]; // qué incluir; por defecto posts de ayuda y posts comunitarios (sin causas)
 }
 
 // --- Feed de publicaciones (RF-019, RF-020, RF-021) ---
 //
-// Mezcla posts de ayuda (sin cupo lleno), posts comunitarios públicos y causas.
+// Mezcla posts de ayuda (sin cupo lleno), posts comunitarios públicos y, si se piden, causas.
 // No muestra publicaciones de miembros inactivos (RF-006).
 // Primero van las publicaciones relevantes para el miembro y, dentro de cada grupo, las más nuevas.
 
@@ -71,12 +77,16 @@ export class FeedService {
         if (!Number.isInteger(tamano) || tamano < 1 || tamano > 50)
             throw new BusinessLogicException("The tamano must be an integer between 1 and 50", BusinessError.BAD_REQUEST);
 
+        const tipos = filtros.tipos && filtros.tipos.length > 0 ? filtros.tipos : TIPOS_POR_DEFECTO;
+        if (tipos.some(t => !TIPOS_PUBLICACION.includes(t)))
+            throw new BusinessLogicException("The tipos must be POST_AYUDA, POST_COMUNITARIO or CAUSA", BusinessError.BAD_REQUEST);
+
         const categoriasDeInteres = filtros.perfilId ? await this.categoriasDeInteres(filtros.perfilId) : new Set<string>();
 
         const publicaciones = [
-            ...(await this.postsAyuda()),
-            ...(await this.postsComunitarios()),
-            ...(await this.causas()),
+            ...(tipos.includes('POST_AYUDA') ? await this.postsAyuda() : []),
+            ...(tipos.includes('POST_COMUNITARIO') ? await this.postsComunitarios() : []),
+            ...(tipos.includes('CAUSA') ? await this.causas() : []),
         ]
             .filter(p => !filtros.perfilId || p.autor?.id !== filtros.perfilId)
             .filter(p => p.autor?.activo !== false)

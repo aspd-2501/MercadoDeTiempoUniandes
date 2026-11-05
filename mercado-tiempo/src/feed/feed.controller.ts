@@ -2,7 +2,7 @@
 /* archivo: src/feed/feed.controller.ts */
 import { Controller, Get, Query, UseInterceptors } from '@nestjs/common';
 import { BusinessErrorsInterceptor } from '../shared/interceptors/business-errors.interceptor';
-import { FeedService } from './feed.service';
+import { FeedService, TipoPublicacion } from './feed.service';
 
 @Controller('feed')
 @UseInterceptors(BusinessErrorsInterceptor)
@@ -10,13 +10,16 @@ export class FeedController {
     constructor(private readonly feedService: FeedService) {}
 
     // GET /feed?perfilId=<miembro>&categoria=Académico&q=excel&pagina=1&tamano=10
+    // Sin `tipos` trae posts de ayuda y posts comunitarios. Para incluir causas:
+    // GET /feed?tipos=POST_AYUDA,POST_COMUNITARIO,CAUSA
     @Get()
     async findFeed(
         @Query('perfilId') perfilId?: string,
         @Query('categoria') categoria?: string,
         @Query('q') q?: string,
         @Query('pagina') pagina?: string,
-        @Query('tamano') tamano?: string
+        @Query('tamano') tamano?: string,
+        @Query('tipos') tipos?: string
     ) {
         return await this.feedService.findFeed({
             perfilId: perfilId || undefined,
@@ -24,6 +27,7 @@ export class FeedController {
             q,
             pagina: pagina !== undefined ? Number(pagina) : undefined,
             tamano: tamano !== undefined ? Number(tamano) : undefined,
+            tipos: tipos ? tipos.split(',').map(t => t.trim().toUpperCase() as TipoPublicacion).filter(t => t) : undefined,
         });
     }
 }

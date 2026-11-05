@@ -56,7 +56,8 @@ export class BusquedaService {
             .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
     }
 
-    // Posts de ayuda por palabra clave en título, descripción o categoría (RF-025), los más nuevos primero
+    // Posts de ayuda por palabra clave en título, descripción o categoría (RF-025), los más nuevos primero.
+    // No aparecen los posts de autores inactivos (RF-006).
     async buscarPostsAyuda(consulta?: string, tipo?: TipoPostBusqueda): Promise<PostAyudaEntity[]> {
         const posts = await this.postAyudaRepository.find({
             relations: { perfilAutor: true, categorias: { categoria: true }, horariosDisponibles: true }
@@ -74,7 +75,8 @@ export class BusquedaService {
             .sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
     }
 
-    // Servicios visibles por palabra clave en título, descripción o categoría
+    // Servicios visibles por palabra clave en título, descripción o categoría.
+    // No aparecen los servicios de miembros inactivos (RF-006).
     async buscarServicios(consulta?: string): Promise<ServicioOfrecidoEntity[]> {
         const servicios = await this.servicioOfrecidoRepository.find({
             where: { visible: true },

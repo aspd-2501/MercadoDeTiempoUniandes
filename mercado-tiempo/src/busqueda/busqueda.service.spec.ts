@@ -153,7 +153,7 @@ describe('BusquedaService', () => {
         expect((await service.buscarMiembros('')).map(p => p.nombre)).toEqual(['Ana Martínez', 'Sofía Padilla']);
     });
 
-        it('buscarServicios should not return the servicios of inactive miembros (RF-006)', async () => {
+    it('buscarServicios should not return the servicios of inactive miembros (RF-006)', async () => {
         await perfilRepository.update(ana.id, { estadoActividad: false });
         expect((await service.buscarServicios('calculo')).length).toBe(0);
         expect((await service.buscarServicios('')).length).toBe(0);
