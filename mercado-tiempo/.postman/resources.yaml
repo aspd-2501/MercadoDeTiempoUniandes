@@ -1,0 +1,15 @@
+# Use this workspace to collaborate
+workspace:
+  id: 91df2565-6d40-410a-9ee1-772390d46c75
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../postman/collections/Mercado de Tiempo Uniandes - API: e0f9074f-684e-4e78-9e14-d7a751b82e4b
+
+# All resources in the `postman/` folder are automatically registered in Local View.
+# Point to additional files outside the `postman/` folder to register them individually. Example:
+#localResources:
+#  collections:
+#    - ../tests/E2E Test Collection/
