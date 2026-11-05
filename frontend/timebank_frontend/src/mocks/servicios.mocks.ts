@@ -6,7 +6,8 @@ import type { ServicioCatalogo } from '../tipos/servicio';
  * Cada servicio pertenece a un miembro identificado por userId.
  * Los identificadores coinciden con las claves de MIEMBROS_DEMO.
  *
- * Por ahora son datos locales: no se consultan ni guardan en el backend.
+ * Estos mocks solo los usan las vistas que todavía no han migrado al backend.
+ * Explorar consulta servicios desde GET /buscar/servicios sin filtros adicionales.
  */
 export const SERVICIOS_DEMO: ServicioCatalogo[] = [
   // 01. SERVICIOS DE MARÍA LÓPEZ
@@ -37,7 +38,7 @@ export const SERVICIOS_DEMO: ServicioCatalogo[] = [
     category: 'Diseño',
     description:
       'Aprende las herramientas básicas de edición de imágenes y retoque fotográfico.',
-    estimatedHours: 2,
+    estimatedHours: 1.5,
     isVisible: false,
   },
 
@@ -59,7 +60,7 @@ export const SERVICIOS_DEMO: ServicioCatalogo[] = [
     category: 'Tecnología / Ofimática',
     description:
       'Te ayudo a organizar hojas de cálculo y utilizar fórmulas y tablas básicas.',
-    estimatedHours: 2,
+    estimatedHours: 1.5,
     isVisible: true,
   },
 
@@ -81,7 +82,7 @@ export const SERVICIOS_DEMO: ServicioCatalogo[] = [
     category: 'Académico / Escritura',
     description:
       'Revisamos la claridad, estructura y ortografía de tus escritos universitarios.',
-    estimatedHours: 2,
+    estimatedHours: 1.5,
     isVisible: true,
   },
 

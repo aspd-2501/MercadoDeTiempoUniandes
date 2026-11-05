@@ -1,21 +1,25 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search, X } from 'lucide-react';
 
 import MiembroCard from '../componentes/miembros/MiembroCard';
 import ServicioCard from '../componentes/servicios/ServicioCard';
 import PostAyuda from '../componentes/posts/PostAyuda';
 
-import { useMiembroSesion } from '../contextos/MiembroSesionContext';
+import type { PerfilMiembroAPI } from '../api/perfilesMiembro.api';
 import { MIEMBROS_DEMO } from '../mocks/miembros.mocks';
-import { PUBLICACIONES_DEMO } from '../mocks/postsAyuda.mocks';
-import { SERVICIOS_DEMO } from '../mocks/servicios.mocks';
+
+//Llamados al API
+import { buscarMiembros } from '../api/perfilesMiembro.api';
+import { buscarServicios, type ServicioOfrecidoAPI } from '../api/serviciosOfrecidos.api';
+import { buscarPostsAyuda, type PostAyudaAPI } from '../api/postsAyuda.api';
 
 /**
  * VISTA: Explorar miembros, solicitudes, servicios y actividades.
  *
  * - Reutiliza MiembroCard, PostAyuda y ServicioCard.
- * - Los datos provienen de los mocks compartidos; no se duplican aquí.
- * - El miembro autenticado se obtiene del contexto de sesión.
+ * - Miembros: lectura real de GET /perfiles-miembro, con los campos exactos del backend.
+ * - Solicitudes y Servicios: se mantienen temporalmente los mocks anteriores.
+ * - La sesión sigue siendo mock; no se infiere qué perfil UUID está conectado.
  * - Las acciones de navegación se reciben como propiedades desde App.tsx.
  * - La pestaña Actividades queda preparada hasta definir su modelo y sus datos.
  *
@@ -56,52 +60,141 @@ export default function Explorar({
   onGuardarPost,
   onCompartirPost,
 }: ExplorarProps) {
-  // 01.1 MIEMBRO AUTENTICADO
-  const { miembro } = useMiembroSesion();
-
-  // 01.2 ESTADOS LOCALES DE BÚSQUEDA Y PESTAÑAS
+  // 01.1 BÚSQUEDA Y PESTAÑAS
   const [busqueda, setBusqueda] = useState('');
   const [pestanaActiva, setPestanaActiva] = useState<PestanaExplorar>('Miembros');
   const termino = busqueda.trim().toLocaleLowerCase();
 
-  // 01.3 MIEMBROS: excluir al miembro autenticado y buscar por perfil
-  const miembrosFiltrados = Object.values(MIEMBROS_DEMO).filter((otroMiembro) => {
-    if (otroMiembro.id === miembro.id) return false;
-    if (!termino) return true;
+  // 01.2 PERFILES: GET /api/v1/perfiles-miembro
+  const [perfiles, setPerfiles] = useState<PerfilMiembroAPI[]>([]);
+  const [cargandoPerfiles, setCargandoPerfiles] = useState(true);
+  const [errorPerfiles, setErrorPerfiles] = useState<string | null>(null);
+  const [numeroConsulta, setNumeroConsulta] = useState(0);
 
-    return (
-      otroMiembro.name.toLocaleLowerCase().includes(termino) ||
-      (otroMiembro.skills ?? []).some((habilidad) =>
-        habilidad.toLocaleLowerCase().includes(termino),
-      ) ||
-      (otroMiembro.bio ?? '').toLocaleLowerCase().includes(termino) ||
-      (otroMiembro.faculty ?? '').toLocaleLowerCase().includes(termino)
-    );
-  });
+  // 01.2.1 Efecto para buscar miembros cuando la pestaña activa es "Miembros" y la búsqueda cambia
+  useEffect(() => {
+    if (pestanaActiva !== 'Miembros') return;
 
-  // 01.4 SOLICITUDES: solo peticiones de ayuda, no ofrecimientos
-  const solicitudesFiltradas = PUBLICACIONES_DEMO.filter((post) => {
-    if (post.type !== 'help-request' || !MIEMBROS_DEMO[post.userId]) return false;
-    if (!termino) return true;
+    let vigente = true;
 
-    return (
-      post.title.toLocaleLowerCase().includes(termino) ||
-      post.description.toLocaleLowerCase().includes(termino) ||
-      post.category.toLocaleLowerCase().includes(termino)
-    );
-  });
+    setCargandoPerfiles(true);
+    setErrorPerfiles(null);
 
-  // 01.5 SERVICIOS: solo los visibles y con un proveedor existente
-  const serviciosFiltrados = SERVICIOS_DEMO.filter((servicio) => {
-    if (!servicio.isVisible || !MIEMBROS_DEMO[servicio.userId]) return false;
-    if (!termino) return true;
+    const temporizador = window.setTimeout(() => {
+      void buscarMiembros(busqueda.trim())
+        .then((respuesta) => {
+          if (vigente) {
+            setPerfiles(respuesta);
+          }
+        })
+        .catch((error: unknown) => {
+          if (!vigente) return;
 
-    return (
-      servicio.title.toLocaleLowerCase().includes(termino) ||
-      servicio.description.toLocaleLowerCase().includes(termino) ||
-      servicio.category.toLocaleLowerCase().includes(termino)
-    );
-  });
+          setErrorPerfiles(
+            error instanceof Error
+              ? error.message
+              : 'No se pudieron consultar los perfiles.'
+          );
+        })
+        .finally(() => {
+          if (vigente) {
+            setCargandoPerfiles(false);
+          }
+        });
+    }, 300);
+
+    return () => {
+      vigente = false;
+      window.clearTimeout(temporizador);
+    };
+  }, [busqueda, pestanaActiva, numeroConsulta]);
+
+  // 01.3 SERVICIOS: GET /api/v1/buscar/servicios
+  const [servicios, setServicios] = useState<ServicioOfrecidoAPI[]>([]);
+  const [cargandoServicios, setCargandoServicios] = useState(false);
+  const [errorServicios, setErrorServicios] = useState<string | null>(null);
+  const [reintentoServicios, setReintentoServicios] = useState(0);
+
+  // 01.3.1 Efecto para buscar servicios cuando la pestaña activa es "Servicios" y la búsqueda cambia
+
+  useEffect(() => {
+    if (pestanaActiva !== 'Servicios') return;
+
+    let vigente = true;
+    setCargandoServicios(true);
+    setErrorServicios(null);
+
+    const temporizador = window.setTimeout(() => {
+      void buscarServicios(busqueda)
+        .then((respuesta) => {
+          if (vigente) setServicios(respuesta);
+        })
+        .catch((error: unknown) => {
+          if (vigente) {
+            setErrorServicios(
+              error instanceof Error
+                ? error.message
+                : 'No se pudieron consultar los servicios.'
+            );
+          }
+        })
+        .finally(() => {
+          if (vigente) setCargandoServicios(false);
+        });
+    }, 300);
+
+    return () => {
+      vigente = false;
+      window.clearTimeout(temporizador);
+    };
+  }, [pestanaActiva, busqueda, reintentoServicios]);
+
+
+  // 01.4 SOLICITUDES DE AYUDA: GET /api/v1/buscar/posts-ayuda
+  const [solicitudes, setSolicitudes] = useState<PostAyudaAPI[]>([]);
+  const [cargandoSolicitudes, setCargandoSolicitudes] = useState(false);
+  const [errorSolicitudes, setErrorSolicitudes] = useState<string | null>(null);
+  const [reintentoSolicitudes, setReintentoSolicitudes] = useState(0);
+
+  
+  useEffect(() => {
+    // Consultar solamente cuando estamos en Solicitudes
+    if (pestanaActiva !== 'Solicitudes') return;
+
+    let vigente = true;
+
+    setCargandoSolicitudes(true);
+    setErrorSolicitudes(null);
+
+    const temporizador = window.setTimeout(() => {
+      void buscarPostsAyuda(busqueda.trim(), 'solicitud')
+        .then((respuesta) => {
+          if (vigente) {
+            setSolicitudes(respuesta);
+          }
+        })
+        .catch((error: unknown) => {
+          if (vigente) {
+            setErrorSolicitudes(
+              error instanceof Error
+                ? error.message
+                : 'No se pudieron cargar las solicitudes.'
+            );
+          }
+        })
+        .finally(() => {
+          if (vigente) {
+            setCargandoSolicitudes(false);
+          }
+        });
+    }, 300);
+
+    return () => {
+      vigente = false;
+      window.clearTimeout(temporizador);
+    };
+  }, [pestanaActiva, busqueda, reintentoSolicitudes]);
+
 
   return (
     <div className="min-h-screen min-w-0 bg-white" data-section="explorar">
@@ -182,65 +275,98 @@ export default function Explorar({
         {/* 03.1 MIEMBROS */}
         {pestanaActiva === 'Miembros' && (
           <section aria-label="Miembros" className="space-y-3">
-            {miembrosFiltrados.length === 0 ? (
-              <EstadoVacio mensaje="No encontramos miembros. Prueba con otra habilidad." />
+            {cargandoPerfiles ? (
+              <p role="status" className="py-16 text-center text-sm text-[#737373]">
+                Cargando miembros desde el backend…
+              </p>
+            ) : errorPerfiles ? (
+              <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-center">
+                <p className="text-sm font-medium text-red-700">No pudimos cargar los miembros.</p>
+                <p className="mt-1 text-xs text-red-700">{errorPerfiles}</p>
+                <button
+                  type="button"
+                  onClick={() => setNumeroConsulta((actual) => actual + 1)}
+                  className="mt-3 rounded-xl bg-[#3C9DA0] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2D8B8E]"
+                >
+                  Reintentar
+                </button>
+              </div>
+            ) : perfiles.length === 0 ? (
+              <EstadoVacio mensaje="No encontramos miembros. Prueba con otra búsqueda." />
             ) : (
-              miembrosFiltrados.map((otroMiembro) => (
-                <MiembroCard
-                  key={otroMiembro.id}
-                  miembro={otroMiembro}
-                  onVerPerfil={onVerPerfil}
-                />
+              perfiles.map((perfil) => (
+                <MiembroCard key={perfil.id} miembro={perfil} onVerPerfil={onVerPerfil} habilitarDetalle={Boolean(onVerPerfil)}/>
               ))
             )}
           </section>
         )}
 
         {/* 03.2 SOLICITUDES DE AYUDA */}
-        {pestanaActiva === 'Solicitudes' && (
-          <section aria-label="Solicitudes de ayuda" className="space-y-3">
-            {solicitudesFiltradas.length === 0 ? (
-              <EstadoVacio mensaje="No encontramos solicitudes. Prueba con otra búsqueda." />
-            ) : (
-              solicitudesFiltradas.map((post) => {
-                const autor = MIEMBROS_DEMO[post.userId];
-                if (!autor) return null;
+          {pestanaActiva === 'Solicitudes' && (
+            <section
+              aria-label="Solicitudes de ayuda"
+              className="space-y-3"
+            >
+              {cargandoSolicitudes ? (
+                <p
+                  role="status"
+                  className="py-16 text-center text-sm text-[#737373]"
+                >
+                  Cargando solicitudes...
+                </p>
+              ) : errorSolicitudes ? (
+                <div
+                  role="alert"
+                  className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center"
+                >
+                  <p className="text-sm text-red-700">
+                    {errorSolicitudes}
+                  </p>
 
-                return (
+                  <button
+                    type="button"
+                    onClick={() => setReintentoSolicitudes((n) => n + 1)}
+                    className="mt-3 rounded-xl bg-[#3C9DA0] px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Reintentar
+                  </button>
+                </div>
+              ) : solicitudes.length === 0 ? (
+                <EstadoVacio
+                  mensaje="No encontramos solicitudes. Prueba con otra búsqueda."
+                />
+              ) : (
+                solicitudes.map((post) => (
                   <PostAyuda
                     key={post.id}
                     post={post}
-                    autor={autor}
                     onVerDetalle={onVerDetallePost}
                     onVerAutor={onVerPerfil}
                     onGuardar={onGuardarPost}
                     onCompartir={onCompartirPost}
                   />
-                );
-              })
-            )}
-          </section>
-        )}
+                ))
+              )}
+            </section>
+          )}
 
         {/* 03.3 SERVICIOS DEL CATÁLOGO */}
         {pestanaActiva === 'Servicios' && (
           <section aria-label="Servicios" className="space-y-3">
-            {serviciosFiltrados.length === 0 ? (
-              <EstadoVacio mensaje="No encontramos servicios. Prueba con otro término." />
+            {cargandoServicios ? (
+              <p>Cargando servicios...</p>
+            ) : errorServicios ? (
+              <p>{errorServicios}</p>
+            ) : servicios.length === 0 ? (
+              <EstadoVacio mensaje="No encontramos servicios." />
             ) : (
-              serviciosFiltrados.map((servicio) => {
-                const proveedor = MIEMBROS_DEMO[servicio.userId];
-                if (!proveedor) return null;
-
-                return (
-                  <ServicioCard
-                    key={servicio.id}
-                    servicio={servicio}
-                    proveedor={proveedor}
-                    onVerPerfil={onVerPerfil}
-                  />
-                );
-              })
+              servicios.map((servicio) => (
+                <ServicioCard
+                  key={servicio.id}
+                  servicio={servicio}
+                  onVerPerfil={onVerPerfil}
+                />
+              ))
             )}
           </section>
         )}

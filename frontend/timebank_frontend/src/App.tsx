@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useEffect } from 'react';
 import { Route, Routes, useNavigate, useLocation } from 'react-router';
 
 //Componentes Globales
@@ -35,6 +36,9 @@ import {
   ID_ACUERDO_POR_POST_DEMO,
 } from './mocks/acuerdosPost.mocks';
 
+//Consultas al API
+import { obtenerPerfiles } from './api/perfilesMiembro.api';
+
 import './App.css'
 
 function App() {
@@ -51,7 +55,6 @@ function App() {
     esDemostracion: true,
   };
 }
-
 
   // 01. ESTADO DEL MENÚ CREAR
   const [menuCrearAbierto, setMenuCrearAbierto] = useState(false);
@@ -177,10 +180,10 @@ function App() {
 
           {/*Info Miembros*/}
           <Route path="/perfil" element={<MiembroProfile onDonarHoras={() => navigate('/donar-horas')} onVerMovimientos={() => navigate('/movimientos')} />} />
-          <Route path="/:miembroId" element={<MiembroDetail />} />
+          <Route path="/:miembroId" element={<MiembroDetail onVolver={() => navigate(-1)}/>} />
 
           {/*Posts*/}
-          <Route path="/posts/:postId" element={<PostAyudaDetail onBack={() => navigate("/")} onIrChat={(chatId) => navigate(`/chats/${chatId}`)} onVerPerfil={(miembroId) => navigate(`/${miembroId}`)} onVolverInicio={() => navigate('/')} onParticipar={participarEnPostDemo} onVerAcuerdo={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}`)} />} />
+          <Route path="/posts/:postId" element={<PostAyudaDetail onBack={() => navigate(-1)} onIrChat={(chatId) => navigate(`/chats/${chatId}`)} onVerPerfil={(miembroId) => navigate(`/${miembroId}`)} onVolverInicio={() => navigate('/')} onParticipar={participarEnPostDemo} onVerAcuerdo={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}`)} />} />
           {/* CREAR PUBLICACIONES DE AYUDA */}
 
           <Route path="/crear-post-ayuda/pide" element={<CrearPostAyuda tipo="pide" onVolver={() => navigate(-1)} onVolverInicio={() => navigate('/')}/>}/>

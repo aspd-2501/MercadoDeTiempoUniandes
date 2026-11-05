@@ -1,3 +1,4 @@
+import type { PostAyudaAPI } from '../../api/postsAyuda.api';
 import {
   Bookmark,
   CalendarDays,
@@ -9,8 +10,6 @@ import {
   TriangleAlert,
   UsersRound,
 } from 'lucide-react';
-
-import type {DatosPostAyuda, } from '../../tipos/postAyuda';
 
 /**
  * COMPONENTE: Tarjeta de publicación de ayuda.
@@ -26,6 +25,23 @@ import type {DatosPostAyuda, } from '../../tipos/postAyuda';
  */
 
 // ─────────────────── 00. TIPOS Y PROPIEDADES ───────────────────
+export type TipoPublicacionAyuda = 'help-request' | 'help-offer';
+
+export interface DatosPostAyuda {
+  id: string;
+  userId: string;
+  type: TipoPublicacionAyuda;
+  title: string;
+  description: string;
+  category: string;
+  createdAt: string;
+  image?: string;
+  preferredDate?: string;
+  preferredTime?: string;
+  estimatedHours?: number;
+  maxParticipants?: number;
+  confirmedParticipants?: string[];
+}
 
 export interface AutorPostAyuda {
   id: string;
@@ -37,7 +53,7 @@ export interface AutorPostAyuda {
 
 export interface PostAyudaProps {
   /** Publicación que debe aparecer en la tarjeta. */
-  post?: DatosPostAyuda;
+  post?: DatosPostAyuda | PostAyudaAPI;
   /** Datos del miembro que publicó la ayuda. */
   autor?: AutorPostAyuda;
   /** Para conectar posteriormente la ventana PostAyudaDetail. */
@@ -47,6 +63,7 @@ export interface PostAyudaProps {
   /** Acciones aún sin implementación; se dejan listas para conectar. */
   onGuardar?: (postId: string) => void;
   onCompartir?: (postId: string) => void;
+  categoriasFeed?: string[];
 }
 
 // ─────────────────── 00.1 DATOS SIMULADOS ───────────────────
@@ -114,13 +131,40 @@ export default function PostAyuda({
   onVerAutor,
   onGuardar,
   onCompartir,
+  categoriasFeed,
 }: PostAyudaProps) {
-  // 01.1 DATOS DERIVADOS: tipo de post y cupos disponibles.
-  const esOfrecimiento = post.type === 'help-offer';
-  const maxCupos = post.maxParticipants ?? 1;
-  const confirmados = post.confirmedParticipants?.length ?? 0;
-  const cuposDisponibles = Math.max(0, maxCupos - confirmados);
-  const cuposCompletos = cuposDisponibles <= 0;
+  // 01.1 EL CONTRATO DEL BACKEND PREVALECE; los mocks antiguos se mantienen
+  // temporalmente para Home mientras conectamos sus consultas.
+  const esBackend = 'ofrece' in post;
+  const esOfrecimiento = esBackend ? post.ofrece : post.type === 'help-offer';
+  const titulo = esBackend ? post.titulo : post.title;
+  const descripcion = esBackend ? post.descripcion : post.description;
+  const imagen = esBackend ? post.imagen : post.image;
+  const horas = esBackend ? post.horas : post.estimatedHours;
+  const fechaCreacion = esBackend
+    ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(post.fechaCreacion))
+    : post.createdAt;
+  const autorId = esBackend ? post.perfilAutor.id : autor.id;
+  const autorNombre = esBackend ? post.perfilAutor.nombre : autor.name;
+  const autorImagen = esBackend ? post.perfilAutor.imagen : autor.avatar;
+  const autorNombreCorto = autorNombre.trim().split(/\s+/)[0] || autorNombre;
+  const autorParaAvatar: AutorPostAyuda = {
+    id: autorId,
+    name: autorNombre,
+    firstName: autorNombreCorto,
+    avatar: autorImagen ?? undefined,
+    avatarColor: autor.avatarColor,
+  };
+  const categorias = categoriasFeed ?? (esBackend
+  ? (post.categorias ?? [])
+      .map((relacion) => relacion.categoria?.nombre)
+      .filter((nombre): nombre is string => Boolean(nombre))
+  : [post.category]);
+  const cuposCompletos = esBackend ? post.cupoLleno :
+    (post.confirmedParticipants?.length ?? 0) >= (post.maxParticipants ?? 1);
+  const maxCupos = esBackend ? post.cupo : (post.maxParticipants ?? 1);
+  const cuposDisponibles = esBackend ? null : Math.max(0, maxCupos - (post.confirmedParticipants?.length ?? 0));
+  const franjasBackend = esBackend ? (post.horariosDisponibles?.length ?? 0) : 0;
 
   return (
     <article
@@ -128,37 +172,33 @@ export default function PostAyuda({
       className="overflow-hidden rounded-2xl border border-[#E8E8E8] bg-white shadow-sm"
     >
       {/* 01.2 IMAGEN DE LA PUBLICACIÓN (si existe) */}
-      {post.image && (
+      {imagen && (
         <div data-section="imagen-publicacion" className="h-40 overflow-hidden bg-[#E8E8E8]">
           <img
-            src={post.image}
-            alt={post.title}
+            src={imagen}
+            alt={titulo}
             className="h-full w-full object-cover"
           />
         </div>
       )}
 
-      <div className="p-4">
+      <div className="px-4 pt-4 pb-3.5">
         {/* 01.3 ENCABEZADO: autor, verificación, fecha y tipo de ayuda */}
         <header data-section="encabezado-publicacion" className="mb-3 flex items-start gap-3">
           <button
             type="button"
-            onClick={() => onVerAutor?.(autor.id)}
-            aria-label={`Ver perfil de ${autor.name}`}
+            onClick={() => onVerAutor?.(autorId)}
+            aria-label={`Ver perfil de ${autorNombre}`}
             className={`shrink-0 rounded-full hover:opacity-80 ${ANIMACION_BOTON}`}
           >
-            <AvatarAutor autor={autor} />
+            <AvatarAutor autor={autorParaAvatar} />
           </button>
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-sm font-semibold text-[#0D0D0D]">{autor.firstName}</span>
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-[#E8F5F6] px-1.5 py-0.5 text-xs font-medium text-[#3C9DA0]">
-                <Check size={10} strokeWidth={3} aria-hidden="true" />
-                Uniandes
-              </span>
+              <span className="text-sm font-semibold text-[#0D0D0D]">{autorNombreCorto}</span>
             </div>
-            <p className="mt-0.5 text-xs text-[#9E9E9E]">{post.createdAt}</p>
+            <p className="mt-0.5 text-xs text-[#9E9E9E]">{fechaCreacion}</p>
           </div>
 
           {/* 01.3.1 DISTINTIVO: ofrece ayuda / pide ayuda */}
@@ -185,9 +225,9 @@ export default function PostAyuda({
             className="mb-1.5 text-base font-bold leading-snug text-[#0D0D0D]"
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
-            {post.title}
+            {titulo}
           </h3>
-          <p className="line-clamp-2 text-sm text-[#737373]">{post.description}</p>
+          <p className="line-clamp-2 text-sm text-[#737373]">{descripcion}</p>
         </section>
 
         {/* 01.5 METADATOS: fecha, duración y disponibilidad */}
@@ -196,56 +236,56 @@ export default function PostAyuda({
           aria-label="Detalles de la publicación"
           className="mb-3 space-y-2 rounded-xl bg-[#F6F6F6] p-3"
         >
-          {(post.preferredDate || post.preferredTime) && (
-            <p className="text-[10px] font-medium uppercase tracking-wide text-[#737373]">
-              Horario preferido
-            </p>
+          {!esBackend && (post.preferredDate || post.preferredTime) && (
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#737373]">HORARIO PREFERIDO</p>
           )}
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center justify-evenly gap-x-6 gap-y-2">
             {/* 01.5.1 FECHA Y HORA */}
-            {(post.preferredDate || post.preferredTime) && (
+            {!esBackend && (post.preferredDate || post.preferredTime) && (
               <div className="flex items-center gap-1.5 text-xs text-[#0D0D0D]">
                 <CalendarDays size={13} strokeWidth={2} className="shrink-0 text-[#3C9DA0]" aria-hidden="true" />
                 <span className="font-medium">
-                  {post.preferredDate}
-                  {post.preferredTime ? ` · ${post.preferredTime}` : ''}
+                  {!esBackend && post.preferredDate}
+                  {!esBackend && post.preferredTime ? ` · ${post.preferredTime}` : ''}
                 </span>
               </div>
             )}
 
             {/* 01.5.2 DURACIÓN ESTIMADA */}
-            {post.estimatedHours != null && (
+            {horas != null && (
               <div className="flex items-center gap-1.5 text-xs text-[#0D0D0D]">
                 <Clock3 size={13} strokeWidth={2} className="shrink-0 text-[#3C9DA0]" aria-hidden="true" />
                 <span className="font-medium">
-                  {post.estimatedHours} hora{post.estimatedHours !== 1 ? 's' : ''}
+                  {horas} hora{horas !== 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+
+            {/* 01.5.3 CUPOS Y PARTICIPANTES */}
+            {maxCupos > 0 && (
+              <div className="flex items-center gap-1.5 text-xs">
+                <UsersRound
+                  size={13}
+                  strokeWidth={2}
+                  className={`shrink-0 ${cuposCompletos ? 'text-[#9E9E9E]' : 'text-[#3C9DA0]'}`}
+                  aria-hidden="true"
+                />
+                <span className={`font-medium ${cuposCompletos ? 'text-[#9E9E9E]' : 'text-[#0D0D0D]'}`}>
+                  {cuposCompletos
+                    ? 'Cupos completos'
+                    : esBackend
+                      ? `Cupo máximo: ${maxCupos}`
+                      : `${cuposDisponibles} de ${maxCupos} cupo${maxCupos !== 1 ? 's' : ''} disponible${cuposDisponibles !== 1 ? 's' : ''}`}
                 </span>
               </div>
             )}
           </div>
-
-          {/* 01.5.3 CUPOS Y PARTICIPANTES */}
-          {maxCupos > 0 && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <UsersRound
-                size={13}
-                strokeWidth={2}
-                className={`shrink-0 ${cuposCompletos ? 'text-[#9E9E9E]' : 'text-[#3C9DA0]'}`}
-                aria-hidden="true"
-              />
-              <span className={`font-medium ${cuposCompletos ? 'text-[#9E9E9E]' : 'text-[#0D0D0D]'}`}>
-                {cuposCompletos
-                  ? 'Cupos completos'
-                  : `${cuposDisponibles} de ${maxCupos} cupo${maxCupos !== 1 ? 's' : ''} disponible${cuposDisponibles !== 1 ? 's' : ''}`}
-              </span>
-            </div>
-          )}
         </section>
 
         {/* 01.6 CATEGORÍA */}
-        <div data-section="categoria-publicacion" className="mb-3 flex items-center gap-1.5">
+        <div data-section="categoria-publicacion" className="flex items-center gap-1.5">
           <LayoutGrid size={12} className="text-[#9E9E9E]" aria-hidden="true" />
-          <span className="text-xs text-[#9E9E9E]">{post.category}</span>
+          <span className="text-xs text-[#9E9E9E]">{categorias.join(' · ')}</span>
         </div>
       </div>
 
@@ -258,17 +298,11 @@ export default function PostAyuda({
         <button
           type="button"
           onClick={() => onVerDetalle?.(post.id)}
-          disabled={cuposCompletos}
-          className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:active:scale-100 ${ANIMACION_BOTON} ${
-            cuposCompletos
-              ? 'cursor-not-allowed bg-[#F0F0F0] text-[#9E9E9E]'
-              : 'bg-[#3C9DA0] text-white hover:bg-[#2D8B8E]'
-          }`}
+          disabled={!onVerDetalle}
+          className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:active:scale-100 ${ANIMACION_BOTON} ${!onVerDetalle ? 'cursor-not-allowed bg-[#F0F0F0] text-[#9E9E9E]' : 'bg-[#3C9DA0] text-white hover:bg-[#2D8B8E]'}`}
           style={{ fontFamily: 'Outfit, sans-serif' }}
         >
-          {cuposCompletos
-            ? 'Cupos completos'
-            : esOfrecimiento
+          {esOfrecimiento
               ? 'Quiero recibir ayuda'
               : 'Quiero ayudar'}
         </button>
@@ -277,7 +311,7 @@ export default function PostAyuda({
         <button
           type="button"
           onClick={() => onGuardar?.(post.id)}
-          aria-label={`Guardar publicación: ${post.title}`}
+          aria-label={`Guardar publicación: ${titulo}`}
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F6F6F6] hover:bg-[#E8F5F6] ${ANIMACION_BOTON}`}
         >
           <Bookmark size={16} className="text-[#737373]" aria-hidden="true" />
@@ -287,7 +321,7 @@ export default function PostAyuda({
         <button
           type="button"
           onClick={() => onCompartir?.(post.id)}
-          aria-label={`Compartir publicación: ${post.title}`}
+          aria-label={`Compartir publicación: ${titulo}`}
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F6F6F6] hover:bg-[#E8F5F6] ${ANIMACION_BOTON}`}
         >
           <Share2 size={16} className="text-[#737373]" aria-hidden="true" />

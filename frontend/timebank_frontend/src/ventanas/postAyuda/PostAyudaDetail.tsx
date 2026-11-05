@@ -17,6 +17,14 @@ import { MIEMBROS_DEMO } from '../../mocks/miembros.mocks';
 import { PUBLICACIONES_DEMO } from '../../mocks/postsAyuda.mocks';
 import { CalendarioDisponibilidadPostAyuda } from '../../componentes/calendario/CalendarioDisponibilidad';
 import type { DatosPostAyuda } from '../../tipos/postAyuda';
+import {
+  obtenerPostAyuda,
+  obtenerCategoriasPost,
+  type PostAyudaAPI,
+  type HorarioPostAPI,
+  type CategoriaPostAPI,
+} from '../../api/postsAyuda.api';
+import type { IntervaloDisponibilidad } from '../../tipos/disponibilidad';
 
 /**
  * Vista actual conectada a /posts/:postId y a los mocks compartidos.
@@ -67,6 +75,32 @@ function mostrarHora24(hora: string): string {
   if (!coincidencia) return hora;
   const h = Number(coincidencia[1]);
   return `${h % 12 || 12}:${coincidencia[2]} ${h < 12 ? 'a. m.' : 'p. m.'}`;
+}
+
+// Los horarios llegan en ISO desde NestJS; solo convertimos para el calendario.
+function mostrarDiaLocal(fecha: Date): string {
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  return `${fecha.getFullYear()}-${mes}-${dia}`;
+}
+
+function mostrarHoraLocal(fecha: Date): string {
+  return `${String(fecha.getHours()).padStart(2, '0')}:${String(fecha.getMinutes()).padStart(2, '0')}`;
+}
+
+function horarioParaCalendario(horario: HorarioPostAPI): IntervaloDisponibilidad {
+  const inicio = new Date(horario.fechaInicio);
+  const fin = new Date(horario.fechaFin);
+  return {
+    id: horario.id,
+    date: mostrarDiaLocal(inicio),
+    startTime: mostrarHoraLocal(inicio),
+    endTime: mostrarHoraLocal(fin),
+  };
+}
+
+function esPostDelBackend(post: DatosPostAyuda | PostAyudaAPI): post is PostAyudaAPI {
+  return 'ofrece' in post;
 }
 
 // Iconos y componentes auxiliares.
@@ -144,14 +178,55 @@ export default function PostAyudaDetail({
   const { miembro } = useMiembroSesion();
   const currentUserId = miembro.id;
 
-  // 03. BUSCAR LA PUBLICACIÓN
-  const post = PUBLICACIONES_DEMO.find(
-    (publicacion) => publicacion.id === postId
-  );
+  // 03. BUSCAR LA PUBLICACIÓN: los mocks antiguos siguen sirviendo para Home,
+  // pero los UUID de Explorar se consultan por API real.
+  const postDemo = PUBLICACIONES_DEMO.find((publicacion) => publicacion.id === postId);
+  const [respuestaApi, setRespuestaApi] = useState<PostAyudaAPI | null>(null);
+  const [categoriasApi, setCategoriasApi] = useState<CategoriaPostAPI[]>([]);
+  const [cargandoPost, setCargandoPost] = useState(false);
+  const [errorPost, setErrorPost] = useState<string | null>(null);
+  const [reintentarConsulta, setReintentarConsulta] = useState(0);
 
-  // 04. OBTENER AL AUTOR
-  const author = post
-    ? MIEMBROS_DEMO[post.userId]
+  useEffect(() => {
+    let vigente = true;
+    setRespuestaApi(null);
+    setCategoriasApi([]);
+    setErrorPost(null);
+
+    if (!postId || postDemo) {
+      setCargandoPost(false);
+      return () => { vigente = false; };
+    }
+
+    setCargandoPost(true);
+    void Promise.allSettled([
+      obtenerPostAyuda(postId),
+      obtenerCategoriasPost(postId),
+    ]).then(([post, categorias]) => {
+      if (!vigente) return;
+      if (post.status === 'rejected') {
+        setErrorPost(post.reason instanceof Error ? post.reason.message : 'No se pudo consultar la publicación.');
+      } else {
+        setRespuestaApi(post.value);
+        if (categorias.status === 'fulfilled') setCategoriasApi(categorias.value);
+      }
+    }).finally(() => {
+      if (vigente) setCargandoPost(false);
+    });
+    return () => { vigente = false; };
+  }, [postId, postDemo, reintentarConsulta]);
+
+  const post = postDemo ?? (respuestaApi?.id === postId ? respuestaApi : undefined);
+  const author: AutorPostAyuda | undefined = post
+    ? esPostDelBackend(post)
+      ? {
+          id: post.perfilAutor.id,
+          name: post.perfilAutor.nombre,
+          firstName: post.perfilAutor.nombre.trim().split(/\s+/)[0],
+          avatar: post.perfilAutor.imagen,
+          faculty: post.perfilAutor.afiliacionUniandes,
+        }
+      : MIEMBROS_DEMO[post.userId]
     : undefined;
 
   const goBack = () => {
@@ -169,7 +244,7 @@ export default function PostAyudaDetail({
   const [enviandoParticipacion, setEnviandoParticipacion] = useState(false);
   const [errorParticipacion, setErrorParticipacion] = useState('');
   const [confirmedParticipants, setConfirmedParticipants] = useState<string[]>(
-    post?.confirmedParticipants ?? [],
+    postDemo?.confirmedParticipants ?? [],
   );
   
   // 05. REINICIAR LA PARTICIPACIÓN AL CAMBIAR DE POST
@@ -177,8 +252,22 @@ export default function PostAyudaDetail({
     setResultadoParticipacion(null);
     setEnviandoParticipacion(false);
     setErrorParticipacion('');
-    setConfirmedParticipants(post?.confirmedParticipants ?? []);
-  }, [postId, post]);
+    setConfirmedParticipants(postDemo?.confirmedParticipants ?? []);
+  }, [postId, postDemo]);
+
+  if (cargandoPost && !post) {
+    return <main role="status" className="min-h-screen bg-[#F6F6F6] p-8 text-center text-sm text-[#737373]">Cargando publicación…</main>;
+  }
+
+  if (errorPost && !post) {
+    return (
+      <main role="alert" className="min-h-screen bg-[#F6F6F6] p-8 text-center">
+        <p className="text-sm text-[#D32F2F]">{errorPost}</p>
+        <button type="button" onClick={() => setReintentarConsulta((valor) => valor + 1)}
+          className="mt-3 rounded-xl bg-[#3C9DA0] px-4 py-2 text-sm text-white">Reintentar</button>
+      </main>
+    );
+  }
 
   // ─── Caso especial: publicación no encontrada ───
   if (!post) {
@@ -209,33 +298,48 @@ export default function PostAyudaDetail({
     );
   }
 
-  // ─── Datos derivados del post para construir la interfaz ───
-  const isOffer = post.type === 'help-offer';
-  const confirmedCount = confirmedParticipants.length;
-  const maxSlots = post.maxParticipants ?? 1;
-  const slotsLeft = maxSlots - confirmedCount;
-  const isFull = slotsLeft <= 0;
-  const currentUserJoined = Boolean(resultadoParticipacion) || confirmedParticipants.includes(currentUserId);
+  // ─── Datos de presentación derivados del contrato real o mock legado ───
+  const postApi = esPostDelBackend(post) ? post : null;
+  const postMock = !esPostDelBackend(post) ? post : null;
+  const isOffer = postApi ? postApi.ofrece : postMock!.type === 'help-offer';
+  const titulo = postApi ? postApi.titulo : postMock!.title;
+  const descripcion = postApi ? postApi.descripcion : postMock!.description;
+  const imagen = postApi ? postApi.imagen : postMock!.image;
+  const horas = postApi ? postApi.horas : postMock!.estimatedHours;
+  const fechaCreacion = postApi
+    ? new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(new Date(postApi.fechaCreacion))
+    : postMock!.createdAt;
+  const categorias = postApi
+    ? categoriasApi.map((categoria) => categoria.nombre)
+    : postMock!.category.split('/').map((categoria) => categoria.trim());
+  const confirmedCount = postApi ? null : confirmedParticipants.length;
+  const maxSlots = postApi ? postApi.cupo : postMock!.maxParticipants ?? 1;
+  const slotsLeft = postApi ? null : maxSlots - confirmedParticipants.length;
+  const isFull = postApi ? postApi.cupoLleno : (slotsLeft ?? 0) <= 0;
+  const currentUserJoined = postApi
+    ? false // No inferimos participación real sin consultar el backend.
+    : Boolean(resultadoParticipacion) || confirmedParticipants.includes(currentUserId);
 
-  // ─── Datos de disponibilidad del post (proporcionados por los mocks o la API) ───
-  // El calendario solo muestra las franjas registradas. No inventamos intervalos
-  // a partir de preferredDate/preferredTime de los posts antiguos.
-  const franjasPropuestas = post.availability ?? [];
-  const franjaPreferida = franjasPropuestas.find(
-    (franja) => franja.id === post.preferredAvailabilityId,
+  // No existe "preferido" en PostAyudaEntity: mostramos todas las franjas.
+  const franjasPropuestas: IntervaloDisponibilidad[] = postApi
+    ? (postApi.horariosDisponibles ?? []).map(horarioParaCalendario)
+    : (postMock!.availability ?? []);
+  const franjaPreferida = postMock?.availability?.find(
+    (franja) => franja.id === postMock.preferredAvailabilityId,
   );
   const fechaPreferida = franjaPreferida
     ? mostrarFechaISO(franjaPreferida.date)
-    : post.preferredDate;
+    : postMock?.preferredDate;
   const horaPreferida = franjaPreferida
     ? `${mostrarHora24(franjaPreferida.startTime)} – ${mostrarHora24(franjaPreferida.endTime)}`
-    : post.preferredTime;
+    : postMock?.preferredTime;
+  const participacionDisponible = !postApi && Boolean(onParticipar);
 
   // 05. SOLICITAR PARTICIPACIÓN: App decide si usa API o un mock.
   // La vista no crea ni asigna acuerdos, únicamente consume el ID retornado.
   async function handleJoin() {
     if (!post) return;
-    if (currentUserJoined || isFull || enviandoParticipacion || !onParticipar) return;
+    if (currentUserJoined || isFull || enviandoParticipacion || !onParticipar || postApi) return;
     setEnviandoParticipacion(true);
     setErrorParticipacion('');
     try {
@@ -358,9 +462,9 @@ export default function PostAyudaDetail({
 
       <main data-section="contenido-detalle-post" className="max-w-2xl mx-auto px-4 py-4 space-y-4">
         {/* 02. IMAGEN DE LA PUBLICACIÓN (solo se muestra si existe) */}
-        {post.image && (
+        {imagen && (
           <figure data-section="imagen-publicacion" className="rounded-2xl overflow-hidden h-48 bg-[#E8E8E8]">
-            <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+            <img src={imagen} alt={titulo} className="w-full h-full object-cover" />
           </figure>
         )}
 
@@ -374,7 +478,7 @@ export default function PostAyudaDetail({
             className="text-xl font-bold text-[#0D0D0D] mb-3"
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
-            {post.title}
+            {titulo}
           </h2>
 
           {/* 03.2 AUTOR: avatar, nombre, facultad y fecha de publicación */}
@@ -392,7 +496,7 @@ export default function PostAyudaDetail({
               </div>
               <p className="text-xs text-[#737373]">
                 {author.faculty ? `${author.faculty} · ` : ''}
-                {post.createdAt}
+                {fechaCreacion}
               </p>
             </div>
             <span className="ml-auto text-xs text-[#3C9DA0] font-medium">Ver perfil →</span>
@@ -400,13 +504,13 @@ export default function PostAyudaDetail({
 
           {/* 03.3 DESCRIPCIÓN DE LA AYUDA */}
           <p data-section="descripcion-publicacion" className="text-sm text-[#737373] leading-relaxed mb-4">
-            {post.description}
+            {descripcion}
           </p>
 
           {/* 03.4 CATEGORÍAS DE LA PUBLICACIÓN */}
           <div data-section="categorias-publicacion" className="flex flex-wrap gap-2 mb-4">
-            {post.category.split('/').map((cat) => (
-              <Chip key={cat} label={cat.trim()} size="sm" color="teal" />
+            {categorias.map((categoria) => (
+              <Chip key={categoria} label={categoria} size="sm" color="teal" />
             ))}
           </div>
         </article>
@@ -445,7 +549,7 @@ export default function PostAyudaDetail({
           )}
 
           {/* 04.2 DURACIÓN ESTIMADA (cuando está definida) */}
-          {post.estimatedHours && (
+          {horas != null && (
             <div data-section="duracion-estimada" className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-[#E8F5F6] flex items-center justify-center flex-shrink-0">
                 <Icon name="clock" size={17} className="text-[#3C9DA0]" strokeWidth={2} />
@@ -453,7 +557,7 @@ export default function PostAyudaDetail({
               <div>
                 <p className="text-[10px] text-[#9E9E9E] uppercase tracking-wide font-medium">Duración</p>
                 <p className="text-sm font-semibold text-[#0D0D0D]">
-                  {post.estimatedHours} hora{post.estimatedHours !== 1 ? 's' : ''}
+                  {horas} hora{horas !== 1 ? 's' : ''}
                 </p>
               </div>
             </div>
@@ -478,9 +582,11 @@ export default function PostAyudaDetail({
               <p className={`text-sm font-semibold ${isFull ? 'text-[#9E9E9E]' : 'text-[#0D0D0D]'}`}>
                 {isFull
                   ? 'Cupos completos'
-                  : `${slotsLeft} de ${maxSlots} cupo${maxSlots !== 1 ? 's' : ''} disponible${slotsLeft !== 1 ? 's' : ''}`}
+                  : postApi
+                    ? `Cupo máximo: ${maxSlots}`
+                    : `${slotsLeft} de ${maxSlots} cupo${maxSlots !== 1 ? 's' : ''} disponible${slotsLeft !== 1 ? 's' : ''}`}
               </p>
-              {confirmedCount > 0 && (
+              {confirmedCount != null && confirmedCount > 0 && (
                 <p className="text-xs text-[#737373] mt-0.5">
                   {confirmedCount} confirmado{confirmedCount !== 1 ? 's' : ''}
                 </p>
@@ -490,11 +596,11 @@ export default function PostAyudaDetail({
         </section>
 
         {/* 04.4 CALENDARIO DE DISPONIBILIDAD PROPUESTA POR EL AUTOR */}
-        {typeof post.estimatedHours === 'number' && post.estimatedHours > 0 ? (
+        {typeof horas === 'number' && horas > 0 ? (
           <CalendarioDisponibilidadPostAyuda
             intervalos={franjasPropuestas}
-            idPreferido={post.preferredAvailabilityId}
-            duracion={post.estimatedHours}
+            idPreferido={postMock?.preferredAvailabilityId}
+            duracion={horas}
           />
         ) : (
           <section
@@ -553,9 +659,9 @@ export default function PostAyudaDetail({
           <button
             type="button"
             onClick={handleJoin}
-            disabled={isFull || currentUserJoined || enviandoParticipacion || !onParticipar}
+            disabled={isFull || currentUserJoined || enviandoParticipacion || !participacionDisponible}
             className={`w-full py-4 rounded-2xl font-bold text-base btn-press transition-all ${
-              isFull || currentUserJoined || enviandoParticipacion || !onParticipar
+              isFull || currentUserJoined || enviandoParticipacion || !participacionDisponible
                 ? 'bg-[#F0F0F0] text-[#9E9E9E]'
                 : 'bg-[#3C9DA0] text-white hover:bg-[#2D8B8E] shadow-lg shadow-[#3C9DA0]/20'
             }`}
@@ -574,8 +680,8 @@ export default function PostAyudaDetail({
           {errorParticipacion && (
             <p className="mt-2 text-sm text-[#D32F2F]" role="alert">{errorParticipacion}</p>
           )}
-          {!onParticipar && (
-            <p className="mt-2 text-xs text-[#737373]">La participación se habilitará al conectar la API.</p>
+          {!participacionDisponible && (
+            <p className="mt-2 text-xs text-[#737373]">La participación real se habilitará cuando conectemos el endpoint correspondiente. Esta publicación sí está cargada desde el backend.</p>
           )}
         </section>
       </main>
