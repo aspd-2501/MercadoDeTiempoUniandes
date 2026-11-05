@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/moderadores/{{moderadorId}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("id correcto", () => { const r = pm.response.json(); pm.expect(r.id).to.eql(pm.collectionVariables.get("moderadorId")); });
+    language: text/javascript
+order: 6000

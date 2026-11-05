@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/depositos-horas/{{fondoId}}/transacciones"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Recibió y envió donaciones", () => { const r = pm.response.json(); pm.expect(r.some(t => t.tipo === "DONACION_RECIBIDA")).to.be.true; pm.expect(r.some(t => t.tipo === "DONACION_ENVIADA")).to.be.true; });
+    language: text/javascript
+order: 18000

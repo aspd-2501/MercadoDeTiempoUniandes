@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo1}}/participantes/{{perfilA}}"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "rol": "PRESTADOR"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("1 participante", () => { const r = pm.response.json(); pm.expect(r.participantes.length).to.eql(1); });
+    language: text/javascript
+order: 2000

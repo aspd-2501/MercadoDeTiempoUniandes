@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/perfiles-miembro/{{perfilA}}/intereses"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "categoriaIds": [
+        "{{idInexistente}}"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Código 404", () => pm.response.to.have.status(404));
+    language: text/javascript
+order: 20000

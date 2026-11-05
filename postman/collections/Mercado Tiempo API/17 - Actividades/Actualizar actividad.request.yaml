@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/actividades/{{actividadId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Jornada de reforestación {{runId}}",
+      "descripcion": "Siembra en los cerros orientales",
+      "imagen": "https://picsum.photos/450",
+      "cupo": 25,
+      "cupoLleno": false,
+      "fechaCreacion": "{{ahora}}",
+      "organizacionId": "{{orgInstId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("cupo", () => { const r = pm.response.json(); pm.expect(r.cupo).to.eql(25); });
+    language: text/javascript
+order: 13000

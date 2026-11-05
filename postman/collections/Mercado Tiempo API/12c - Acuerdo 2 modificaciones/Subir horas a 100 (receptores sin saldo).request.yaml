@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo2}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "horas": 100,
+      "fechaCreacion": "{{ahora}}",
+      "fechaRealizacion": "{{futuroInicio}}",
+      "estado": 1,
+      "solicitudId": "{{solicitudId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: not have enough saldo", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("not have enough saldo"); });
+    language: text/javascript
+order: 4000

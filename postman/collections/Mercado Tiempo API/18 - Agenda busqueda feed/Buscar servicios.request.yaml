@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/buscar/servicios?q=Fotografía"
+method: GET
+queryParams:
+  q: Fotografía
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Encuentra el servicio de E", () => { const r = pm.response.json(); pm.expect(JSON.stringify(r)).to.include(pm.collectionVariables.get("servicioId")); });
+    language: text/javascript
+order: 13000

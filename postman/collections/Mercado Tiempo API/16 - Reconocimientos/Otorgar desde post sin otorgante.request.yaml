@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/reconocimientos/{{recId}}/otorgar"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "perfilReceptorId": "{{perfilA}}",
+      "postComunitarioId": "{{postComId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: requires a perfil otorgante", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("requires a perfil otorgante"); });
+    language: text/javascript
+order: 9000

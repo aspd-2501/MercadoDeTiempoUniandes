@@ -1,0 +1,25 @@
+$kind: http-request
+url: "{{baseUrl}}/perfiles-miembro"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Duplicado {{runId}}",
+      "edad": 21,
+      "afiliacionUniandes": "Estudiante",
+      "imagen": "https://picsum.photos/200",
+      "descripcion": "Perfil de prueba A",
+      "estadoActividad": true,
+      "saldo": 1,
+      "usuarioId": "{{usuarioA}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: already has a perfil", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("already has a perfil"); });
+    language: text/javascript
+order: 6000

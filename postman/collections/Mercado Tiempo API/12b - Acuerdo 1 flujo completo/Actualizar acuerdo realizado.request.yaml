@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo1}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "horas": 5,
+      "fechaCreacion": "{{ahora}}",
+      "fechaRealizacion": "{{futuroInicio}}",
+      "postAyudaId": "{{postId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: realizado and cannot be modified", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("realizado and cannot be modified"); });
+    language: text/javascript
+order: 28000

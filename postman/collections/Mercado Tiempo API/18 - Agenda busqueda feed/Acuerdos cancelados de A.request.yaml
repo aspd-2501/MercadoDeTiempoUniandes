@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/perfiles-miembro/{{perfilA}}/acuerdos?filtro=cancelados"
+method: GET
+queryParams:
+  filtro: cancelados
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Incluye el acuerdo 2", () => { const r = pm.response.json(); pm.expect(r.map(a => a.id)).to.include(pm.collectionVariables.get("acuerdo2")); });
+    language: text/javascript
+order: 3000

@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/feed?pagina=0"
+method: GET
+queryParams:
+  pagina: "0"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 400", () => pm.response.to.have.status(400));
+      pm.test("Mensaje: pagina must be", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("pagina must be"); });
+    language: text/javascript
+order: 16000

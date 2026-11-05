@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/organizaciones-institucionales/{{orgInstId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Decanatura de Estudiantes {{runId}}",
+      "descripcion": "Bienestar y voluntariado",
+      "imagen": "https://picsum.photos/350"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Descripción actualizada", () => { const r = pm.response.json(); pm.expect(r.descripcion).to.include("voluntariado"); });
+    language: text/javascript
+order: 6000

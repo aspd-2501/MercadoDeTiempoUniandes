@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "idUniandes": "a.prueba{{runId}}",
+      "contrasenia": "clave123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("Devuelve access_token JWT", () => { const r = pm.response.json(); pm.expect(r.access_token.split(".")).to.have.length(3); });
+      pm.test("Usuario sin contraseña", () => { const r = pm.response.json(); pm.expect(r.usuario.id).to.eql(pm.collectionVariables.get("usuarioA")); pm.expect(r.usuario).to.not.have.property("contrasenia"); });
+      { const r = pm.response.json(); pm.collectionVariables.set("token", r.access_token); }
+    language: text/javascript
+order: 1000

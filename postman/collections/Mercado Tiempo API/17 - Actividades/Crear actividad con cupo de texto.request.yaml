@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/actividades"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Jornada de reforestación {{runId}}",
+      "descripcion": "Siembra en los cerros orientales",
+      "imagen": "https://picsum.photos/450",
+      "cupo": "veinte",
+      "cupoLleno": false,
+      "fechaCreacion": "{{ahora}}",
+      "organizacionId": "{{orgInstId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 400", () => pm.response.to.have.status(400));
+      pm.test("Error de validación", () => { const r = pm.response.json(); pm.expect(r.message).to.exist; });
+    language: text/javascript
+order: 9000

@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{baseUrl}}/buscar/posts-ayuda?q=Cálculo&tipo=ofrecimiento"
+method: GET
+queryParams:
+  q: Cálculo
+  tipo: ofrecimiento
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Encuentra el post de A", () => { const r = pm.response.json(); pm.expect(JSON.stringify(r)).to.include(pm.collectionVariables.get("postId")); });
+    language: text/javascript
+order: 11000

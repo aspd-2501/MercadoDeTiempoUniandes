@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/buscar/miembros?q=Ana Tutora {{runId}}"
+method: GET
+queryParams:
+  q: Ana Tutora {{runId}}
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Encuentra a A", () => { const r = pm.response.json(); pm.expect(JSON.stringify(r)).to.include(pm.collectionVariables.get("perfilA")); });
+    language: text/javascript
+order: 9000

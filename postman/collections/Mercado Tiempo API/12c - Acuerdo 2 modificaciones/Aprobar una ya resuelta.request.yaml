@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo2}}/solicitudes-modificacion/{{modif1}}/aprobar"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "perfilId": "{{perfilA}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: no longer pending", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("no longer pending"); });
+    language: text/javascript
+order: 19000

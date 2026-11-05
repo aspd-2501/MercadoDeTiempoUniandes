@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/perfiles-miembro"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "X {{runId}}",
+      "edad": 21,
+      "afiliacionUniandes": "Estudiante",
+      "imagen": "https://picsum.photos/200",
+      "descripcion": "Perfil de prueba A",
+      "estadoActividad": true,
+      "saldo": 1,
+      "usuarioId": "{{idInexistente}}"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Código 404", () => pm.response.to.have.status(404));
+    language: text/javascript
+order: 7000

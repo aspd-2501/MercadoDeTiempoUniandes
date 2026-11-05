@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/mensajes"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "contenido": "Hola Bruno, ¿te sirve el jueves?",
+      "emisorId": "{{perfilA}}",
+      "chatId": "{{chatId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("Tiene id UUID", () => { const r = pm.response.json(); pm.expect(r.id).to.match(/^[0-9a-f-]{36}$/); });
+      pm.test("Tiene fecha", () => { const r = pm.response.json(); pm.expect(r.fecha).to.exist; });
+      { const r = pm.response.json(); pm.collectionVariables.set("mensajeId", r.id); }
+    language: text/javascript
+order: 13000

@@ -1,0 +1,33 @@
+$kind: http-request
+url: "{{baseUrl}}/posts-ayuda"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Tutoría de Cálculo Integral {{runId}}",
+      "descripcion": "Repaso para el parcial",
+      "horas": 2,
+      "imagen": "https://picsum.photos/400",
+      "ofrece": true,
+      "cupo": 3,
+      "cupoLleno": false,
+      "fechaCreacion": "{{ahora}}",
+      "perfilAutorId": "{{idInexistente}}",
+      "categoriaIds": [
+        "{{cat1}}"
+      ],
+      "horarios": [
+        {
+          "fechaInicio": "{{pasadoInicio}}",
+          "fechaFin": "{{pasadoFin}}"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Código 404", () => pm.response.to.have.status(404));
+    language: text/javascript
+order: 7000

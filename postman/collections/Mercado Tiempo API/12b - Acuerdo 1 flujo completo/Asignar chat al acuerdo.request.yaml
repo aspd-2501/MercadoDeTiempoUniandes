@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo1}}/chat/{{chatId}}"
+method: PUT
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("chat asignado", () => { const r = pm.response.json(); pm.expect(r.chat.id).to.eql(pm.collectionVariables.get("chatId")); });
+    language: text/javascript
+order: 10000

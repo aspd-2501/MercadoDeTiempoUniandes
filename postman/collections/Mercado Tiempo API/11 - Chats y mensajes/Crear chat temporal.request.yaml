@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/chats"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "perfilIds": [
+        "{{perfilC}}",
+        "{{perfilD}}"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      { const r = pm.response.json(); pm.collectionVariables.set("chatTmp", r.id); }
+    language: text/javascript
+order: 21000

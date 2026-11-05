@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/perfiles-miembro/{{perfilD}}/estado-actividad"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "activo": false
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("inactivo", () => { const r = pm.response.json(); pm.expect(r.estadoActividad).to.eql(false); });
+    language: text/javascript
+order: 14000

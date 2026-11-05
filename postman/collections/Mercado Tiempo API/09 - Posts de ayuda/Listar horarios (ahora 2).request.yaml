@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/posts-ayuda/{{postId}}/horarios"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("2 horarios", () => { const r = pm.response.json(); pm.expect(r.length).to.eql(2); });
+      { const r = pm.response.json(); pm.collectionVariables.set("horarioPostNuevoId", r.find(h => h.id !== pm.collectionVariables.get("horarioPostId")).id); }
+    language: text/javascript
+order: 14000

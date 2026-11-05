@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/solicitudes-ayuda/{{solicitudId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Fotos feria actualizada {{runId}}",
+      "descripcion": "Necesito fotos del stand",
+      "fechaCreacion": "{{ahora}}",
+      "horas": 1,
+      "perfilAutorId": "{{perfilC}}",
+      "prestadorId": "{{orgId}}",
+      "servicioOfrecidoId": "{{servicioId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Título actualizado", () => { const r = pm.response.json(); pm.expect(r.titulo).to.include("actualizada"); });
+    language: text/javascript
+order: 9000

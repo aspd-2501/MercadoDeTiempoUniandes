@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo1}}/participantes/{{perfilA}}"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "rol": "PRESTADOR"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: already a participant", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("already a participant"); });
+    language: text/javascript
+order: 4000

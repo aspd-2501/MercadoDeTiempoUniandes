@@ -1,0 +1,32 @@
+$kind: collection
+description: |-
+  Pruebas de la API REST del Mercado de Tiempo (NestJS, prefijo /api/v1).
+
+  Cómo usarla:
+  1. Levanta Postgres y el backend (`npm run start:dev`).
+  2. Importa esta colección y el entorno "Local".
+  3. Ejecuta la colección completa con el Runner (en orden). Cada corrida usa un sufijo único (runId), así que se puede repetir sobre la misma base.
+
+  Personas de prueba: A (tutora, saldo 20), B y C (estudiantes, 10 y 5), D (sin saldo), E (dueña de una organización).
+  Cada carpeta prueba casos felices, validaciones (400), reglas de negocio (412) y recursos inexistentes (404).
+variables:
+  idInexistente: 00000000-0000-4000-8000-000000000000
+  runId: ""
+  token: ""
+  fondoId: ""
+  usuarioA: ""
+  perfilA: ""
+  acuerdo1: ""
+  acuerdo2: ""
+scripts:
+  - type: http:afterResponse
+    code: |-
+      pm.test("Responde en menos de 2 s", () => pm.expect(pm.response.responseTime).to.be.below(2000));
+      if (pm.response.code !== 204) pm.test("Respuesta JSON", () => pm.response.to.be.json);
+    language: text/javascript
+auth:
+  - id: 2bc39a2d-5fdd-4eff-ac50-66f810f60e33
+    type: bearer
+    name: bearer auth
+    credentials:
+      token: "{{token}}"

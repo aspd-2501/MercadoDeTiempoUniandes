@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/usuarios"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "idUniandes": "e.prueba{{runId}}",
+      "contrasenia": "clave123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("Tiene id UUID", () => { const r = pm.response.json(); pm.expect(r.id).to.match(/^[0-9a-f-]{36}$/); });
+      pm.test("No devuelve la contraseña", () => { const r = pm.response.json(); pm.expect(r).to.not.have.property("contrasenia"); });
+      { const r = pm.response.json(); pm.collectionVariables.set("usuarioE", r.id); }
+    language: text/javascript
+order: 5000
