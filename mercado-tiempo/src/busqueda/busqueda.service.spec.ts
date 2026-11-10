@@ -13,6 +13,7 @@ import { PostAyudaCategoriaEntity } from '../post-ayuda/post-ayuda-categoria.ent
 import { ServicioOfrecidoEntity } from '../servicio-ofrecido/servicio-ofrecido.entity';
 import { ServicioOfrecidoCategoriaEntity } from '../servicio-ofrecido/servicio-ofrecido-categoria.entity';
 import { CategoriaEntity } from '../categoria/categoria.entity';
+import { PerfilOrganizacionEntity } from '../perfil-organizacion/perfil-organizacion.entity';
 
 describe('BusquedaService', () => {
     let service: BusquedaService;
@@ -23,11 +24,13 @@ describe('BusquedaService', () => {
     let servicioRepository: Repository<ServicioOfrecidoEntity>;
     let servicioCategoriaRepository: Repository<ServicioOfrecidoCategoriaEntity>;
     let categoriaRepository: Repository<CategoriaEntity>;
+    let organizacionRepository: Repository<PerfilOrganizacionEntity>;
 
     let ana: PerfilMiembroEntity;      // ofrece "Tutoría de cálculo" (visible)
     let tomas: PerfilMiembroEntity;    // ofrece "Fotografía de eventos" (oculto)
     let sofia: PerfilMiembroEntity;    // Administración, sin servicios
     let musica: CategoriaEntity;
+    let club: PerfilMiembroEntity;     // organización: ofrece "Asesoría de hojas de vida" (visible)
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -43,6 +46,7 @@ describe('BusquedaService', () => {
         servicioRepository = module.get(getRepositoryToken(ServicioOfrecidoEntity));
         servicioCategoriaRepository = module.get(getRepositoryToken(ServicioOfrecidoCategoriaEntity));
         categoriaRepository = module.get(getRepositoryToken(CategoriaEntity));
+        organizacionRepository = module.get(getRepositoryToken(PerfilOrganizacionEntity));
 
         await seedDatabase();
     });
@@ -70,6 +74,7 @@ describe('BusquedaService', () => {
         await servicioRepository.clear();
         await postAyudaRepository.clear();
         await categoriaRepository.clear();
+        await organizacionRepository.clear();
         await perfilRepository.clear();
         await usuarioRepository.clear();
 
@@ -85,6 +90,11 @@ describe('BusquedaService', () => {
         await crearPost('Ofrezco clases de inglés', true, ana, 3);
         const conCategoria = await crearPost('Clases de guitarra', true, tomas, 2);
         await postCategoriaRepository.save({ idPostAyuda: conCategoria.id, idCategoria: musica.id });
+
+        club = await createPerfil('Club de Empleabilidad', 'Organización estudiantil');
+        await organizacionRepository.save({ numMiembros: 5, perfil: club });
+        await servicioRepository.save({ titulo: 'Asesoría de hojas de vida', descripcion: 'Revisamos tu hoja de vida para prácticas', visible: true, perfil: club });
+        await servicioRepository.save({ titulo: 'Simulacro de entrevista', descripcion: 'Oculto por ahora', visible: false, perfil: club });
     };
 
     // --- Miembros (RF-023, RF-024) ---
@@ -114,7 +124,7 @@ describe('BusquedaService', () => {
 
     it('buscarMiembros should return everyone sorted by nombre and exclude the given perfil', async () => {
         const result = await service.buscarMiembros('', ana.id);
-        expect(result.map(p => p.nombre)).toEqual(['Sofía Padilla', 'Tomás Bedoya']);
+        expect(result.map(p => p.nombre)).toEqual(['Club de Empleabilidad', 'Sofía Padilla', 'Tomás Bedoya']);
     });
 
     // --- Posts de ayuda (RF-025) ---
@@ -139,24 +149,64 @@ describe('BusquedaService', () => {
         expect((await service.buscarPostsAyuda('astronomia')).length).toBe(0);
     });
 
+    it('buscarPostsAyuda should not return posts with cupo lleno', async () => {
+        const post = (await postAyudaRepository.findOneBy({ titulo: 'Clases de guitarra' }))!;
+        await postAyudaRepository.update(post.id, { cupoLleno: true });
+        expect((await service.buscarPostsAyuda('guitarra')).length).toBe(0);
+        expect((await service.buscarPostsAyuda('clases', TipoPostBusqueda.OFRECIMIENTO)).map(p => p.titulo)).toEqual(['Ofrezco clases de inglés']);
+        expect((await service.buscarPostsAyuda('', TipoPostBusqueda.SOLICITUD)).map(p => p.titulo)).toEqual(['Necesito ayuda con Excel']);
+    });
+
     // --- Servicios ---
 
-    it('buscarServicios should return only visible servicios that match', async () => {
-        expect((await service.buscarServicios('')).map(s => s.titulo)).toEqual(['Tutoría de cálculo']);
-        expect((await service.buscarServicios('fotografia')).length).toBe(0);
-        expect((await service.buscarServicios('integrales')).length).toBe(1);
+    it('buscarServicios should return posts de ofrecimiento and servicios of organizaciones, sorted by titulo', async () => {
+        const result = await service.buscarServicios('');
+        expect(result.map(r => [r.tipo, r.titulo])).toEqual([
+            ['SERVICIO_ORGANIZACION', 'Asesoría de hojas de vida'],
+            ['POST_OFRECIMIENTO', 'Clases de guitarra'],
+            ['POST_OFRECIMIENTO', 'Ofrezco clases de inglés'],
+        ]);
+    });
+
+    it('buscarServicios should not return servicios of individual perfiles nor solicitudes', async () => {
+        expect((await service.buscarServicios('calculo')).length).toBe(0);   // servicio de Ana (individual)
+        expect((await service.buscarServicios('excel')).length).toBe(0);     // post que pide ayuda
+    });
+
+    it('buscarServicios should not return hidden servicios of organizaciones', async () => {
+        expect((await service.buscarServicios('entrevista')).length).toBe(0);
+    });
+
+    it('buscarServicios should filter by palabra clave and categoria', async () => {
+        const porTexto = await service.buscarServicios('hoja de vida');
+        expect(porTexto.map(r => r.id)).toHaveLength(1);
+        expect(porTexto[0].autor).toEqual(expect.objectContaining({ id: club.id, esOrganizacion: true }));
+        expect(porTexto[0].autor?.perfilOrganizacionId).toBeTruthy();
+        expect(porTexto[0].horas).toBeNull();
+
+        const porCategoria = await service.buscarServicios('musica');
+        expect(porCategoria.map(r => r.titulo)).toEqual(['Clases de guitarra']);
+        expect(porCategoria[0].categorias).toEqual(['Música']);
+        expect(porCategoria[0].horas).toBe(2);
+        expect(porCategoria[0].autor).toEqual(expect.objectContaining({ id: tomas.id, esOrganizacion: false, perfilOrganizacionId: null }));
+    });
+
+    it('buscarServicios should not return posts with cupo lleno', async () => {
+        const post = (await postAyudaRepository.findOneBy({ titulo: 'Clases de guitarra' }))!;
+        await postAyudaRepository.update(post.id, { cupoLleno: true });
+        expect((await service.buscarServicios('guitarra')).length).toBe(0);
     });
 
     it('buscarMiembros should not return inactive miembros (RF-006)', async () => {
         await perfilRepository.update(tomas.id, { estadoActividad: false });
         expect((await service.buscarMiembros('tomas')).length).toBe(0);
-        expect((await service.buscarMiembros('')).map(p => p.nombre)).toEqual(['Ana Martínez', 'Sofía Padilla']);
+        expect((await service.buscarMiembros('')).map(p => p.nombre)).toEqual(['Ana Martínez', 'Club de Empleabilidad', 'Sofía Padilla']);
     });
 
-    it('buscarServicios should not return the servicios of inactive miembros (RF-006)', async () => {
+    it('buscarServicios should not return what inactive miembros offer (RF-006)', async () => {
         await perfilRepository.update(ana.id, { estadoActividad: false });
-        expect((await service.buscarServicios('calculo')).length).toBe(0);
-        expect((await service.buscarServicios('')).length).toBe(0);
+        await perfilRepository.update(club.id, { estadoActividad: false });
+        expect((await service.buscarServicios('')).map(r => r.titulo)).toEqual(['Clases de guitarra']);
     });
 
     it('buscarPostsAyuda should not return the posts of inactive autores (RF-006)', async () => {
