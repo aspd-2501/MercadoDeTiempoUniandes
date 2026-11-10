@@ -200,4 +200,19 @@ describe('PerfilMiembroService', () => {
         await expect(() => service.cambiarEstadoActividad("0", false))
             .rejects.toHaveProperty("message", "The perfil miembro with the given id was not found");
     });
+
+    // --- Perfil a partir del usuario (inicio de sesión) ---
+
+    it('findByUsuarioId should return the perfil of the usuario', async () => {
+        const perfil = perfilesList[0];
+        const result = await service.findByUsuarioId(perfil.usuario.id);
+        expect(result.id).toBe(perfil.id);
+        expect(result.nombre).toBe(perfil.nombre);
+    });
+
+    it('findByUsuarioId should throw an exception for a usuario without perfil', async () => {
+        const usuarioSinPerfil = await createUsuario();
+        await expect(() => service.findByUsuarioId(usuarioSinPerfil.id))
+            .rejects.toHaveProperty("message", "The usuario with the given id does not have a perfil miembro");
+    });
 });

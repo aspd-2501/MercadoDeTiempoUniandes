@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "idUniandes": "a.prueba{{runId}}",
+      "contrasenia": "clave123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("Devuelve el perfil de A", () => { const r = pm.response.json(); pm.expect(r.perfil.id).to.eql(pm.collectionVariables.get("perfilA")); });
+      pm.test("No es moderador", () => { const r = pm.response.json(); pm.expect(r.esModerador).to.eql(false); });
+      pm.test("Usuario sin contraseña", () => { const r = pm.response.json(); pm.expect(r.usuario).to.not.have.property("contrasenia"); });
+      { const r = pm.response.json(); pm.collectionVariables.set("token", r.access_token); }
+    language: text/javascript
+order: 11100

@@ -18,6 +18,14 @@ export class PerfilMiembroController {
         return await this.perfilMiembroService.findAll();
     }
 
+    // GET /perfiles-miembro/usuario/:usuarioId -> perfil del usuario (404 si aún no lo ha creado)
+    @Get('usuario/:usuarioId')
+    async findByUsuarioId(@Param('usuarioId') usuarioId: string) {
+        const perfil = await this.perfilMiembroService.findByUsuarioId(usuarioId);
+        const { contrasenia, ...usuarioSinContrasenia } = perfil.usuario;
+        return { ...perfil, usuario: usuarioSinContrasenia };
+    }
+
     @Get(':perfilId')
 async findOne(@Param('perfilId') perfilId: string) {
     const perfil = await this.perfilMiembroService.findOne(perfilId);
