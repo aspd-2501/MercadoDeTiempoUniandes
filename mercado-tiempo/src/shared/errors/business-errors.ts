@@ -6,6 +6,7 @@ export enum BusinessError {
     NOT_FOUND,
     PRECONDITION_FAILED,
     BAD_REQUEST,
+    FORBIDDEN,
 }
 
 export class BusinessLogicException extends HttpException {
@@ -22,6 +23,9 @@ export class BusinessLogicException extends HttpException {
                 break;
             case BusinessError.BAD_REQUEST:
                 status = HttpStatus.BAD_REQUEST;
+                break;
+            case BusinessError.FORBIDDEN:
+                status = HttpStatus.FORBIDDEN;
                 break;
             default:
                 status = HttpStatus.INTERNAL_SERVER_ERROR;

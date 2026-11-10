@@ -1,12 +1,16 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/perfil-miembro/perfil-miembro.controller.ts */
-import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, UseGuards, UseInterceptors } from '@nestjs/common';
 import { BusinessErrorsInterceptor } from '../shared/interceptors/business-errors.interceptor';
 import { PerfilMiembroService } from './perfil-miembro.service';
 import { PerfilMiembroEntity } from './perfil-miembro.entity';
 import { PerfilMiembroDto } from './perfil-miembro.dto';
 import { AsociarInteresesDto } from './asociar-intereses.dto';
 import { EstadoActividadDto } from './estado-actividad.dto';
+import { AjustarSaldoDto } from './ajustar-saldo.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser } from '../auth/current-user.decorator';
+import type { JwtPayload } from '../auth/jwt.strategy';
 
 @Controller('perfiles-miembro')
 @UseInterceptors(BusinessErrorsInterceptor)
@@ -54,6 +58,14 @@ async findOne(@Param('perfilId') perfilId: string) {
         return await this.perfilMiembroService.delete(perfilId);
     }
 
+    // PUT /perfiles-miembro/:perfilId/saldo  { "saldo": 20 }
+    // Solo un moderador (token en Authorization: Bearer). 401 sin token, 403 si no es moderador.
+    @Put(':perfilId/saldo')
+    @UseGuards(JwtAuthGuard)
+    async ajustarSaldo(@Param('perfilId') perfilId: string, @Body() dto: AjustarSaldoDto, @CurrentUser() usuario: JwtPayload) {
+        return await this.perfilMiembroService.ajustarSaldo(perfilId, dto.saldo, usuario.sub);
+    }
+
     // --- Intereses (categorías) ---
 
     // PUT /perfiles-miembro/:perfilId/estado-actividad  { "activo": false }  (RF-006)
@@ -92,7 +104,6 @@ async findOne(@Param('perfilId') perfilId: string) {
         perfil.imagen = dto.imagen;
         perfil.descripcion = dto.descripcion;
         perfil.estadoActividad = dto.estadoActividad;
-        perfil.saldo = dto.saldo;
         perfil.usuario = { id: dto.usuarioId } as any;
         return perfil;
     }

@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/perfiles-miembro/{{perfilC}}/saldo"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "saldo": 5
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Saldo 5", () => { const r = pm.response.json(); pm.expect(r.saldo).to.eql(5); });
+    language: text/javascript
+order: 9500

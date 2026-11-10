@@ -8,10 +8,12 @@ import { UsuarioEntity } from '../usuario/usuario.entity';
 import { CategoriaEntity } from '../categoria/categoria.entity';
 import { PerfilInteresEntity } from './perfil-interes.entity';
 import { PerfilMiembroController } from './perfil-miembro.controller';
+import { ModeradorEntity } from '../moderador/moderador.entity';
+import { TransaccionEntity } from '../transaccion/transaccion.entity';
 
 
 @Module({
-    imports: [TypeOrmModule.forFeature([PerfilMiembroEntity, UsuarioEntity, CategoriaEntity, PerfilInteresEntity])],
+    imports: [TypeOrmModule.forFeature([PerfilMiembroEntity, UsuarioEntity, CategoriaEntity, PerfilInteresEntity, ModeradorEntity, TransaccionEntity])],
     providers: [PerfilMiembroService],
     exports: [TypeOrmModule],
     controllers: [PerfilMiembroController],
