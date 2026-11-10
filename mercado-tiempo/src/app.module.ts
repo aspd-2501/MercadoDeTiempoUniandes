@@ -9,6 +9,7 @@ import { AppService } from './app.service';
 import { UsuarioModule } from './usuario/usuario.module';
 import { ModeradorModule } from './moderador/moderador.module';
 import { PerfilMiembroModule } from './perfil-miembro/perfil-miembro.module';
+import { ImagenModule } from './imagen/imagen.module';
 import { PerfilOrganizacionModule } from './perfil-organizacion/perfil-organizacion.module';
 import { DepositoHorasModule } from './deposito-horas/deposito-horas.module';
 import { DonacionModule } from './donacion/donacion.module';
@@ -71,6 +72,7 @@ import { TransaccionEntity } from './transaccion/transaccion.entity';
     AuthModule,
     ModeradorModule,
     PerfilMiembroModule,
+    ImagenModule,
     PerfilOrganizacionModule,
     DepositoHorasModule,
     DonacionModule,

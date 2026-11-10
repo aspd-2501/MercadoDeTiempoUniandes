@@ -1,5 +1,8 @@
 # compiled output
 /dist
+
+# Imágenes subidas por los usuarios
+/uploads
 /dist-test
 /node_modules
 /build
