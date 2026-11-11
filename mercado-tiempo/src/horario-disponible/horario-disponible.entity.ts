@@ -24,6 +24,11 @@ export class HorarioDisponibleEntity {
     @Column()
     fechaFin: Date;
 
+    // Solo en las franjas de un post de ayuda: la que el autor marcó como su horario preferido.
+    // Cada post tiene exactamente una. Es una preferencia inicial; el horario final se define en el acuerdo.
+    @Column({ default: false })
+    preferido: boolean;
+
     // --- Origen: acuerdo, solicitud, post o actividad (exactamente uno, validado por CHECK) ---
     // Un acuerdo puede tener varios horarios propuestos (horariosDisponibles)
     @ManyToOne(() => AcuerdoEntity, acuerdo => acuerdo.horariosDisponibles, { nullable: true, onDelete: 'CASCADE' })

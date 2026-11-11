@@ -14,7 +14,10 @@ import { HorarioDisponibleEntity } from '../horario-disponible/horario-disponibl
 export interface FranjaHoraria {
     fechaInicio: Date;
     fechaFin: Date;
+    preferido?: boolean;   // horario preferido del autor (uno por post)
 }
+
+const inicioMs = (h: { fechaInicio: Date }) => new Date(h.fechaInicio).getTime();
 
 @Injectable()
 export class PostAyudaService {
@@ -70,6 +73,12 @@ export class PostAyudaService {
             throw new BusinessLogicException("A post ayuda must have at least 1 horario disponible", BusinessError.PRECONDITION_FAILED);
         horarios.forEach(franja => this.validarFranja(franja, post.horas));
 
+        // Exactamente un horario preferido: el marcado o, si no hay ninguno, el que empieza primero
+        const marcadas = horarios.filter(franja => franja.preferido === true);
+        if (marcadas.length > 1)
+            throw new BusinessLogicException("Only one horario of a post ayuda can be preferido", BusinessError.PRECONDITION_FAILED);
+        const preferida = marcadas[0] ?? [...horarios].sort((a, b) => inicioMs(a) - inicioMs(b))[0];
+
         const nuevoPost = await this.postAyudaRepository.save(post);
 
         const relaciones = categoriaIds.map(idCategoria =>
@@ -81,6 +90,7 @@ export class PostAyudaService {
             this.horarioRepository.create({
                 fechaInicio: franja.fechaInicio,
                 fechaFin: franja.fechaFin,
+                preferido: franja === preferida,
                 postAyuda: { id: nuevoPost.id },
                 perfil: { id: autor.id },
             })
@@ -115,7 +125,23 @@ export class PostAyudaService {
         if (!post)
             throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
 
-        return post.horariosDisponibles.sort((a, b) => new Date(a.fechaInicio).getTime() - new Date(b.fechaInicio).getTime());
+        return post.horariosDisponibles.sort((a, b) => inicioMs(a) - inicioMs(b));
+    }
+
+    // El horario preferido del post (preferencia inicial del autor; el horario final se define en el acuerdo)
+    async marcarHorarioPreferido(postId: string, horarioId: string): Promise<PostAyudaEntity> {
+        const post: PostAyudaEntity | null = await this.postAyudaRepository.findOne({
+            where: { id: postId },
+            relations: { horariosDisponibles: true }
+        });
+        if (!post)
+            throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+
+        if (!post.horariosDisponibles.some(h => h.id === horarioId))
+            throw new BusinessLogicException("The horario disponible is not associated with the post ayuda", BusinessError.PRECONDITION_FAILED);
+
+        await this.cambiarPreferido(postId, horarioId);
+        return await this.findOne(postId);
     }
 
     async addHorarioPost(postId: string, franja: FranjaHoraria): Promise<PostAyudaEntity> {
@@ -131,10 +157,13 @@ export class PostAyudaService {
         const horario = this.horarioRepository.create({
             fechaInicio: franja.fechaInicio,
             fechaFin: franja.fechaFin,
+            preferido: false,
             postAyuda: { id: postId },
             perfil: { id: post.perfilAutor.id },
         });
-        await this.horarioRepository.save(horario);
+        const nuevo = await this.horarioRepository.save(horario);
+        if (franja.preferido === true)
+            await this.cambiarPreferido(postId, nuevo.id);
 
         return await this.findOne(postId);
     }
@@ -155,6 +184,22 @@ export class PostAyudaService {
             throw new BusinessLogicException("A post ayuda must keep at least 1 horario disponible", BusinessError.PRECONDITION_FAILED);
 
         await this.horarioRepository.remove(horario);
+
+        // Si se borró el preferido, pasa a serlo la franja restante que empieza primero
+        if (horario.preferido) {
+            const siguiente = post.horariosDisponibles
+                .filter(h => h.id !== horarioId)
+                .sort((a, b) => inicioMs(a) - inicioMs(b))[0];
+            await this.cambiarPreferido(postId, siguiente.id);
+        }
+    }
+
+    // Deja como preferida solo la franja indicada
+    private async cambiarPreferido(postId: string, horarioId: string) {
+        await this.horarioRepository.manager.transaction(async manager => {
+            await manager.update(HorarioDisponibleEntity, { postAyuda: { id: postId } }, { preferido: false });
+            await manager.update(HorarioDisponibleEntity, { id: horarioId }, { preferido: true });
+        });
     }
 
     // --- Categorías (1 a 3 por post, regla pendiente desde el diagrama) ---

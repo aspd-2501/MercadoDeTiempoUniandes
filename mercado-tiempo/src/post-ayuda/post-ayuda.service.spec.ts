@@ -387,4 +387,69 @@ describe('PostAyudaService', () => {
         await expect(() => service.deleteHorarioPost(post.id, "0"))
             .rejects.toHaveProperty("message", "The horario disponible is not associated with the post ayuda");
     });
+
+    // --- Horario preferido (preferencia inicial del autor; el horario final se define en el acuerdo) ---
+
+    const datosPost = (): PostAyudaEntity => ({
+        titulo: faker.lorem.words(3), descripcion: faker.lorem.sentence(), imagen: faker.image.url(),
+        ofrece: true, cupo: 1, cupoLleno: false, horas: 2, fechaCreacion: faker.date.recent(), perfilAutor: perfil,
+    }) as PostAyudaEntity;
+
+    // Franja de 3 horas que empieza el 1 de diciembre de 2026 a la hora indicada (UTC)
+    const franjaA = (hora: number, preferido?: boolean): FranjaHoraria => ({
+        fechaInicio: new Date(Date.UTC(2026, 11, 1, hora)), fechaFin: new Date(Date.UTC(2026, 11, 1, hora + 3)), preferido,
+    });
+    const preferidas = (horarios: HorarioDisponibleEntity[]) => horarios.filter(h => h.preferido).map(h => new Date(h.fechaInicio).getUTCHours());
+
+    it('create should save the horario marked as preferido', async () => {
+        const result = await service.create(datosPost(), [categoriasList[0].id], [franjaA(8), franjaA(14, true), franjaA(10)]);
+        expect(preferidas(result.horariosDisponibles)).toEqual([14]);
+    });
+
+    it('create should use the earliest horario as preferido when none is marked', async () => {
+        const result = await service.create(datosPost(), [categoriasList[0].id], [franjaA(14), franjaA(8), franjaA(10)]);
+        expect(preferidas(result.horariosDisponibles)).toEqual([8]);
+    });
+
+    it('create should throw an exception with more than one preferido', async () => {
+        await expect(() => service.create(datosPost(), [categoriasList[0].id], [franjaA(8, true), franjaA(14, true)]))
+            .rejects.toHaveProperty("message", "Only one horario of a post ayuda can be preferido");
+    });
+
+    it('marcarHorarioPreferido should change the preferido horario', async () => {
+        const creado = await service.create(datosPost(), [categoriasList[0].id], [franjaA(8, true), franjaA(14)]);
+        const tarde = creado.horariosDisponibles.find(h => new Date(h.fechaInicio).getUTCHours() === 14)!;
+
+        const result = await service.marcarHorarioPreferido(creado.id, tarde.id);
+        expect(preferidas(result.horariosDisponibles)).toEqual([14]);
+    });
+
+    it('marcarHorarioPreferido should throw an exception for a horario of another post', async () => {
+        const creado = await service.create(datosPost(), [categoriasList[0].id], [franjaA(8)]);
+        const [delOtro] = await service.findHorariosByPostId(post.id);
+        await expect(() => service.marcarHorarioPreferido(creado.id, delOtro.id))
+            .rejects.toHaveProperty("message", "The horario disponible is not associated with the post ayuda");
+    });
+
+    it('marcarHorarioPreferido should throw an exception for an invalid post ayuda', async () => {
+        await expect(() => service.marcarHorarioPreferido("0", "0"))
+            .rejects.toHaveProperty("message", "The post ayuda with the given id was not found");
+    });
+
+    it('addHorarioPost should keep the preferido unless the new horario is marked', async () => {
+        const creado = await service.create(datosPost(), [categoriasList[0].id], [franjaA(8)]);
+        const sinMarcar = await service.addHorarioPost(creado.id, franjaA(10));
+        expect(preferidas(sinMarcar.horariosDisponibles)).toEqual([8]);
+
+        const marcado = await service.addHorarioPost(creado.id, franjaA(16, true));
+        expect(preferidas(marcado.horariosDisponibles)).toEqual([16]);
+    });
+
+    it('deleteHorarioPost should make the earliest horario preferido when the preferido is removed', async () => {
+        const creado = await service.create(datosPost(), [categoriasList[0].id], [franjaA(16), franjaA(14, true), franjaA(10)]);
+        const preferido = creado.horariosDisponibles.find(h => h.preferido)!;
+
+        await service.deleteHorarioPost(creado.id, preferido.id);
+        expect(preferidas(await service.findHorariosByPostId(creado.id))).toEqual([10]);
+    });
 });

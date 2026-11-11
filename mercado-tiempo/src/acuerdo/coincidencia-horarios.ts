@@ -52,7 +52,8 @@ export function intersectar(a: Intervalo[], b: Intervalo[]): Intervalo[] {
 }
 
 // disponibilidades: una lista de franjas por participante (todos ya enviaron)
-export function calcularCoincidencia(horas: number, disponibilidades: Intervalo[][]): ResultadoCoincidencia {
+// preferidas: horario preferido del post de origen. Si hay un horario común suficiente dentro de él, se usa ese.
+export function calcularCoincidencia(horas: number, disponibilidades: Intervalo[][], preferidas: Intervalo[] = []): ResultadoCoincidencia {
     if (disponibilidades.length === 0)
         return { estado: 'pendiente' };
 
@@ -65,8 +66,10 @@ export function calcularCoincidencia(horas: number, disponibilidades: Intervalo[
 
     const duracion = horas * 60 * 60 * 1000;
 
-    // El primer horario común que alcance: se toma justo la duración del acuerdo desde su inicio
-    const suficiente = comunes.find(c => ms(c.fin) - ms(c.inicio) >= duracion);
+    // Primero se busca dentro del horario preferido; si no alcanza, el primer horario común que alcance.
+    // Se toma justo la duración del acuerdo desde su inicio.
+    const alcanza = (c: Intervalo) => ms(c.fin) - ms(c.inicio) >= duracion;
+    const suficiente = intersectar(comunes, fusionar(preferidas)).find(alcanza) ?? comunes.find(alcanza);
     if (suficiente)
         return { estado: 'compatible', intervalo: { inicio: suficiente.inicio, fin: new Date(ms(suficiente.inicio) + duracion) } };
 

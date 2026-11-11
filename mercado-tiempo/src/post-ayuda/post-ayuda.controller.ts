@@ -27,7 +27,7 @@ export class PostAyudaController {
         @Post()
     async create(@Body() dto: CrearPostAyudaDto) {
         const post: PostAyudaEntity = this.dtoToEntity(dto);
-        const horarios = dto.horarios.map(f => ({ fechaInicio: new Date(f.fechaInicio), fechaFin: new Date(f.fechaFin) }));
+        const horarios = dto.horarios.map(f => ({ fechaInicio: new Date(f.fechaInicio), fechaFin: new Date(f.fechaFin), preferido: f.preferido === true }));
         return await this.postAyudaService.create(post, dto.categoriaIds, horarios);
     }
 
@@ -52,8 +52,14 @@ export class PostAyudaController {
 
     @Post(':postId/horarios')
     async addHorarioPost(@Param('postId') postId: string, @Body() dto: FranjaHorariaDto) {
-        const franja = { fechaInicio: new Date(dto.fechaInicio), fechaFin: new Date(dto.fechaFin) };
+        const franja = { fechaInicio: new Date(dto.fechaInicio), fechaFin: new Date(dto.fechaFin), preferido: dto.preferido === true };
         return await this.postAyudaService.addHorarioPost(postId, franja);
+    }
+
+    // Cambia el horario preferido del post (la anterior deja de serlo)
+    @Put(':postId/horarios/:horarioId/preferido')
+    async marcarHorarioPreferido(@Param('postId') postId: string, @Param('horarioId') horarioId: string) {
+        return await this.postAyudaService.marcarHorarioPreferido(postId, horarioId);
     }
 
     @Delete(':postId/horarios/:horarioId')

@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/posts-ayuda/{{postId}}/horarios/00000000-0000-0000-0000-000000000000/preferido"
+method: PUT
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: not associated", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("not associated with the post ayuda"); });
+    language: text/javascript
+order: 14200
