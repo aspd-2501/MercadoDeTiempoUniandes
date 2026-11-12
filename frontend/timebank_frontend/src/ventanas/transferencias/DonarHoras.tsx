@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { buscarMiembros } from '../../api/perfilesMiembro.api';
+import { consultarFondoComunitario, realizarDonacion, type FondoHorasAPI } from '../../api/donaciones.api';
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
 import {
   ArrowLeft,
@@ -23,7 +25,7 @@ export interface MiembroParaDonacion {
   colorAvatar?: string;
 }
 
-interface DonacionSimulada {
+interface DonacionConfirmada {
   destino: DestinoDonacion;
   horas: number;
   nombreMiembro?: string;
@@ -32,14 +34,6 @@ interface DonacionSimulada {
 interface DonarHorasProps {
   miembros?: MiembroParaDonacion[];
 }
-
-const MIEMBROS_DEMO: MiembroParaDonacion[] = [
-  { id: 'm-101', nombre: 'Daniela Rodríguez', facultad: 'Facultad de Ingeniería', colorAvatar: '#3C9DA0' },
-  { id: 'm-102', nombre: 'Andrés Martínez', facultad: 'Facultad de Ciencias Sociales', colorAvatar: '#7655A0' },
-  { id: 'm-103', nombre: 'Camila Torres', facultad: 'Facultad de Artes y Humanidades', colorAvatar: '#E3A723' },
-  { id: 'm-104', nombre: 'Felipe Gómez', facultad: 'Facultad de Administración', colorAvatar: '#4977B5' },
-  { id: 'm-105', nombre: 'Laura Sánchez', facultad: 'Facultad de Medicina', colorAvatar: '#B86583' },
-];
 
 const BOTON_ANIMADO =
   'cursor-pointer transition-[transform,background-color,border-color,color,box-shadow] duration-200 ease-out ' +
@@ -72,56 +66,79 @@ function AvatarMiembro({ miembro }: { miembro: MiembroParaDonacion }) {
 // ============================================================================
 
 export default function DonarHoras({
-  miembros = MIEMBROS_DEMO,
+  miembros,
 }: DonarHorasProps) {
 
   // 00.1 DATOS DEL MIEMBRO AUTENTICADO
-  const { miembro } = useMiembroSesion();
-
-  const saldoDisponible = miembro.balance;
-
-  // 00.2 Estados locales para demostrar la interfaz (sin backend).
-  const [horasComunidad, setHorasComunidad] = useState(1);
+  const { perfil, reintentarSesion } = useMiembroSesion();
+  const saldoDisponible = perfil?.saldo ?? 0;
+  const [miembrosApi, setMiembrosApi] = useState<MiembroParaDonacion[]>([]);
+  const [fondo, setFondo] = useState<FondoHorasAPI | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(false);
+  const [procesando, setProcesando] = useState(false);
   const [busqueda, setBusqueda] = useState('');
+  useEffect(() => {
+    let vigente = true;
+    void consultarFondoComunitario().then(res => { if (vigente) setFondo(res); })
+      .catch(() => { /* El fondo puede no estar inicializado aún en el backend */ });
+    return () => { vigente = false; };
+  }, []);
+  useEffect(() => {
+    if (miembros !== undefined || !perfil?.id) return;
+    let vigente = true;
+    setCargando(true);
+    const temporizador = setTimeout(() => {
+      void buscarMiembros(busqueda.trim(), perfil.id)
+        .then(res => { if (vigente) setMiembrosApi(res.map(m => ({ id: m.id, nombre: m.nombre, facultad: m.afiliacionUniandes }))); })
+        .catch(e => { if (vigente) setError(e instanceof Error ? e.message : 'No se pudieron consultar miembros.'); })
+        .finally(() => { if (vigente) setCargando(false); });
+    }, 300);
+    return () => { vigente = false; clearTimeout(temporizador); };
+  }, [miembros, busqueda, perfil?.id]);
+
+  // 00.2 Estado local de los controles; la donación se registra en el backend.
+  const [horasComunidad, setHorasComunidad] = useState(1);
   const [idMiembroSeleccionado, setIdMiembroSeleccionado] = useState('');
   const [horasMiembro, setHorasMiembro] = useState(1);
   const [mensaje, setMensaje] = useState('');
   const [confirmacionAbierta, setConfirmacionAbierta] = useState<DestinoDonacion | null>(null);
-  const [donacionSimulada, setDonacionSimulada] = useState<DonacionSimulada | null>(null);
+  const [donacionConfirmada, setDonacionConfirmada] = useState<DonacionConfirmada | null>(null);
 
   // 00.3 Datos derivados para la visualización.
-  const miembrosFiltrados = miembros
-    .filter((miembro) => miembro.nombre.toLowerCase().includes(busqueda.trim().toLowerCase()))
-    .slice(0, 5);
-  const miembroSeleccionado = miembros.find((miembro) => miembro.id === idMiembroSeleccionado);
-  const puedeDonarComunidad = horasComunidad >= 0.5 && horasComunidad <= saldoDisponible;
-  const puedeDonarMiembro = Boolean(miembroSeleccionado) && horasMiembro >= 0.5 && horasMiembro <= saldoDisponible;
+  const miembrosFiltrados = miembros ?? miembrosApi;
+  const miembroSeleccionado = miembrosFiltrados.find((m) => m.id === idMiembroSeleccionado);
+  const puedeDonarComunidad = Boolean(fondo) && Number.isInteger(horasComunidad) && horasComunidad >= 1 && horasComunidad <= saldoDisponible;
+  const puedeDonarMiembro = Boolean(miembroSeleccionado) && Number.isInteger(horasMiembro) && horasMiembro >= 1 && horasMiembro <= saldoDisponible;
 
-  // Los botones +/- modifican únicamente los valores mostrados en pantalla.
   function modificarHoras(actuales: number, cambio: number) {
-    return Math.max(0.5, Math.min(saldoDisponible, actuales + cambio));
+    return Math.max(1, Math.min(saldoDisponible, actuales + cambio));
   }
 
-  function confirmarDonacionVisual() {
-    if (confirmacionAbierta === 'comunidad' && puedeDonarComunidad) {
-      setDonacionSimulada({ destino: 'comunidad', horas: horasComunidad });
-    }
-
-    if (confirmacionAbierta === 'miembro' && puedeDonarMiembro && miembroSeleccionado) {
-      setDonacionSimulada({
-        destino: 'miembro',
-        horas: horasMiembro,
-        nombreMiembro: miembroSeleccionado.nombre,
+  async function confirmarDonacion() {
+    if (!perfil || procesando || !confirmacionAbierta) return;
+    const destino = confirmacionAbierta;
+    const horas = destino === 'comunidad' ? horasComunidad : horasMiembro;
+    if (destino === 'comunidad' ? !puedeDonarComunidad : !puedeDonarMiembro) return;
+    setProcesando(true); setError(null);
+    try {
+      await realizarDonacion({
+        perfilDonanteId: perfil.id, horasDonadas: horas,
+        mensaje: mensaje.trim() || 'Donación de horas',
+        ...(destino === 'comunidad' && fondo ? { depositoReceptorId: fondo.id } : {}),
+        ...(destino === 'miembro' && miembroSeleccionado ? { perfilReceptorId: miembroSeleccionado.id } : {}),
       });
-    }
-
-    setConfirmacionAbierta(null);
+      setDonacionConfirmada({ destino, horas, nombreMiembro: miembroSeleccionado?.nombre });
+      setConfirmacionAbierta(null);
+      await reintentarSesion(); // Saldo actualizado desde /auth/me
+    } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo realizar la donación.'); }
+    finally { setProcesando(false); }
   }
 
   // ========================================================================
-  // 01. PANTALLA DE ÉXITO (DEMOSTRACIÓN VISUAL, SIN TRANSFERENCIA REAL)
+  // 01. PANTALLA DE ÉXITO (solo después de confirmar la donación en la API)
   // ========================================================================
-  if (donacionSimulada) {
+  if (donacionConfirmada) {
     return (
       <main
         data-section="resultado-donacion"
@@ -137,15 +154,15 @@ export default function DonarHoras({
           ¡Donación realizada!
         </h1>
         <p className="max-w-xs text-[#737373]">
-          {donacionSimulada.destino === 'comunidad'
-            ? `Donaste ${donacionSimulada.horas} hora${donacionSimulada.horas !== 1 ? 's' : ''} al fondo comunitario.`
-            : `${donacionSimulada.horas} hora${donacionSimulada.horas !== 1 ? 's fueron enviadas' : ' fue enviada'} a ${donacionSimulada.nombreMiembro}.`}
+          {donacionConfirmada.destino === 'comunidad'
+            ? `Donaste ${donacionConfirmada.horas} hora${donacionConfirmada.horas !== 1 ? 's' : ''} al fondo comunitario.`
+            : `${donacionConfirmada.horas} hora${donacionConfirmada.horas !== 1 ? 's fueron enviadas' : ' fue enviada'} a ${donacionConfirmada.nombreMiembro}.`}
         </p>
 
         {/* 01.3 Volver al formulario de demostración */}
         <button
           type="button"
-          onClick={() => setDonacionSimulada(null)}
+          onClick={() => setDonacionConfirmada(null)}
           className={`mt-8 rounded-xl bg-[#3C9DA0] px-8 py-3 text-sm font-semibold text-white hover:bg-[#2D8B8E] ${BOTON_ANIMADO}`}
           style={{ fontFamily: 'Outfit, sans-serif' }}
         >
@@ -173,6 +190,7 @@ export default function DonarHoras({
       </header>
 
       <main className="mx-auto w-full max-w-lg space-y-4 px-4 py-5">
+        {error && <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>}
         {/* 03. SALDO DISPONIBLE DEL MIEMBRO */}
         <section
           data-section="saldo-disponible"
@@ -221,9 +239,9 @@ export default function DonarHoras({
               <div className="flex items-center gap-4">
                 <button
                   type="button"
-                  aria-label="Restar media hora a la donación comunitaria"
-                  onClick={() => setHorasComunidad((horas) => modificarHoras(horas, -0.5))}
-                  disabled={horasComunidad <= 0.5}
+                  aria-label="Restar una hora a la donación comunitaria"
+                  onClick={() => setHorasComunidad((horas) => modificarHoras(horas, -1))}
+                  disabled={horasComunidad <= 1}
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E8E8E8] bg-white text-xl font-bold text-[#0D0D0D] hover:bg-[#F6F6F6] disabled:opacity-40 ${BOTON_ANIMADO}`}
                 >
                   −
@@ -236,8 +254,8 @@ export default function DonarHoras({
                 </div>
                 <button
                   type="button"
-                  aria-label="Sumar media hora a la donación comunitaria"
-                  onClick={() => setHorasComunidad((horas) => modificarHoras(horas, 0.5))}
+                  aria-label="Sumar una hora a la donación comunitaria"
+                  onClick={() => setHorasComunidad((horas) => modificarHoras(horas, 1))}
                   disabled={horasComunidad >= saldoDisponible}
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E8E8E8] bg-white text-xl font-bold text-[#0D0D0D] hover:bg-[#F6F6F6] disabled:opacity-40 ${BOTON_ANIMADO}`}
                 >
@@ -299,6 +317,7 @@ export default function DonarHoras({
 
             {/* 06.2 Resultados del buscador */}
             <div className="mt-2 max-h-44 space-y-1.5 overflow-y-auto">
+              {cargando && <p className="py-2 text-sm text-[#737373]">Buscando miembros…</p>}
               {miembrosFiltrados.length === 0 ? (
                 <p className="py-3 text-center text-sm text-[#9E9E9E]">No se encontraron miembros</p>
               ) : (
@@ -339,9 +358,9 @@ export default function DonarHoras({
                 <div className="flex items-center gap-4">
                   <button
                     type="button"
-                    aria-label="Restar media hora a la donación al miembro"
-                    onClick={() => setHorasMiembro((horas) => modificarHoras(horas, -0.5))}
-                    disabled={horasMiembro <= 0.5}
+                    aria-label="Restar una hora a la donación al miembro"
+                    onClick={() => setHorasMiembro((horas) => modificarHoras(horas, -1))}
+                    disabled={horasMiembro <= 1}
                     className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E8E8E8] text-xl font-bold text-[#0D0D0D] hover:bg-[#F6F6F6] disabled:opacity-40 ${BOTON_ANIMADO}`}
                   >
                     −
@@ -354,8 +373,8 @@ export default function DonarHoras({
                   </div>
                   <button
                     type="button"
-                    aria-label="Sumar media hora a la donación al miembro"
-                    onClick={() => setHorasMiembro((horas) => modificarHoras(horas, 0.5))}
+                    aria-label="Sumar una hora a la donación al miembro"
+                    onClick={() => setHorasMiembro((horas) => modificarHoras(horas, 1))}
                     disabled={horasMiembro >= saldoDisponible}
                     className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#E8E8E8] text-xl font-bold text-[#0D0D0D] hover:bg-[#F6F6F6] disabled:opacity-40 ${BOTON_ANIMADO}`}
                   >
@@ -484,11 +503,12 @@ export default function DonarHoras({
               </button>
               <button
                 type="button"
-                onClick={confirmarDonacionVisual}
+                disabled={procesando}
+                onClick={() => void confirmarDonacion()}
                 className={`flex-1 rounded-xl bg-[#3C9DA0] py-3 text-sm font-bold text-white hover:bg-[#2D8B8E] ${BOTON_ANIMADO}`}
                 style={{ fontFamily: 'Outfit, sans-serif' }}
               >
-                Confirmar donación
+                {procesando ? 'Enviando…' : 'Confirmar donación'}
               </button>
             </div>
           </section>

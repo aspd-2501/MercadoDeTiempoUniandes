@@ -1,11 +1,14 @@
-import { useState } from 'react';
-import { ArrowLeft, Eye, EyeOff, Pencil, Plus, Star, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router';
+import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
+import { obtenerServiciosMiembro } from '../../api/perfilResumen.api';
+import { actualizarServicioOfrecido, eliminarServicioOfrecido, type ServicioOfrecidoAPI } from '../../api/serviciosOfrecidos.api';
+import { ArrowLeft, Eye, EyeOff, Plus, Star, Trash2 } from 'lucide-react';
 
 /**
  * VISTA: Servicios ofrecidos por un miembro del Banco de Tiempo.
  *
- * La lista y las tarjetas usan datos simulados. Las acciones de mostrar,
- * ocultar y eliminar solo modifican el estado local del componente.
+ * La lista, visibilidad y eliminación están conectadas con el backend.
  *
  * El formulario de creación es un componente independiente que se encuentra en
  * src/ventanas/creacionYEdicion/AniadirServicio.tsx.
@@ -25,7 +28,7 @@ interface ServicioMiembro {
   category: string;
   description: string;
   isVisible: boolean;   
-  estimatedHours: number;
+  estimatedHours?: number;
   imageUrl?: string;
 }
 
@@ -35,40 +38,13 @@ interface TarjetaServicioProps {
   onEliminar: () => void;
 }
 
-const ID_MIEMBRO_DEMO = 'miembro-demo-1';
-
-const SERVICIOS_DEMO: ServicioMiembro[] = [
-  {
-    id: 'servicio-demo-1',
-    userId: ID_MIEMBRO_DEMO,
-    title: 'Tutorías de cálculo diferencial',
-    category: 'Académico / Matemáticas',
-    description:
-      'Te ayudo a resolver dudas, estudiar para parciales y practicar ejercicios de cálculo.',
-    isVisible: true,
-    estimatedHours: 2,
-  },
-  {
-    id: 'servicio-demo-2',
-    userId: ID_MIEMBRO_DEMO,
-    title: 'Conversación en inglés',
-    category: 'Idiomas',
-    description:
-      'Práctica conversacional de inglés para mejorar tu fluidez y confianza.',
-    isVisible: true,
-    estimatedHours: 1,
-  },
-  {
-    id: 'servicio-demo-3',
-    userId: ID_MIEMBRO_DEMO,
-    title: 'Introducción a Photoshop',
-    category: 'Diseño',
-    description:
-      'Aprende las herramientas básicas de edición de imágenes y retoque fotográfico.',
-    isVisible: false,
-    estimatedHours: 1.5,
-  },
-];
+function adaptarServicio(s: ServicioOfrecidoAPI, perfilId: string): ServicioMiembro {
+  return {
+    id: s.id, userId: perfilId, title: s.titulo, description: s.descripcion,
+    category: s.categorias?.map(c => c.categoria?.nombre).filter(Boolean).join(', ') ?? '',
+    isVisible: s.visible, imageUrl: s.imagen ?? undefined,
+  };
+}
 
 // Animaciones visuales: no implican navegación ni acciones reales.
 const ANIMACION_BOTON =
@@ -87,22 +63,41 @@ function ChipCategoria({ label }: { label: string }) {
 
 // ───────────────────────── COMPONENTE PRINCIPAL ─────────────────────────
 export default function ServiciosMiembro() {
-  const [servicios, setServicios] = useState<ServicioMiembro[]>(SERVICIOS_DEMO);
-
-  // Acciones de demostración: solo actualizan los datos en memoria.
-  function cambiarVisibilidad(id: string) {
-    setServicios((actuales) =>
-      actuales.map((servicio) =>
-        servicio.id === id
-          ? { ...servicio, isVisible: !servicio.isVisible }
-          : servicio
-      )
-    );
+  const { perfil } = useMiembroSesion();
+  const navigate = useNavigate();
+  const [servicios, setServicios] = useState<ServicioMiembro[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    if (!perfil?.id) return;
+    let vigente = true;
+    setCargando(true); setError(null);
+    void obtenerServiciosMiembro(perfil.id, true)
+      .then(res => { if (vigente) setServicios(res.map(s => adaptarServicio(s, perfil.id))); })
+      .catch(e => { if (vigente) setError(e instanceof Error ? e.message : 'No se pudieron cargar los servicios.'); })
+      .finally(() => { if (vigente) setCargando(false); });
+    return () => { vigente = false; };
+  }, [perfil?.id, revision]);
+  async function cambiarVisibilidad(id: string) {
+    if (!perfil) return;
+    const servicio = servicios.find(s => s.id === id);
+    if (!servicio) return;
+    setError(null);
+    try {
+      await actualizarServicioOfrecido(id, {
+        titulo: servicio.title, descripcion: servicio.description,
+        visible: !servicio.isVisible, perfilId: perfil.id,
+        ...(servicio.imageUrl ? { imagen: servicio.imageUrl } : {}),
+      });
+      setRevision(v => v + 1);
+    } catch (e) { setError(e instanceof Error ? e.message : 'No se pudo modificar el servicio.'); }
   }
-
-  function eliminarServicio(id: string) {
-    setServicios((actuales) => actuales.filter((servicio) => servicio.id !== id));
-  }  
+  async function eliminarServicio(id: string) {
+    setError(null);
+    try { await eliminarServicioOfrecido(id); setRevision(v => v + 1); }
+    catch (e) { setError(e instanceof Error ? e.message : 'No se pudo eliminar el servicio.'); }
+  }
 
   return (
     <div className="min-h-screen bg-[#F6F6F6]">
@@ -117,6 +112,7 @@ export default function ServiciosMiembro() {
             <button
               type="button"
               aria-label="Volver"
+              onClick={() => navigate(-1)}
               className={`${ANIMACION_BOTON} flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-[#F6F6F6]`}
             >
               <ArrowLeft size={22} className="text-[#0D0D0D]" />
@@ -133,6 +129,7 @@ export default function ServiciosMiembro() {
             type="button"
             className={`${ANIMACION_BOTON} ${ANIMACION_ELEVACION} flex shrink-0 items-center gap-1.5 rounded-xl bg-[#3C9DA0] px-4 py-2 text-sm font-semibold text-white hover:bg-[#2D8B8E]`}
             style={{ fontFamily: 'Outfit, sans-serif' }}
+            onClick={() => navigate('/anadir-servicio')}
           >
             <Plus size={16} />
             Añadir
@@ -145,7 +142,9 @@ export default function ServiciosMiembro() {
         data-section="lista-servicios"
         className="mx-auto max-w-lg space-y-3 px-4 py-4"
       >
-        {servicios.length === 0 ? (
+        {cargando ? <p role="status" className="py-8 text-center text-sm text-[#737373]">Cargando servicios…</p>
+          : error ? <div role="alert" className="rounded-lg bg-red-50 p-4 text-red-700">{error}<button type="button" onClick={() => setRevision(v => v + 1)} className="ml-2 underline">Reintentar</button></div>
+          : servicios.length === 0 ? (
           <section data-section="sin-servicios" className="py-20 text-center">
             <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-[#F0F0F0]">
               <Star size={32} className="text-[#C0C0C0]" />
@@ -161,6 +160,7 @@ export default function ServiciosMiembro() {
             </p>
             <button
               type="button"
+              onClick={() => navigate('/anadir-servicio')}
               className={`${ANIMACION_BOTON} ${ANIMACION_ELEVACION} rounded-xl bg-[#3C9DA0] px-6 py-3 text-sm font-semibold text-white hover:bg-[#2D8B8E]`}
             >
               Añadir mi primer servicio
@@ -225,9 +225,7 @@ function TarjetaServicio({
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <ChipCategoria label={servicio.category} />
-            <span className="text-xs text-[#9E9E9E]">
-              {servicio.estimatedHours} h
-            </span>
+
           </div>
         </div>
 
@@ -244,13 +242,7 @@ function TarjetaServicio({
           data-section="acciones-servicio"
           className="flex flex-wrap items-center gap-2"
         >
-          <button
-            type="button"
-            className={`${ANIMACION_BOTON} flex items-center gap-1.5 rounded-xl bg-[#F6F6F6] px-3 py-2 text-sm font-medium text-[#0D0D0D] hover:bg-[#E8E8E8]`}
-          >
-            <Pencil size={14} />
-            Editar
-          </button>
+
           <button
             type="button"
             onClick={onCambiarVisibilidad}

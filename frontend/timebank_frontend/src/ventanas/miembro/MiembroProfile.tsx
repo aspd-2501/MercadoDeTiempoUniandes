@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { obtenerInteresesMiembro, obtenerServiciosMiembro, obtenerReconocimientosMiembro, obtenerIntercambiosRealizados, cambiarVisibilidadPerfil } from '../../api/perfilResumen.api';
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
 import { useNavigate } from 'react-router';
+import type { ServicioOfrecidoAPI } from '../../api/serviciosOfrecidos.api';
 import {
   Activity,
   Award,
@@ -24,8 +26,8 @@ import {
  * Este archivo conserva el diseño de Figma. Está organizado en secciones
  * semánticas con comentarios y atributos data-section para ubicar cada bloque.
  *
- * El perfil se lee del contexto global de sesión; los servicios siguen siendo datos de prueba.
- * Sin API ni navegación real. El interruptor actualiza el estado compartido.
+ * El perfil se lee del contexto global de sesión; intereses, servicios,
+ * reconocimientos y acuerdos completados se consultan mediante API.
  */
 
 // ─────────────────────────── TIPOS DE DATOS ───────────────────────────
@@ -34,7 +36,7 @@ interface ServicioPerfil {
   title: string;
   category: string;
   description: string;
-  estimatedHours: number;
+  estimatedHours?: number;
   imageUrl?: string;
   isVisible: boolean;
 }
@@ -46,25 +48,6 @@ interface MiembroProfileProps {
 }
 
 // ────────────────────────── DATOS DE PRUEBA ──────────────────────────
-const DEMO_SERVICES: ServicioPerfil[] = [
-  {
-    id: 'servicio-demo-1',
-    title: 'Tutorías de cálculo diferencial',
-    category: 'Académico / Matemáticas',
-    description: 'Te ayudo a resolver dudas, estudiar para parciales y practicar ejercicios de cálculo.',
-    estimatedHours: 2,
-    isVisible: true,
-  },
-  {
-    id: 'servicio-demo-2',
-    title: 'Conversación en inglés',
-    category: 'Idiomas',
-    description: 'Práctica conversacional de inglés para mejorar tu fluidez y confianza.',
-    estimatedHours: 1,
-    isVisible: true,
-  },
-];
-
 // ────────────────────── ELEMENTOS VISUALES LOCALES ──────────────────────
 type IconName =
   | 'bell'
@@ -145,10 +128,12 @@ function Section({
   title,
   children,
   actionLabel,
+  onAction,
 }: {
   title: string;
   children: ReactNode;
   actionLabel?: string;
+  onAction?: () => void;
 }) {
   return (
     <section className="mt-3 rounded-2xl border border-[#E8E8E8] bg-white p-4">
@@ -159,6 +144,7 @@ function Section({
         {actionLabel && (
           <button
             type="button"
+            onClick={onAction}
             className={`${BUTTON_FEEDBACK} rounded-md px-1 py-0.5 text-xs font-medium text-[#3C9DA0] hover:text-[#2D8B8E] hover:underline`}
           >
             {actionLabel}
@@ -172,12 +158,45 @@ function Section({
 
 // ────────────────────────── VISTA PRINCIPAL ──────────────────────────
 export default function MiembroProfile({
-  services = DEMO_SERVICES,
+  services,
   onDonarHoras,
   onVerMovimientos,
 }: MiembroProfileProps) {
   // 00. MIEMBRO AUTENTICADO: fuente de datos compartida por todas las ventanas
-  const { miembro, actualizarDisponibilidad, cerrarSesion } = useMiembroSesion();
+  const { miembro, perfil, cerrarSesion } = useMiembroSesion();
+  const [serviciosApi, setServiciosApi] = useState<ServicioOfrecidoAPI[]>([]);
+  const [intereses, setIntereses] = useState<string[]>([]);
+  const [reconocimientos, setReconocimientos] = useState<string[]>([]);
+  const [intercambios, setIntercambios] = useState<number | null>(null);
+  const [visibilidad, setVisibilidad] = useState<boolean | null>(null);
+  const [actualizandoVisibilidad, setActualizandoVisibilidad] = useState(false);
+  const [errorPerfil, setErrorPerfil] = useState<string | null>(null);
+  const [cargandoDatos, setCargandoDatos] = useState(false);
+  useEffect(() => {
+    if (!perfil?.id) return;
+    let vigente = true;
+    setCargandoDatos(true); setErrorPerfil(null); setVisibilidad(perfil.estadoActividad);
+    void Promise.all([
+      obtenerServiciosMiembro(perfil.id, true), obtenerInteresesMiembro(perfil.id),
+      obtenerReconocimientosMiembro(perfil.id), obtenerIntercambiosRealizados(perfil.id),
+    ]).then(([svc, ints, rec, ac]) => {
+      if (!vigente) return;
+      setServiciosApi(svc); setIntereses(ints.map(c => c.nombre));
+      setReconocimientos(rec.map(r => r.reconocimiento?.nombre).filter((n): n is string => Boolean(n)));
+      setIntercambios(ac.length);
+    }).catch(error => { if (vigente) setErrorPerfil(error instanceof Error ? error.message : 'Error cargando datos personales'); })
+      .finally(() => { if (vigente) setCargandoDatos(false); });
+    return () => { vigente = false; };
+  }, [perfil?.id, perfil?.estadoActividad]);
+  async function manejarVisibilidad() {
+    if (!perfil || actualizandoVisibilidad) return;
+    setActualizandoVisibilidad(true); setErrorPerfil(null);
+    try {
+      const actualizado = await cambiarVisibilidadPerfil(perfil.id, !(visibilidad ?? perfil.estadoActividad));
+      setVisibilidad(actualizado.estadoActividad);
+    } catch (error) { setErrorPerfil(error instanceof Error ? error.message : 'No se pudo cambiar la visibilidad.'); }
+    finally { setActualizandoVisibilidad(false); }
+  }
   const navigate = useNavigate();
 
   function manejarCerrarSesion() {
@@ -194,18 +213,20 @@ export default function MiembroProfile({
     );
   }
 
-  const isAvailable = miembro.isAvailable;
-  const visibleServices = services.filter((service) => service.isVisible);
+  const isAvailable = visibilidad ?? perfil?.estadoActividad ?? false;
+  const serviciosMostrados: ServicioPerfil[] = services ?? serviciosApi.map(s => ({
+    id: s.id, title: s.titulo, category: s.categorias?.map(c => c.categoria?.nombre).filter(Boolean).join(', ') ?? '',
+    description: s.descripcion, imageUrl: s.imagen ?? undefined, isVisible: s.visible,
+  }));
+  const visibleServices = serviciosMostrados.filter((service) => service.isVisible);
   const stats = [
-    { label: 'Intercambios', value: miembro.completedExchanges },
-    { label: 'Servicios', value: visibleServices.length },
-    { label: 'Reconocimientos', value: miembro.recognitions.length },
+    { label: 'Intercambios', value: intercambios ?? '—' },
+    { label: 'Servicios', value: cargandoDatos ? '—' : visibleServices.length },
+    { label: 'Reconocimientos', value: cargandoDatos ? '—' : reconocimientos.length },
   ];
-  const quickLinks: { icon: IconName; label: string }[] = [
-    { icon: 'activity', label: 'Acuerdos pendientes' },
-    { icon: 'clock', label: 'Historial de intercambios' },
-    { icon: 'settings', label: 'Configuración' },
-    { icon: 'shield', label: 'Panel de moderación' },
+  const quickLinks: { icon: IconName; label: string; ruta: string }[] = [
+    { icon: 'activity', label: 'Acuerdos pendientes', ruta: '/actividad' },
+    { icon: 'clock', label: 'Historial de intercambios', ruta: '/movimientos' },
   ];
 
   return (
@@ -258,7 +279,7 @@ export default function MiembroProfile({
                 >
                   {miembro.name}
                 </h1>
-                <p className="break-words text-sm text-[#737373]">{miembro.faculty}</p>
+                <p className="break-words text-sm text-[#737373]">{perfil?.afiliacionUniandes ?? ''}</p>
               </div>
             </div>
 
@@ -267,25 +288,26 @@ export default function MiembroProfile({
           </header>
 
           <div className="px-5 pb-5">
-            {/* 02.2 DISPONIBILIDAD: interruptor conectado al contexto de sesión */}
+            {/* 02.2 VISIBILIDAD PÚBLICA DEL PERFIL: persistida en backend */}
             <div
               data-section="disponibilidad"
               className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-[#F6F6F6] p-3"
             >
               <div className="min-w-0">
                 <p className="text-sm font-medium text-[#0D0D0D]">
-                  {isAvailable ? 'Disponible para ayudar' : 'No disponible temporalmente'}
+                  {isAvailable ? 'Perfil visible en búsquedas' : 'Perfil oculto en búsquedas'}
                 </p>
                 <p className="mt-0.5 text-xs text-[#737373]">
-                  {isAvailable ? 'Tu perfil aparece en los resultados' : 'Tu perfil está oculto por ahora'}
+                  {isAvailable ? 'Otros miembros pueden encontrarte' : 'Otros miembros no pueden encontrarte'}
                 </p>
               </div>
               <button
                 type="button"
                 role="switch"
                 aria-checked={isAvailable}
-                aria-label="Disponible para ayudar"
-                onClick={() => actualizarDisponibilidad(!isAvailable)}
+                aria-label="Mostrar perfil en búsquedas"
+                disabled={actualizandoVisibilidad}
+                onClick={() => void manejarVisibilidad()}
                 className={`${BUTTON_FEEDBACK} relative h-6 w-12 shrink-0 rounded-full hover:shadow-md ${isAvailable ? 'bg-[#3C9DA0]' : 'bg-[#D0D0D0]'}`}
               >
                 <span
@@ -295,6 +317,7 @@ export default function MiembroProfile({
               </button>
             </div>
 
+            {errorPerfil && <p className="mb-3 text-xs text-red-600" role="alert">{errorPerfil}</p>}
             {/* 02.3 SALDO DE HORAS: valor disponible y tres botones */}
             <section
               aria-label="Saldo de horas"
@@ -375,19 +398,15 @@ export default function MiembroProfile({
         {/* 03. INTERESES DEL MIEMBRO */}
         <Section title="Intereses">
           <div className="flex flex-wrap gap-2">
-            {miembro.interests.map((interest) => <Chip key={interest} label={interest} color="teal" />)}
+            {intereses.map((interest) => <Chip key={interest} label={interest} color="teal" />)}
           </div>
         </Section>
 
         {/* 04. HABILIDADES DEL MIEMBRO */}
-        <Section title="Habilidades">
-          <div className="flex flex-wrap gap-2">
-            {miembro.skills.map((skill) => <Chip key={skill} label={skill} color="yellow" />)}
-          </div>
-        </Section>
 
-        {/* 05. ORGANIZACIONES A LAS QUE PERTENECE */}
-        {miembro.organizations.length > 0 && (
+
+        {/* 05. ORGANIZACIONES A LAS QUE PERTENECE 
+        {false && miembro.organizations.length > 0 && (
           <Section title="Organizaciones">
             <div className="space-y-2">
               {miembro.organizations.map((organization) => (
@@ -400,11 +419,11 @@ export default function MiembroProfile({
               ))}
             </div>
           </Section>
-        )}
+        )*/}
 
         {/* 06. SERVICIOS OFRECIDOS POR EL MIEMBRO */}
-        <Section title="Servicios ofrecidos" actionLabel="Gestionar">
-          {visibleServices.length === 0 ? (
+        <Section title="Servicios ofrecidos" actionLabel="Gestionar" onAction={() => navigate('/mis-servicios')}>
+          {cargandoDatos && !services ? <p className="py-4 text-center text-xs text-[#737373]">Cargando servicios…</p> : visibleServices.length === 0 ? (
             <p className="py-4 text-center text-sm text-[#9E9E9E]">Aún no tienes servicios publicados</p>
           ) : (
             <div className="space-y-3">
@@ -427,7 +446,7 @@ export default function MiembroProfile({
                     <p className="mt-0.5 line-clamp-1 text-xs text-[#9E9E9E]">{service.description}</p>
                   </div>
                   <span className="shrink-0 rounded-full bg-[#FFFF00] px-2 py-0.5 text-xs font-bold text-[#0D0D0D]">
-                    {service.estimatedHours}h
+                    {service.estimatedHours ? `${service.estimatedHours}h` : 'Servicio'}
                   </span>
                 </div>
               ))}
@@ -436,10 +455,10 @@ export default function MiembroProfile({
         </Section>
 
         {/* 07. RECONOCIMIENTOS DEL MIEMBRO */}
-        {miembro.recognitions.length > 0 && (
+        {reconocimientos.length > 0 && (
           <Section title="Reconocimientos">
             <div className="flex flex-wrap gap-2">
-              {miembro.recognitions.map((recognition) => (
+              {reconocimientos.map((recognition) => (
                 <span
                   key={recognition}
                   className="inline-flex items-center gap-1.5 rounded-full bg-[#FFFF00] px-3 py-1.5 text-xs font-bold text-[#0D0D0D]"
@@ -462,6 +481,7 @@ export default function MiembroProfile({
             <button
               key={item.label}
               type="button"
+              onClick={() => navigate(item.ruta)}
               className={`${BUTTON_FEEDBACK} group flex w-full items-center gap-3 px-4 py-3.5 text-left hover:bg-[#F6F6F6] active:bg-[#E8F5F6] ${
                 index < quickLinks.length - 1 ? 'border-b border-[#F0F0F0]' : ''
               }`}

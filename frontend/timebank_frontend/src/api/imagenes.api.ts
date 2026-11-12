@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1';
 
 export interface ImagenSubidaAPI {
   ruta: string;    // se guarda tal cual en el campo `imagen` (ej. /uploads/imagenes/abc.png)

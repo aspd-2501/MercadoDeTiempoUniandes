@@ -12,8 +12,6 @@ import {
 } from 'lucide-react';
 
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
-import { MIEMBROS_DEMO } from '../../mocks/miembros.mocks';
-import { ACUERDOS_DEMO } from '../../mocks/acuerdos.mocks';
 import {
   DisponibilidadCompartida,
 } from '../../componentes/calendario/CalendarioDisponibilidad';
@@ -22,15 +20,17 @@ import EditorFranjasDisponibilidad, {
   cumpleDuracionMinima,
 } from '../../componentes/calendario/EditorFranjasDisponibilidad';
 import type { AcuerdoServicio, DatosPropuestaCambio } from '../../tipos/acuerdo';
+import { convertirAcuerdo } from '../../api/acuerdoPresentacion';
+import { obtenerDetalleAcuerdo, guardarDisponibilidadAcuerdo, solicitarCambioAcuerdo, responderCambioAcuerdo, confirmarPrestacionAcuerdo, type ParticipanteAcuerdoAPI } from '../../api/acuerdos.api';
 import type { IntervaloDisponibilidad } from '../../tipos/disponibilidad';
 
 /**
  * VISTA: detalle de un acuerdo de servicio del Banco de Tiempo.
  *
  * - La URL /acuerdos/:acuerdoId identifica el acuerdo.
- * - Los datos de lectura vienen de la API (aquí, un mock compartido).
+ * - Los datos y cambios provienen de la API real de acuerdos y sus relaciones.
  * - La vista NO calcula coincidencias, asigna horarios ni transfiere créditos.
- * - Los formularios solo preparan datos. Las operaciones se delegan por callbacks.
+ * - Los formularios preparan datos; la API persiste las acciones disponibles.
  * - Horas de servicio y créditos: enteros positivos. Horario visual 05:00–22:00.
  *
  * Ubicación: src/ventanas/acuerdos/AcuerdoDetail.tsx
@@ -38,7 +38,6 @@ import type { IntervaloDisponibilidad } from '../../tipos/disponibilidad';
 
 // ──────────────────── 00. PROPIEDADES DE LA VENTANA ────────────────────
 export interface AcuerdoDetailProps {
-  acuerdos?: Record<string, AcuerdoServicio>;
   onVolver?: () => void;
   onVerPost?: (postId: string) => void;
   onIrChat?: (chatId: string) => void;
@@ -93,24 +92,12 @@ function minutos(hora: string): number {
   const [h, m] = hora.split(':').map(Number);
   return h * 60 + m;
 }
-function nombreMiembro(id: string): string {
-  return MIEMBROS_DEMO[id]?.name ?? 'Miembro de la comunidad';
-}
-
-// ──────────────────── 01. PIEZAS VISUALES LOCALES ────────────────────
-function AvatarMiembro({ id }: { id: string }) {
-  const persona = MIEMBROS_DEMO[id];
-  const nombre = nombreMiembro(id);
-  const iniciales = nombre.split(' ').slice(0, 2).map((parte) => parte[0]).join('');
+// ──────────────────── 01. AVATAR DE PARTICIPANTES REALES ────────────────────
+function AvatarMiembro({ nombre, imagen }: { nombre: string; imagen?: string | null }) {
+  const iniciales = nombre.split(' ').slice(0, 2).map((parte) => parte[0]).join('').toUpperCase();
   return (
-    <div
-      className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full text-sm font-bold text-white"
-      style={{ backgroundColor: persona?.avatarColor ?? '#3C9DA0' }}
-      aria-label={nombre}
-    >
-      {persona?.avatar
-        ? <img src={persona.avatar} alt="" className="h-full w-full object-cover" />
-        : iniciales}
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#3C9DA0] text-sm font-bold text-white" aria-label={nombre}>
+      {imagen ? <img src={imagen} alt="" className="h-full w-full object-cover" /> : iniciales}
     </div>
   );
 }
@@ -157,9 +144,9 @@ function FormularioPropuesta({
   enviando: boolean;
   aviso?: string;
 }) {
-  const [fecha, setFecha] = useState(acuerdo.fechaProgramada ?? '');
-  const [horaInicio, setHoraInicio] = useState(acuerdo.horaInicio ?? '');
-  const [horaFin, setHoraFin] = useState(acuerdo.horaFin ?? '');
+  const fecha = acuerdo.fechaProgramada ?? '';
+  const horaInicio = acuerdo.horaInicio ?? '';
+  const horaFin = acuerdo.horaFin ?? '';
   const [duracion, setDuracion] = useState(String(acuerdo.duracionHoras));
   const [motivo, setMotivo] = useState('');
   const horas = Number(duracion);
@@ -177,7 +164,7 @@ function FormularioPropuesta({
   return (
     <div className="mx-auto max-w-lg space-y-4 px-4 py-5" data-section="editar-acuerdo">
       <div className="rounded-xl border border-[#FFF176] bg-[#FFFDE0] p-4 text-sm leading-relaxed text-[#5A5A00]">
-        Los cambios que propongas requieren aprobación. El acuerdo actual sigue vigente hasta que el backend confirme una modificación.
+        Los cambios requieren aprobación. Por ahora el backend permite modificar las horas, pero cambiar una fecha no actualiza el horario acordado. Conservaremos ese horario hasta que la API admita una modificación coherente de ambas fechas.
       </div>
       {aviso && <div className="rounded-xl bg-[#FFFDE0] p-3 text-sm text-[#5A5A00]" role="status">{aviso}</div>}
       <Panel titulo="Horario actual">
@@ -190,16 +177,16 @@ function FormularioPropuesta({
         <div className="space-y-3">
           <label className="block space-y-1.5">
             <span className="text-xs font-semibold text-[#737373]">Fecha propuesta</span>
-            <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} className={ESTILO_CAMPO} />
+            <input type="date" value={fecha} disabled title="El backend todavía no permite cambiar el horario acordado" className={ESTILO_CAMPO} />
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block min-w-0 space-y-1.5">
               <span className="text-xs font-semibold text-[#737373]">Desde</span>
-              <input type="time" min="05:00" max="22:00" value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)} className={ESTILO_CAMPO} />
+              <input type="time" min="05:00" max="22:00" value={horaInicio} disabled title="El backend todavía no permite cambiar el horario acordado" className={ESTILO_CAMPO} />
             </label>
             <label className="block min-w-0 space-y-1.5">
               <span className="text-xs font-semibold text-[#737373]">Hasta</span>
-              <input type="time" min="05:00" max="22:00" value={horaFin} onChange={(e) => setHoraFin(e.target.value)} className={ESTILO_CAMPO} />
+              <input type="time" min="05:00" max="22:00" value={horaFin} disabled title="El backend todavía no permite cambiar el horario acordado" className={ESTILO_CAMPO} />
             </label>
           </div>
           <label className="block space-y-1.5">
@@ -230,14 +217,14 @@ function FormularioPropuesta({
         </button>
         <button
           type="button"
-          disabled={!onEnviar || !intervaloValido || enviando}
+          disabled={!onEnviar || !intervaloValido || enviando || horas === acuerdo.duracionHoras || fecha !== (acuerdo.fechaProgramada ?? '') || horaInicio !== (acuerdo.horaInicio ?? '') || horaFin !== (acuerdo.horaFin ?? '')}
           onClick={() => onEnviar?.({ fecha, horaInicio, horaFin, duracionHoras: horas, motivo })}
           className={`${ESTILO_ACCION} flex-1 bg-[#3C9DA0] text-white hover:bg-[#2D8B8E]`}
         >
           {enviando ? 'Enviando…' : 'Proponer cambios'}
         </button>
       </div>
-      {!onEnviar && <p className="text-xs text-[#737373]">El envío se habilitará al conectar la API.</p>}
+      <p className="text-xs text-[#737373]">Por el contrato actual, solo puedes enviar una modificación en la cantidad de horas sin cambiar el horario vigente.</p>
     </div>
   );
 }
@@ -307,7 +294,6 @@ function MiDisponibilidad({
 
 // ──────────────────── 04. VENTANA PRINCIPAL ────────────────────
 export default function AcuerdoDetail({
-  acuerdos = ACUERDOS_DEMO,
   onVolver,
   onVerPost,
   onIrChat,
@@ -320,9 +306,51 @@ export default function AcuerdoDetail({
   onCompartirExperiencia,
 }: AcuerdoDetailProps) {
   const { acuerdoId } = useParams<{ acuerdoId: string }>();
-  const { miembro } = useMiembroSesion();
-  const miId = miembro?.id ?? '';
-  const acuerdo = acuerdoId ? acuerdos[acuerdoId] : undefined;
+  const { perfil } = useMiembroSesion();
+  const miId = perfil?.id ?? '';
+  const [datos, setDatos] = useState<Awaited<ReturnType<typeof obtenerDetalleAcuerdo>> | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
+  const participantes = datos?.participantes ?? [];
+  const acuerdo = datos ? convertirAcuerdo(datos.acuerdo, datos.participantes, datos.disponibilidad, datos.solicitudes, miId) : undefined;
+  const nombreMiembro = (id: string) => participantes.find(p => p.idPerfil === id)?.perfil?.nombre ?? 'Miembro de la comunidad';
+  function perfilDe(id: string): ParticipanteAcuerdoAPI['perfil'] | undefined {
+    return participantes.find(p => p.idPerfil === id)?.perfil;
+  }
+  async function actualizarDetalle(): Promise<void> {
+    if (!acuerdoId) return;
+    const actual = await obtenerDetalleAcuerdo(acuerdoId);
+    setDatos(actual);
+  }
+  const guardarDisponibilidadReal = async (id: string, franjas: IntervaloDisponibilidad[]) => {
+    await guardarDisponibilidadAcuerdo(id, miId, franjas.map(f => ({
+      inicio: new Date(`${f.date}T${f.startTime}:00`).toISOString(),
+      fin: new Date(`${f.date}T${f.endTime}:00`).toISOString(),
+    })));
+    await actualizarDetalle();
+  };
+  const proponerCambioReal = async (id: string, propuesta: DatosPropuestaCambio) => {
+    if (!acuerdo || propuesta.fecha !== acuerdo.fechaProgramada ||
+      propuesta.horaInicio !== acuerdo.horaInicio || propuesta.horaFin !== acuerdo.horaFin)
+      throw new Error('El backend aún no permite modificar el horario acordado mediante una propuesta.');
+    if (propuesta.duracionHoras === acuerdo.duracionHoras)
+      throw new Error('Indica una cantidad de horas distinta a la actual.');
+    await solicitarCambioAcuerdo(id, miId, { tipo: 'MODIFICACION', horas: propuesta.duracionHoras });
+    await actualizarDetalle();
+  };
+  const responderPropuestaReal = async (id: string, propuestaId: string, decision: 'aceptada' | 'rechazada') => {
+    await responderCambioAcuerdo(id, propuestaId, miId, decision === 'aceptada' ? 'aprobar' : 'rechazar');
+    await actualizarDetalle();
+  };
+  const confirmarServicioReal = async (id: string) => {
+    await confirmarPrestacionAcuerdo(id, miId);
+    await actualizarDetalle();
+  };
+  const cancelarAcuerdoReal = async (id: string) => {
+    await solicitarCambioAcuerdo(id, miId, { tipo: 'CANCELACION' });
+    await actualizarDetalle();
+  };
   const [modoEdicion, setModoEdicion] = useState(false);
   const [procesando, setProcesando] = useState(false);
   const [aviso, setAviso] = useState('');
@@ -330,7 +358,19 @@ export default function AcuerdoDetail({
   useEffect(() => {
     setModoEdicion(false);
     setAviso('');
-  }, [acuerdoId]);
+    setDatos(null);
+    if (!acuerdoId || !miId) { setCargando(false); return; }
+    let vigente = true;
+    setCargando(true);
+    setErrorCarga(null);
+    void obtenerDetalleAcuerdo(acuerdoId)
+      .then((respuesta) => { if (vigente) setDatos(respuesta); })
+      .catch((error: unknown) => {
+        if (vigente) setErrorCarga(error instanceof Error ? error.message : 'No se pudo consultar el acuerdo.');
+      })
+      .finally(() => { if (vigente) setCargando(false); });
+    return () => { vigente = false; };
+  }, [acuerdoId, miId, revision]);
 
   async function ejecutar(accion: () => void | Promise<void>, mensaje: string): Promise<boolean> {
     setProcesando(true);
@@ -339,18 +379,19 @@ export default function AcuerdoDetail({
       await accion();
       setAviso(mensaje);
       return true;
-    } catch {
-      setAviso('No se pudo completar la operación. Inténtalo nuevamente.');
+    } catch (error) {
+      setAviso(error instanceof Error ? error.message : 'No se pudo completar la operación. Inténtalo nuevamente.');
       return false;
     } finally {
       setProcesando(false);
     }
   }
 
-  if (!acuerdo) {
+  if (cargando || errorCarga || !acuerdo) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#F6F6F6] px-4">
-        <p className="text-sm text-[#737373]">Acuerdo no encontrado.</p>
+        <p className="text-sm text-[#737373]" role={errorCarga ? 'alert' : 'status'}>{cargando ? 'Cargando acuerdo…' : errorCarga ?? 'Acuerdo no encontrado.'}</p>
+        {errorCarga && <button type="button" onClick={() => setRevision(v => v + 1)} className="text-sm font-semibold text-[#3C9DA0]">Reintentar</button>}
         <button type="button" onClick={onVolver} disabled={!onVolver} className="text-sm font-semibold text-[#3C9DA0]">Volver</button>
       </main>
     );
@@ -362,7 +403,7 @@ export default function AcuerdoDetail({
     acuerdo.proveedorId,
     acuerdo.solicitanteId,
     ...(acuerdo.otrosParticipantesIds ?? []),
-  ]));
+  ].filter(Boolean)));
   const nombres = Object.fromEntries(idsParticipantes.map((id) => [id, nombreMiembro(id)]));
   const esProveedor = acuerdo.proveedorId === miId;
   const esSolicitante = acuerdo.solicitanteId === miId;
@@ -376,7 +417,8 @@ export default function AcuerdoDetail({
   const nombreOtraPersona = nombreMiembro(esProveedor ? acuerdo.solicitanteId : acuerdo.proveedorId);
   const sePuedeEditar = acuerdo.estado === 'accepted' || acuerdo.estado === 'pending';
   const propuesta = acuerdo.propuestaCambio;
-  const propuestaAjena = propuesta?.autorId !== miId;
+  const propuestaAjena = propuesta?.autorId !== miId && !(propuesta?.aprobacionesIds ?? []).includes(miId);
+  const esCancelacion = propuesta?.tipo === 'CANCELACION';
 
   const tituloVista = modoEdicion ? 'Editar acuerdo' : 'Detalle del acuerdo';
 
@@ -409,12 +451,12 @@ export default function AcuerdoDetail({
           enviando={procesando}
           aviso={aviso}
           onCancelar={() => setModoEdicion(false)}
-          onEnviar={onProponerCambio ? (datos) => {
+          onEnviar={(datos) => {
             void ejecutar(
-              () => onProponerCambio(acuerdo.id, datos),
+              () => (onProponerCambio ?? proponerCambioReal)(acuerdo.id, datos),
               'Propuesta enviada. El acuerdo actual sigue vigente mientras se revisa.',
             ).then((exitoso) => { if (exitoso) setModoEdicion(false); });
-          } : undefined}
+          }}
         />
       ) : (
         <main className="mx-auto max-w-2xl space-y-4 px-4 py-4">
@@ -434,18 +476,18 @@ export default function AcuerdoDetail({
                 </span>
                 <div className="min-w-0">
                   <h2 className="text-sm font-bold text-[#0D0D0D]">
-                    {propuestaAjena ? 'Modificación pendiente de tu respuesta' : 'Tu modificación está pendiente'}
+                    {esCancelacion ? 'Solicitud de cancelación pendiente' : propuestaAjena ? 'Modificación pendiente de tu respuesta' : 'Tu modificación está pendiente'}
                   </h2>
                   <p className="text-xs text-[#665600]">
                     {propuestaAjena
-                      ? `${nombreMiembro(propuesta.autorId)} propuso cambiar las condiciones.`
+                      ? `${nombreMiembro(propuesta.autorId)} presentó una solicitud.`
                       : 'Esperando la respuesta de los demás participantes.'}
                   </p>
                 </div>
               </div>
 
               {/* Comparación visible de inmediato; no sustituye el acuerdo vigente. */}
-              <div className="space-y-1.5 rounded-lg bg-white/55 px-3 py-2.5 text-xs sm:text-sm">
+              {!esCancelacion && <div className="space-y-1.5 rounded-lg bg-white/55 px-3 py-2.5 text-xs sm:text-sm">
                 <div className="grid grid-cols-[70px_minmax(0,1fr)] gap-2">
                   <span className="text-[#655D44]">Actual</span>
                   <span className="text-[#0D0D0D]">
@@ -455,39 +497,39 @@ export default function AcuerdoDetail({
                 <div className="grid grid-cols-[70px_minmax(0,1fr)] gap-2">
                   <span className="font-bold text-[#705900]">Propuesto</span>
                   <span className="font-semibold text-[#0D0D0D]">
-                    {mostrarFecha(propuesta.fecha)} · {mostrarHora(propuesta.horaInicio)} – {mostrarHora(propuesta.horaFin)} ({propuesta.duracionHoras} h)
+                    {mostrarFecha(propuesta.fecha)} · Horario vigente sin cambios · {propuesta.duracionHoras} h propuestas
                   </span>
                 </div>
-              </div>
+              </div>}
 
-              {propuesta.motivo && (
+              {!esCancelacion && propuesta.motivo && (
                 <p className="mt-2 text-xs leading-relaxed text-[#665600]">
                   <span className="font-semibold">Motivo:</span> {propuesta.motivo}
                 </p>
               )}
 
               <p className="mt-2 text-[11px] leading-snug text-[#705900]">
-                El acuerdo actual sigue vigente hasta que se apruebe la propuesta.
+                {esCancelacion ? 'La cancelación requiere aprobación de todos los participantes.' : 'El acuerdo actual sigue vigente hasta que se apruebe la propuesta.'}
               </p>
 
               {propuestaAjena && (
                 <div className="mt-3 flex gap-2">
-                  <button
+                  {!esCancelacion && <button
                     type="button"
-                    disabled={!onResponderPropuesta || procesando}
-                    onClick={() => onResponderPropuesta && void ejecutar(
-                      () => onResponderPropuesta(acuerdo.id, propuesta.id, 'rechazada'),
+                    disabled={procesando}
+                    onClick={() => void ejecutar(
+                      () => (onResponderPropuesta ?? responderPropuestaReal)(acuerdo.id, propuesta.id, 'rechazada'),
                       'Respuesta enviada. Espera a que se actualice el estado del acuerdo.',
                     )}
                     className={`${ESTILO_ACCION} flex-1 border border-[#D8B946] bg-white py-2.5 text-[#D32F2F]`}
                   >
                     Rechazar cambio
-                  </button>
+                  </button>}
                   <button
                     type="button"
-                    disabled={!onResponderPropuesta || procesando}
-                    onClick={() => onResponderPropuesta && void ejecutar(
-                      () => onResponderPropuesta(acuerdo.id, propuesta.id, 'aceptada'),
+                    disabled={procesando}
+                    onClick={() => void ejecutar(
+                      () => (onResponderPropuesta ?? responderPropuestaReal)(acuerdo.id, propuesta.id, 'aceptada'),
                       'Respuesta enviada. Espera a que se actualice el estado del acuerdo.',
                     )}
                     className={`${ESTILO_ACCION} flex-1 bg-[#3C9DA0] py-2.5 text-white`}
@@ -496,16 +538,14 @@ export default function AcuerdoDetail({
                   </button>
                 </div>
               )}
-              {!onResponderPropuesta && propuestaAjena && (
-                <p className="mt-1 text-xs text-[#665600]">Las decisiones se habilitarán al conectar la API.</p>
-              )}
+
             </section>
           )}
           {acuerdo.estado === 'completed' && (
             <div className="rounded-2xl bg-[#FFFF00] p-4 text-center">
               <p className="text-lg font-bold text-[#0D0D0D]">¡Intercambio completado!</p>
               <p className="mt-1 text-sm text-[#5A5A00]">
-                {acuerdo.creditosHoras} hora{acuerdo.creditosHoras !== 1 ? 's' : ''} de crédito registradas según el estado del acuerdo.
+                {acuerdo.creditosHoras} hora{acuerdo.creditosHoras !== 1 ? 's' : ''} intercambiadas según el acuerdo.
               </p>
             </div>
           )}
@@ -570,7 +610,7 @@ export default function AcuerdoDetail({
             <div className="space-y-3">
               {idsParticipantes.map((id) => (
                 <div key={id} className="flex items-center gap-3">
-                  <AvatarMiembro id={id} />
+                  <AvatarMiembro nombre={nombreMiembro(id)} imagen={perfilDe(id)?.imagen} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-[#0D0D0D]">{nombreMiembro(id)}{id === miId ? ' (tú)' : ''}</p>
                     <p className="text-xs text-[#9E9E9E]">
@@ -612,9 +652,7 @@ export default function AcuerdoDetail({
                 key={acuerdo.id}
                 acuerdo={acuerdo}
                 miId={miId}
-                onGuardar={onGuardarDisponibilidad
-                  ? (franjas) => onGuardarDisponibilidad(acuerdo.id, franjas)
-                  : undefined}
+                onGuardar={(franjas) => (onGuardarDisponibilidad ?? guardarDisponibilidadReal)(acuerdo.id, franjas)}
               />
             </>
           )}
@@ -633,9 +671,9 @@ export default function AcuerdoDetail({
               {sePuedeEditar && (
                 <button
                   type="button"
-                  disabled={!onCancelarAcuerdo || procesando}
-                  onClick={() => onCancelarAcuerdo && window.confirm('¿Quieres solicitar la cancelación de este acuerdo?') && void ejecutar(
-                    () => onCancelarAcuerdo(acuerdo.id),
+                  disabled={procesando || Boolean(propuesta)}
+                  onClick={() => window.confirm('¿Quieres solicitar la cancelación de este acuerdo?') && void ejecutar(
+                    () => (onCancelarAcuerdo ?? cancelarAcuerdoReal)(acuerdo.id),
                     'Solicitud de cancelación enviada. Espera la actualización del acuerdo.',
                   )}
                   className={`${ESTILO_ACCION} min-w-[140px] flex-1 border border-[#E8E8E8] bg-white text-[#D32F2F]`}
@@ -664,9 +702,9 @@ export default function AcuerdoDetail({
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    disabled={!onConfirmarServicio || procesando}
-                    onClick={() => onConfirmarServicio && void ejecutar(
-                      () => onConfirmarServicio(acuerdo.id),
+                    disabled={procesando}
+                    onClick={() => void ejecutar(
+                      () => (onConfirmarServicio ?? confirmarServicioReal)(acuerdo.id),
                       'Confirmación enviada. El backend actualizará el acuerdo y los créditos cuando corresponda.',
                     )}
                     className={`${ESTILO_ACCION} flex-1 bg-[#3C9DA0] text-white`}
@@ -686,9 +724,7 @@ export default function AcuerdoDetail({
                   </button>
                 </div>
               )}
-              {!onConfirmarServicio && !confirmacionPropia && (
-                <p className="mt-2 text-xs text-[#737373]">La confirmación se habilitará al conectar la API.</p>
-              )}
+
             </Panel>
           )}
 
@@ -714,7 +750,7 @@ export default function AcuerdoDetail({
           )}
 
           <p className="pb-4 text-center text-xs text-[#9E9E9E]">
-            Los estados, horarios definitivos y créditos se recibirán del backend.
+            Estados y horarios provistos por el backend. Los créditos se transfieren al confirmar todos los participantes.
           </p>
         </main>
       )}

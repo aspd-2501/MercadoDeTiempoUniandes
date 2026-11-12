@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, Check, ChevronRight, Clock3, ImagePlus, Star, TriangleAlert, X } from 'lucide-react';
 
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
-import { SERVICIOS_DEMO } from '../../mocks/servicios.mocks';
-import type { ServicioCatalogo } from '../../tipos/servicio';
+import { obtenerServiciosMiembro } from '../../api/perfilResumen.api';
+import { obtenerCategoriasRegistro, type CategoriaAPI } from '../../api/identidad.api';
+import type { ServicioOfrecidoAPI } from '../../api/serviciosOfrecidos.api';
 import type { IntervaloDisponibilidad } from '../../tipos/disponibilidad';
 import EditorFranjasDisponibilidad, {
   crearPrimeraFranja,
@@ -48,10 +49,6 @@ export interface CrearPostAyudaProps {
   onVolverInicio?: () => void;
 }
 
-const CATEGORIAS = [
-  'Académico', 'Idiomas', 'Tecnología', 'Diseño', 'Deportes',
-  'Música', 'Arte', 'Bienestar', 'Otros',
-];
 const OPCIONES_PERSONAS = ['1', '2', '3', '4', '5', '8', '10'];
 const CLASE_CAMPO =
   'w-full min-w-0 rounded-xl border border-[#E8E8E8] bg-white px-4 py-3 text-sm text-[#0D0D0D] outline-none focus:border-[#3C9DA0] focus-visible:ring-2 focus-visible:ring-[#3C9DA0]/20';
@@ -64,7 +61,7 @@ export default function CrearPostAyuda({
   onPublicar,
   onVolverInicio,
 }: CrearPostAyudaProps) {
-  const { miembro } = useMiembroSesion();
+  const { perfil } = useMiembroSesion();
   const esOferta = tipo === 'ofrece';
 
   // 01.1 PASOS: el menú Crear ya decide el tipo de publicación.
@@ -97,11 +94,34 @@ export default function CrearPostAyuda({
     setImagenVistaPrevia(archivo ? URL.createObjectURL(archivo) : undefined);
   }
 
-  // 01.3 SERVICIOS VISIBLES DEL MIEMBRO AUTENTICADO.
-  const serviciosPropios = useMemo(
-    () => SERVICIOS_DEMO.filter((servicio) => servicio.userId === miembro.id && servicio.isVisible),
-    [miembro.id],
-  );
+  // 01.3 CATÁLOGO Y CATEGORÍAS REALES. El backend decide qué servicios son visibles.
+  const [serviciosPropios, setServiciosPropios] = useState<ServicioOfrecidoAPI[]>([]);
+  const [cargandoCatalogo, setCargandoCatalogo] = useState(esOferta);
+  const [errorCatalogo, setErrorCatalogo] = useState<string | null>(null);
+  const [categoriasApi, setCategoriasApi] = useState<CategoriaAPI[]>([]);
+  const [cargandoCategorias, setCargandoCategorias] = useState(true);
+  const [errorCategorias, setErrorCategorias] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    setCargandoCategorias(true);
+    void obtenerCategoriasRegistro()
+      .then(datos => { if (vigente) setCategoriasApi(datos); })
+      .catch(e => { if (vigente) setErrorCategorias(e instanceof Error ? e.message : 'No se pudieron cargar las categorías.'); })
+      .finally(() => { if (vigente) setCargandoCategorias(false); });
+    return () => { vigente = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!esOferta || !perfil?.id) return;
+    let vigente = true;
+    setCargandoCatalogo(true);
+    void obtenerServiciosMiembro(perfil.id)
+      .then(datos => { if (vigente) setServiciosPropios(datos); })
+      .catch(e => { if (vigente) setErrorCatalogo(e instanceof Error ? e.message : 'No se pudieron cargar tus servicios.'); })
+      .finally(() => { if (vigente) setCargandoCatalogo(false); });
+    return () => { vigente = false; };
+  }, [esOferta, perfil?.id]);
 
   // 01.4 COMPROBACIONES BÁSICAS DEL FORMULARIO (NO REEMPLAZAN VALIDACIÓN DE API).
   // Las horas de servicio y los créditos del Banco de Tiempo siempre son enteros positivos.
@@ -118,20 +138,16 @@ export default function CrearPostAyuda({
     titulo.trim() && categoria.trim() && descripcion.trim() &&
     franjasValidas && preferidaExiste && horasEnterasValidas && Number(personas) > 0,
   );
-  const categoriasDisponibles = categoria && !CATEGORIAS.includes(categoria)
-    ? [...CATEGORIAS, categoria]
-    : CATEGORIAS;
+  const categoriasDisponibles = categoriasApi.map(c => c.nombre);
 
   // 02. PRECARGA DE DATOS DESDE EL CATÁLOGO.
-  function utilizarServicio(servicio: ServicioCatalogo) {
-    setTitulo(servicio.title);
-    setDescripcion(servicio.description);
-    setCategoria(servicio.category);
-    // La duración precargada es editable; si un servicio legado tuviera fracciones,
-    // el formulario avisará para que se corrija, sin redondear silenciosamente.
-    setHoras(String(servicio.estimatedHours));
+  function utilizarServicio(servicio: ServicioOfrecidoAPI) {
+    setTitulo(servicio.titulo);
+    setDescripcion(servicio.descripcion);
+    // La entidad servicio no almacena una duración. El miembro la define aquí.
+    setCategoria(servicio.categorias?.[0]?.categoria?.nombre ?? '');
     setServicioCatalogoId(servicio.id);
-    setImagenUrlCatalogo(servicio.imageUrl);
+    setImagenUrlCatalogo(servicio.imagen ?? undefined);
     setPaso('formulario');
   }
 
@@ -216,7 +232,11 @@ export default function CrearPostAyuda({
           <p className="text-sm text-[#737373]">
             Elige uno de tus servicios para completar automáticamente el título, la descripción y la imagen de tu oferta.
           </p>
-          {serviciosPropios.length === 0 ? (
+          {cargandoCatalogo ? (
+            <p role="status" className="py-8 text-center text-sm text-[#737373]">Cargando tus servicios…</p>
+          ) : errorCatalogo ? (
+            <p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{errorCatalogo}</p>
+          ) : serviciosPropios.length === 0 ? (
             <div className="rounded-2xl border border-[#E8E8E8] px-4 py-12 text-center">
               <Star size={36} className="mx-auto mb-3 text-[#C0C0C0]" aria-hidden="true" />
               <p className="text-sm font-medium text-[#737373]">No tienes servicios visibles en tu catálogo.</p>
@@ -231,17 +251,17 @@ export default function CrearPostAyuda({
                   onClick={() => utilizarServicio(servicio)}
                   className="flex w-full items-start gap-3 rounded-2xl border border-[#E8E8E8] p-4 text-left transition-colors hover:border-[#3C9DA0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C9DA0]"
                 >
-                  {servicio.imageUrl ? (
-                    <img src={servicio.imageUrl} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
+                  {servicio.imagen ? (
+                    <img src={servicio.imagen} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />
                   ) : (
                     <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#3C9DA0]">
                       <Star size={22} className="text-white" aria-hidden="true" />
                     </span>
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-[#0D0D0D]">{servicio.title}</span>
-                    <span className="mt-0.5 block text-xs text-[#737373]">{servicio.category}</span>
-                    <span className="mt-1 line-clamp-2 block text-xs text-[#9E9E9E]">{servicio.description}</span>
+                    <span className="block text-sm font-semibold text-[#0D0D0D]">{servicio.titulo}</span>
+                    <span className="mt-0.5 block text-xs text-[#737373]">{servicio.categorias?.map(c => c.categoria?.nombre).filter(Boolean).join(', ')}</span>
+                    <span className="mt-1 line-clamp-2 block text-xs text-[#9E9E9E]">{servicio.descripcion}</span>
                   </span>
                   <ChevronRight size={18} className="mt-1 shrink-0 text-[#C0C0C0]" aria-hidden="true" />
                 </button>
@@ -296,6 +316,8 @@ export default function CrearPostAyuda({
           {/* 06.2 CATEGORÍA */}
           <fieldset>
             <legend className={CLASE_ETIQUETA}>Categoría *</legend>
+            {cargandoCategorias && <p role="status" className="text-xs text-[#737373]">Cargando categorías…</p>}
+            {errorCategorias && <p role="alert" className="text-xs text-red-600">{errorCategorias}</p>}
             <div className="flex flex-wrap gap-2">
               {categoriasDisponibles.map((opcion) => (
                 <button

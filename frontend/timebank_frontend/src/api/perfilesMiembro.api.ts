@@ -17,10 +17,12 @@ export function obtenerPerfiles() {
 }
 
 export function buscarMiembros(
-  consulta?: string
+  consulta?: string,
+  excluirPerfilId?: string,
 ): Promise<PerfilMiembroAPI[]> {
   const parametros = new URLSearchParams();
 
+  if (excluirPerfilId) parametros.set('excluir', excluirPerfilId);
   if (consulta) {
     parametros.set('q', consulta);
   }

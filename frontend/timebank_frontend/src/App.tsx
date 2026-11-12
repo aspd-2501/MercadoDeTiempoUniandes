@@ -13,6 +13,8 @@ import MiembroProfile from './ventanas/miembro/MiembroProfile';
 import HistorialMiembro from './ventanas/miembro/HistorialMiembro';
 import DonarHoras from './ventanas/transferencias/DonarHoras';
 import MiembroDetail from './ventanas/miembro/MiembroDetail';
+import ServiciosMiembro from './ventanas/miembro/ServiciosMiembro';
+import AniadirServicio from './ventanas/creacionYEdicion/AniadirServicio';
 import ChatList from './ventanas/chats/ChatList';
 import Chat from './ventanas/chats/Chat';
 import Explorar from './ventanas/Explorar';
@@ -27,12 +29,6 @@ import { useMiembroSesion } from './contextos/MiembroSesionContext';
 import Login from './ventanas/LoginYRegistro/Login';
 import Onboarding from './ventanas/LoginYRegistro/Onboarding';
 import { registrarCuenta } from './api/identidad.api';
-
-// Datos de prueba (se conservan mientras se conecta la participación real)
-import {
-  ACUERDOS_PARA_DETALLE_DEMO,
-  ID_ACUERDO_POR_POST_DEMO,
-} from './mocks/acuerdosPost.mocks';
 
 import './App.css';
 
@@ -79,7 +75,7 @@ function LayoutPrivado() {
         navigate('/crear-post-ayuda/ofrece');
         break;
       case 'gestionar-servicios':
-        // Pendiente: conectar con la ventana de servicios.
+        navigate('/mis-servicios');
         break;
       case 'compartir-experiencia':
         // Pendiente: implementar esta ventana.
@@ -126,19 +122,6 @@ function App() {
   const navigate = useNavigate();
   const { iniciarSesion, establecerAutenticacion } = useMiembroSesion();
 
-  // TEMPORAL: participación con acuerdos de demostración.
-  async function participarEnPostDemo(postId: string) {
-    const acuerdoId = ID_ACUERDO_POR_POST_DEMO[postId];
-
-    if (!acuerdoId || !ACUERDOS_PARA_DETALLE_DEMO[acuerdoId]) {
-      throw new Error('No existe un acuerdo de prueba para este post');
-    }
-
-    return {
-      acuerdoId,
-      esDemostracion: true,
-    };
-  }
 
   return (
     <div className="min-h-screen bg-[#F6F6F6]">
@@ -207,8 +190,9 @@ function App() {
               path="/actividad"
               element={
                 <Actividad
-                  onVerAcuerdo={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}`)}
                   onExplorar={() => navigate('/explorar')}
+                  onVerAcuerdo={(id) => navigate(`/acuerdos/${id}`)}
+                  onIrChat={(id) => navigate(`/chats/${id}`)}
                 />
               }
             />
@@ -223,6 +207,8 @@ function App() {
                 />
               }
             />
+            <Route path="/mis-servicios" element={<ServiciosMiembro />} />
+            <Route path="/anadir-servicio" element={<AniadirServicio onCerrar={() => navigate('/mis-servicios')} />} />
             <Route
               path="/:miembroId"
               element={<MiembroDetail onVolver={() => navigate(-1)} />}
@@ -237,7 +223,6 @@ function App() {
                   onIrChat={(chatId) => navigate(`/chats/${chatId}`)}
                   onVerPerfil={(miembroId) => navigate(`/${miembroId}`)}
                   onVolverInicio={() => navigate('/')}
-                  onParticipar={participarEnPostDemo}
                   onVerAcuerdo={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}`)}
                 />
               }
@@ -269,7 +254,6 @@ function App() {
               path="/acuerdos/:acuerdoId"
               element={
                 <AcuerdoDetail
-                  acuerdos={ACUERDOS_PARA_DETALLE_DEMO}
                   onVolver={() => navigate(-1)}
                   onVerPost={(postId) => navigate(`/posts/${postId}`)}
                   onIrChat={(chatId) => navigate(`/chats/${chatId}`)}
@@ -293,7 +277,7 @@ function App() {
                 <ChatList onAbrirChat={(chatId) => navigate(`/chats/${chatId}`)} />
               }
             />
-            <Route path="/chats/:chatId" element={<Chat />} />
+            <Route path="/chats/:chatId" element={<Chat onAbrirPerfil={(id) => navigate(`/${id}`)} />} />
 
             {/* Calendario */}
             <Route

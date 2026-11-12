@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { ArrowLeft, CheckCircle2, Clock3, Paperclip, Send } from 'lucide-react';
 
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
-import { CHATS_DEMO } from './ChatList';
+import { obtenerParticipantesChat, obtenerMensajesChat, enviarMensajeChat, type MensajeAPI } from '../../api/chats.api';
 import type { ChatResumen, InterlocutorChat, EstadoAcuerdoChat } from './ChatList';
 
 /**
@@ -12,7 +12,8 @@ import type { ChatResumen, InterlocutorChat, EstadoAcuerdoChat } from './ChatLis
  * Basada en ConversationView de Figma y adaptada a React Router.
  * - /chats/:chatId identifica la conversación.
  * - El miembro autenticado proviene del contexto global.
- * - Los mensajes se envían solo al estado local (sin API ni persistencia).
+ * - Los mensajes se consultan desde GET /chats/:id y GET /mensajes/:id.
+ * - Enviar un mensaje usa POST /mensajes y luego refresca la conversación.
  * - Las acciones de acuerdos y perfil se conectarán mediante callbacks.
  *
  * Ubicación: src/ventanas/chat/Chat.tsx
@@ -39,44 +40,12 @@ interface ChatProps {
   onCrearAcuerdo?: (chatId: string) => void;
 }
 
-// 00.1 MENSAJES DE PRUEBA POR CONVERSACIÓN
-// Usan el ID del miembro del contexto: no se duplica CURRENT_USER_ID.
-function crearMensajesDemo(chatId: string, miId: string, otroId: string): MensajeChat[] {
-  switch (chatId) {
-    case 'chat-demo-1':
-      return [
-        { id: 'm1', senderId: otroId, text: '¡Hola! ¿Me podrías ayudar a repasar cálculo?', type: 'text', createdAt: '10:30' },
-        { id: 'm2', senderId: miId, text: '¡Claro! Mañana en la tarde tengo tiempo.', type: 'text', createdAt: '10:34' },
-        { id: 'm3', senderId: miId, text: 'Tutoría de cálculo · 2 horas', type: 'agreement-proposal', createdAt: '10:40' },
-        { id: 'm4', senderId: 'sistema', text: 'El acuerdo fue aceptado.', type: 'system', createdAt: '10:42' },
-        { id: 'm5', senderId: otroId, text: '¡Perfecto! Nos vemos mañana para la tutoría.', type: 'text', createdAt: '10:45' },
-      ];
-
-    case 'chat-demo-2':
-      return [
-        { id: 'm1', senderId: otroId, text: '¿Te parece bien revisar las diapositivas hoy?', type: 'text', createdAt: 'Ayer · 14:10' },
-        { id: 'm2', senderId: miId, text: '¡Sí! Ya tengo listas las observaciones.', type: 'text', createdAt: 'Ayer · 14:18' },
-        { id: 'm3', senderId: 'sistema', text: 'El intercambio se marcó como completado.', type: 'system', createdAt: 'Ayer · 15:00' },
-        { id: 'm4', senderId: otroId, text: 'Gracias por ayudarme con la presentación.', type: 'text', createdAt: 'Ayer · 15:05' },
-      ];
-
-    case 'chat-demo-3':
-      return [
-        { id: 'm1', senderId: miId, text: '¡Hola, Laura! Vi que ofreces práctica de inglés.', type: 'text', createdAt: 'Lun · 09:15' },
-        { id: 'm2', senderId: otroId, text: '¡Hola! Sí, podemos organizar una sesión.', type: 'text', createdAt: 'Lun · 09:20' },
-        { id: 'm3', senderId: otroId, text: 'Hola, ¿todavía tienes tiempo para practicar inglés?', type: 'text', createdAt: 'Lun · 09:25' },
-      ];
-
-    case 'chat-demo-4':
-      return [
-        { id: 'm1', senderId: otroId, text: 'Hola, ¿podemos revisar el archivo de Excel esta semana?', type: 'text', createdAt: 'Dom · 11:00' },
-        { id: 'm2', senderId: miId, text: 'Por supuesto. Te confirmo el horario en cuanto pueda.', type: 'text', createdAt: 'Dom · 11:08' },
-        { id: 'm3', senderId: otroId, text: 'Quedo pendiente de la confirmación.', type: 'text', createdAt: 'Dom · 11:12' },
-      ];
-
-    default:
-      return [];
-  }
+/** Los mensajes del chat son reales; nunca se agregan mensajes locales sin respuesta del servidor. */
+function adaptarMensaje(m: MensajeAPI): MensajeChat {
+  return {
+    id: m.id, senderId: m.emisor.id, text: m.contenido, type: 'text',
+    createdAt: new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit' }).format(new Date(m.fecha)),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,32 +55,69 @@ function crearMensajesDemo(chatId: string, miId: string, otroId: string): Mensaj
 export default function Chat(props: ChatProps) {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
-  const { miembro } = useMiembroSesion();
+  const { perfil } = useMiembroSesion();
+  const [chat, setChat] = useState<ChatResumen | null>(null);
+  const [mensajesIniciales, setMensajesIniciales] = useState<MensajeChat[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
 
-  // Compartimos los resúmenes de ChatList; así coinciden sus IDs y acuerdos.
-  const chat = CHATS_DEMO.find((conversacion) => conversacion.id === chatId);
+  useEffect(() => {
+    if (!chatId || !perfil?.id) return;
+    let vigente = true;
+    setCargando(true); setError(null); setChat(null);
+    void (async () => {
+      try {
+        const participantes = await obtenerParticipantesChat(chatId);
+        if (!participantes.some(p => p.id === perfil.id))
+          throw new Error('No formas parte de esta conversación.');
+        const otros = participantes.filter(p => p.id !== perfil.id);
+        const interlocutor = otros[0];
+        if (!interlocutor) throw new Error('No se encontraron los participantes del chat.');
+        const mensajes = await obtenerMensajesChat(chatId);
+        if (!vigente) return;
+        setChat({
+          id: chatId,
+          interlocutor: {
+            id: interlocutor.id, name: otros.length === 1 ? interlocutor.nombre : `${interlocutor.nombre} y ${otros.length - 1} más`,
+            avatar: interlocutor.imagen ?? undefined,
+            avatarColor: '#3C9DA0', isAvailable: false, // estado en línea NO disponible en la API
+          },
+          lastMessage: mensajes.at(-1)?.contenido ?? '',
+          lastMessageAt: mensajes.at(-1)?.fecha ?? '', unreadCount: 0,
+        });
+        setMensajesIniciales(mensajes.map(adaptarMensaje));
+      } catch (e) {
+        if (vigente) setError(e instanceof Error ? e.message : 'No se pudo cargar la conversación.');
+      } finally {
+        if (vigente) setCargando(false);
+      }
+    })();
+    return () => { vigente = false; };
+  }, [chatId, perfil?.id, revision]);
 
-  if (!chat || chat.interlocutor.id === miembro.id) {
+  if (cargando || error || !chat || !perfil?.id) {
     return (
-      <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-white px-4 text-center" data-section="chat-no-encontrado">
-        <p className="text-sm font-semibold text-[#0D0D0D]">No encontramos esta conversación.</p>
-        <button
-          type="button"
-          onClick={() => navigate('/chats')}
-          className="cursor-pointer rounded-xl bg-[#3C9DA0] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#2D8B8E] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0]"
-        >
-          Volver a Chats
-        </button>
+      <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-white px-4 text-center">
+        <p role={error ? 'alert' : 'status'} className="text-sm text-[#737373]">
+          {cargando ? 'Cargando conversación…' : error ?? 'Conversación no encontrada.'}
+        </p>
+        {error && <button type="button" className="text-sm font-semibold text-[#3C9DA0]" onClick={() => setRevision(v => v + 1)}>Reintentar</button>}
+        <button type="button" onClick={() => navigate('/chats')} className="rounded-xl bg-[#3C9DA0] px-4 py-2 text-sm font-semibold text-white">Volver a Chats</button>
       </main>
     );
   }
 
-  // La key reinicia únicamente la conversación cuando cambia el parámetro de ruta.
   return (
     <Conversacion
       key={chat.id}
       chat={chat}
-      miId={miembro.id}
+      miId={perfil.id}
+      mensajesIniciales={mensajesIniciales}
+      onEnviarMensaje={async (contenido) => {
+        await enviarMensajeChat(chat.id, perfil.id, contenido);
+        return (await obtenerMensajesChat(chat.id)).map(adaptarMensaje);
+      }}
       onVolver={() => navigate('/chats')}
       {...props}
     />
@@ -126,25 +132,28 @@ interface ConversacionProps extends ChatProps {
   chat: ChatResumen;
   miId: string;
   onVolver: () => void;
+  mensajesIniciales: MensajeChat[];
+  onEnviarMensaje: (contenido: string) => Promise<MensajeChat[]>;
 }
 
 function Conversacion({
   chat,
   miId,
   onVolver,
+  mensajesIniciales,
+  onEnviarMensaje,
   onAbrirPerfil,
   onVerAcuerdo,
   onCrearAcuerdo,
 }: ConversacionProps) {
   const { interlocutor, agreement } = chat;
 
-  // 02.1 ESTADO LOCAL DE LOS MENSAJES Y DEL CAMPO DE ESCRITURA
-  const [mensajes, setMensajes] = useState<MensajeChat[]>(() =>
-    crearMensajesDemo(chat.id, miId, interlocutor.id),
-  );
+  // 02.1 Estado visual; los mensajes provienen del backend.
+  const [mensajes, setMensajes] = useState<MensajeChat[]>(mensajesIniciales);
   const [texto, setTexto] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const contenedorMensajesRef = useRef<HTMLDivElement>(null);
-  const secuenciaRef = useRef(0);
 
   // 02.2 MANTENER A LA VISTA EL ÚLTIMO MENSAJE, SIN MOVER TODA LA PÁGINA
   useEffect(() => {
@@ -154,22 +163,19 @@ function Conversacion({
     }
   }, [mensajes]);
 
-  // 02.3 ENVIAR UN MENSAJE SOLO EN ESTA SESIÓN DE REACT
-  function enviarMensaje() {
+  // 02.3 Solo mostrar el mensaje tras confirmar el POST y refrescar la consulta.
+  async function enviarMensaje() {
     const contenido = texto.trim();
-    if (!contenido) return;
-
-    secuenciaRef.current += 1;
-    const nuevoMensaje: MensajeChat = {
-      id: `mensaje-local-${Date.now()}-${secuenciaRef.current}`,
-      senderId: miId,
-      text: contenido,
-      type: 'text',
-      createdAt: 'Ahora',
-    };
-
-    setMensajes((anteriores) => [...anteriores, nuevoMensaje]);
-    setTexto('');
+    if (!contenido || enviando) return;
+    setEnviando(true); setErrorEnvio(null);
+    try {
+      setMensajes(await onEnviarMensaje(contenido));
+      setTexto('');
+    } catch (e) {
+      setErrorEnvio(e instanceof Error ? e.message : 'No se pudo enviar el mensaje.');
+    } finally {
+      setEnviando(false);
+    }
   }
 
   const puedeAccionarAcuerdo = agreement ? Boolean(onVerAcuerdo) : Boolean(onCrearAcuerdo);
@@ -203,14 +209,14 @@ function Conversacion({
             title={onAbrirPerfil ? 'Ver perfil' : 'Enlace al perfil pendiente de implementar'}
             className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0] ${onAbrirPerfil ? 'cursor-pointer hover:bg-[#F6F6F6] active:scale-[0.99]' : 'cursor-default'}`}
           >
-            <AvatarChat interlocutor={interlocutor} tamaño="sm" mostrarEstado />
+            <AvatarChat interlocutor={interlocutor} tamaño="sm" />
             <span className="min-w-0">
               <span className="flex min-w-0 items-center gap-1">
                 <span className="truncate text-sm font-semibold text-[#0D0D0D]">{interlocutor.name}</span>
                 <CheckCircle2 size={13} strokeWidth={2.5} className="shrink-0 text-[#3C9DA0]" aria-hidden="true" />
               </span>
               <span className="block text-xs text-[#9E9E9E]">
-                {interlocutor.isAvailable ? 'En línea' : 'Desconectado'}
+                Miembro de la comunidad
               </span>
             </span>
           </button>
@@ -309,7 +315,7 @@ function Conversacion({
         data-section="redactar-mensaje"
         onSubmit={(evento) => {
           evento.preventDefault();
-          enviarMensaje();
+          void enviarMensaje();
         }}
         className="shrink-0 border-t border-[#E8E8E8] bg-white px-4 py-3"
       >
@@ -325,6 +331,7 @@ function Conversacion({
             <Paperclip size={18} aria-hidden="true" />
           </button>
 
+          {errorEnvio && <span role="alert" className="max-w-[150px] text-xs text-red-600">{errorEnvio}</span>}
           {/* 05.2 TEXTO DEL MENSAJE */}
           <div className="flex min-w-0 flex-1 items-end rounded-2xl bg-[#F6F6F6] px-4 py-2.5 focus-within:ring-2 focus-within:ring-[#3C9DA0]/30">
             <textarea
@@ -334,7 +341,7 @@ function Conversacion({
               onKeyDown={(evento) => {
                 if (evento.key === 'Enter' && !evento.shiftKey && !evento.nativeEvent.isComposing) {
                   evento.preventDefault();
-                  enviarMensaje();
+                  void enviarMensaje();
                 }
               }}
               placeholder="Escribe un mensaje…"
@@ -346,7 +353,7 @@ function Conversacion({
           {/* 05.3 ENVIAR: DESHABILITADO PARA MENSAJES VACÍOS */}
           <button
             type="submit"
-            disabled={!texto.trim()}
+            disabled={!texto.trim() || enviando}
             aria-label="Enviar mensaje"
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0] ${texto.trim() ? 'cursor-pointer bg-[#3C9DA0] text-white hover:bg-[#2D8B8E] active:scale-95' : 'cursor-not-allowed bg-[#F0F0F0] text-[#C0C0C0]'}`}
           >
