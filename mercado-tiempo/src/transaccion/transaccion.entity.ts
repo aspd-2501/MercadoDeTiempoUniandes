@@ -9,7 +9,7 @@ import { TipoTransaccion } from './tipo-transaccion.enum';
 
 // --- Un movimiento de horas en la cuenta de un miembro o del fondo comunitario (RF-046, RF-049, RF-056) ---
 @Entity()
-@Check(`"tipo" IN ('SERVICIO_RECIBIDO', 'SERVICIO_PRESTADO', 'APORTE_FONDO', 'DONACION_ENVIADA', 'DONACION_RECIBIDA')`)
+@Check(`"tipo" IN ('SERVICIO_RECIBIDO', 'SERVICIO_PRESTADO', 'APORTE_FONDO', 'DONACION_ENVIADA', 'DONACION_RECIBIDA', 'AJUSTE_MODERADOR')`)
 @Check(`
     (CASE WHEN "idPerfil" IS NOT NULL THEN 1 ELSE 0 END) +
     (CASE WHEN "idDeposito" IS NOT NULL THEN 1 ELSE 0 END) = 1

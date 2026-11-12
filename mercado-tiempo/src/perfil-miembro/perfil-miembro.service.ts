@@ -8,6 +8,12 @@ import { PerfilMiembroEntity } from './perfil-miembro.entity';
 import { UsuarioEntity } from '../usuario/usuario.entity';
 import { CategoriaEntity } from '../categoria/categoria.entity';
 import { PerfilInteresEntity } from './perfil-interes.entity';
+import { ModeradorEntity } from '../moderador/moderador.entity';
+import { TransaccionEntity } from '../transaccion/transaccion.entity';
+import { TipoTransaccion } from '../transaccion/tipo-transaccion.enum';
+
+// Horas con las que empieza todo perfil nuevo
+export const SALDO_INICIAL = 3;
 
 @Injectable()
 export class PerfilMiembroService {
@@ -22,7 +28,10 @@ export class PerfilMiembroService {
         private readonly categoriaRepository: Repository<CategoriaEntity>,
 
         @InjectRepository(PerfilInteresEntity)
-        private readonly perfilInteresRepository: Repository<PerfilInteresEntity>
+        private readonly perfilInteresRepository: Repository<PerfilInteresEntity>,
+
+        @InjectRepository(ModeradorEntity)
+        private readonly moderadorRepository: Repository<ModeradorEntity>
     ) {}
 
     async findAll(): Promise<PerfilMiembroEntity[]> {
@@ -64,6 +73,8 @@ export class PerfilMiembroService {
         if (usuario.perfil)
             throw new BusinessLogicException("The usuario already has a perfil miembro", BusinessError.PRECONDITION_FAILED);
 
+        // El saldo no lo elige el cliente: todos empiezan con SALDO_INICIAL
+        perfil.saldo = SALDO_INICIAL;
         return await this.perfilMiembroRepository.save(perfil);
     }
 
@@ -72,7 +83,36 @@ export class PerfilMiembroService {
         if (!persisted)
             throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
         perfil.id = id;
+        // Editar el perfil nunca cambia el saldo (eso solo lo hace un moderador con ajustarSaldo)
+        perfil.saldo = persisted.saldo;
         return await this.perfilMiembroRepository.save(perfil);
+    }
+
+    // --- Saldo: solo un moderador puede cambiarlo ---
+    // Deja el saldo en el valor indicado y registra la diferencia como una Transaccion AJUSTE_MODERADOR.
+    async ajustarSaldo(perfilId: string, saldo: number, usuarioModeradorId: string): Promise<PerfilMiembroEntity> {
+        if (!Number.isInteger(saldo) || saldo < 0)
+            throw new BusinessLogicException("The saldo must be an integer greater than or equal to 0", BusinessError.BAD_REQUEST);
+
+        const moderador = await this.moderadorRepository.findOne({ where: { usuario: { id: usuarioModeradorId } } });
+        if (!moderador)
+            throw new BusinessLogicException("Only a moderador can change the saldo of a perfil miembro", BusinessError.FORBIDDEN);
+
+        return await this.perfilMiembroRepository.manager.transaction(async manager => {
+            const perfil = await manager.findOne(PerfilMiembroEntity, { where: { id: perfilId } });
+            if (!perfil)
+                throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
+
+            const diferencia = saldo - perfil.saldo;
+            if (diferencia !== 0) {
+                await manager.update(PerfilMiembroEntity, perfil.id, { saldo });
+                await manager.save(TransaccionEntity, manager.create(TransaccionEntity, {
+                    tipo: TipoTransaccion.AJUSTE_MODERADOR, horas: diferencia, saldoResultante: saldo, perfil: { id: perfil.id },
+                }));
+                perfil.saldo = saldo;
+            }
+            return perfil;
+        });
     }
 
     async delete(id: string) {

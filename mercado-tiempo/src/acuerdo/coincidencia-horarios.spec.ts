@@ -65,4 +65,16 @@ describe('calcularCoincidencia', () => {
         expect(r.estado).toBe('compatible');
         if (r.estado === 'compatible') expect(new Date(r.intervalo.inicio).getUTCDate()).toBe(11);
     });
+
+    it('prefiere el horario preferido del post cuando todos pueden en él', () => {
+        const r = calcularCoincidencia(2, [[f(8, 18)], [f(8, 18)]], [f(14, 17)]);
+        expect(r.estado).toBe('compatible');
+        if (r.estado === 'compatible') expect(hora(r.intervalo.inicio)).toBe(14);
+    });
+
+    it('usa el primer horario común si el preferido no alcanza para todos', () => {
+        const r = calcularCoincidencia(2, [[f(8, 18)], [f(8, 12), f(15, 18)]], [f(13, 16)]);
+        expect(r.estado).toBe('compatible');
+        if (r.estado === 'compatible') expect(hora(r.intervalo.inicio)).toBe(8);
+    });
 });

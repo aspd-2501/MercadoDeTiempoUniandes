@@ -182,6 +182,27 @@ describe('DisponibilidadAcuerdoService', () => {
         expect(new Date(result.horarioAcordado!.inicio).getUTCHours()).toBe(14);
     });
 
+    it('the horario preferido of the post has priority when everyone can make it', async () => {
+        await horarioRepository.save({ fechaInicio: f(8, 12).inicio, fechaFin: f(8, 12).fin, postAyuda, perfil: autor });
+        await horarioRepository.save({ fechaInicio: f(15, 18).inicio, fechaFin: f(15, 18).fin, postAyuda, perfil: autor, preferido: true });
+
+        const antes = await service.findDisponibilidad(acuerdo.id);
+        expect(new Date(antes.horarioPreferido!.inicio).getUTCHours()).toBe(15);
+
+        const result = await service.registrarDisponibilidad(acuerdo.id, receptor.id, [f(8, 18)]);
+        expect(result.resultado.estado).toBe('compatible');
+        expect(new Date(result.horarioAcordado!.inicio).getUTCHours()).toBe(15);
+    });
+
+    it('the horario acordado can differ from the preferido when not everyone can make it', async () => {
+        await horarioRepository.save({ fechaInicio: f(8, 12).inicio, fechaFin: f(8, 12).fin, postAyuda, perfil: autor });
+        await horarioRepository.save({ fechaInicio: f(15, 18).inicio, fechaFin: f(15, 18).fin, postAyuda, perfil: autor, preferido: true });
+
+        const result = await service.registrarDisponibilidad(acuerdo.id, receptor.id, [f(9, 12)]);
+        expect(result.resultado.estado).toBe('compatible');
+        expect(new Date(result.horarioAcordado!.inicio).getUTCHours()).toBe(9);
+    });
+
     it('registrarDisponibilidad should throw an exception when the acuerdo already has a horario acordado', async () => {
         await service.registrarDisponibilidad(acuerdo.id, autor.id, [f(8, 12)]);
         await service.registrarDisponibilidad(acuerdo.id, receptor.id, [f(8, 12)]);

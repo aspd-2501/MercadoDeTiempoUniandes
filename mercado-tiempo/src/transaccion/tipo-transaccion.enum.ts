@@ -8,4 +8,5 @@ export enum TipoTransaccion {
     APORTE_FONDO = 'APORTE_FONDO',             // horas sobrantes de un acuerdo grupal que van al fondo comunitario
     DONACION_ENVIADA = 'DONACION_ENVIADA',     // débito a quien dona (RF-050)
     DONACION_RECIBIDA = 'DONACION_RECIBIDA',   // crédito a quien recibe la donación (RF-050, RF-054)
+    AJUSTE_MODERADOR = 'AJUSTE_MODERADOR',     // un moderador corrige el saldo de un miembro (positivo o negativo)
 }

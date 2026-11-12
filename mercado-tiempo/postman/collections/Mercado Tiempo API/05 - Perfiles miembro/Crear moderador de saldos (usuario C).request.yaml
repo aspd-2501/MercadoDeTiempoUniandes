@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/moderadores"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "usuarioId": "{{usuarioC}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      { const r = pm.response.json(); pm.collectionVariables.set("moderadorSaldosId", r.id); }
+    language: text/javascript
+order: 9200

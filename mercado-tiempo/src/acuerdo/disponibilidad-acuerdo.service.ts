@@ -20,7 +20,8 @@ export interface DisponibilidadParticipante {
 export interface DisponibilidadAcuerdo {
     participantes: DisponibilidadParticipante[];
     resultado: ResultadoCoincidencia;
-    horarioAcordado: Intervalo | null;
+    horarioAcordado: Intervalo | null;      // horario final del acuerdo
+    horarioPreferido: Intervalo | null;     // preferencia inicial del autor del post (solo referencia)
 }
 
 // --- Coordinación de horarios de un acuerdo (RF-037, RF-038, RF-039) ---
@@ -53,7 +54,8 @@ export class DisponibilidadAcuerdoService {
             ? { inicio: acuerdo.horarioAcordado.fechaInicio, fin: acuerdo.horarioAcordado.fechaFin }
             : null;
 
-        return { participantes, resultado: this.evaluar(acuerdo, participantes), horarioAcordado };
+        const horarioPreferido = (await this.preferidasDe(acuerdo))[0] ?? null;
+        return { participantes, resultado: await this.evaluar(acuerdo, participantes), horarioAcordado, horarioPreferido };
     }
 
     // --- Registrar (o reemplazar) la disponibilidad de un participante ---
@@ -92,7 +94,7 @@ export class DisponibilidadAcuerdoService {
 
         // RF-039: si ya hay un horario común suficiente, se asigna
         const actualizado = await this.findAcuerdo(acuerdoId);
-        const resultado = this.evaluar(actualizado, await this.disponibilidadesDe(actualizado));
+        const resultado = await this.evaluar(actualizado, await this.disponibilidadesDe(actualizado));
         if (resultado.estado === 'compatible')
             await this.asignarHorario(actualizado, resultado.intervalo);
 
@@ -101,10 +103,19 @@ export class DisponibilidadAcuerdoService {
 
     // --- Auxiliares ---
 
-    private evaluar(acuerdo: AcuerdoEntity, participantes: DisponibilidadParticipante[]): ResultadoCoincidencia {
+    private async evaluar(acuerdo: AcuerdoEntity, participantes: DisponibilidadParticipante[]): Promise<ResultadoCoincidencia> {
         if (participantes.length === 0 || participantes.some(p => !p.envioDisponibilidad))
             return { estado: 'pendiente' };
-        return calcularCoincidencia(acuerdo.horas, participantes.map(p => p.franjas));
+        // El horario preferido del post de origen tiene prioridad si todos pueden en él
+        const preferidas = await this.preferidasDe(acuerdo);
+        return calcularCoincidencia(acuerdo.horas, participantes.map(p => p.franjas), preferidas);
+    }
+
+    // Horario preferido del post del que salió el acuerdo (vacío si el acuerdo no viene de un post)
+    private async preferidasDe(acuerdo: AcuerdoEntity): Promise<Intervalo[]> {
+        if (!acuerdo.postAyuda) return [];
+        const preferidas = await this.horarioRepository.find({ where: { postAyuda: { id: acuerdo.postAyuda.id }, preferido: true } });
+        return preferidas.map(h => ({ inicio: h.fechaInicio, fin: h.fechaFin }));
     }
 
     // Franjas de cada participante. El autor del post de origen ya dio su disponibilidad al publicarlo.

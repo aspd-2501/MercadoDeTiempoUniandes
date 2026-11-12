@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/perfiles-miembro/{{perfilA}}/saldo"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "saldo": 100
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 403", () => pm.response.to.have.status(403));
+      pm.test("Mensaje: only a moderador", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("Only a moderador"); });
+    language: text/javascript
+order: 9100

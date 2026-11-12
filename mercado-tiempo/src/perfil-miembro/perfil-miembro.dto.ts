@@ -27,9 +27,9 @@ export class PerfilMiembroDto {
     @IsNotEmpty()
     readonly estadoActividad: boolean;
 
-    @IsNumber()
-    @IsNotEmpty()
-    readonly saldo: number;
+    // El saldo no se envía: todo perfil nuevo empieza con SALDO_INICIAL horas
+    // y solo un moderador lo cambia (PUT /perfiles-miembro/:id/saldo).
+    // Si el cliente lo envía, se ignora.
 
     @IsUUID()
     @IsNotEmpty()

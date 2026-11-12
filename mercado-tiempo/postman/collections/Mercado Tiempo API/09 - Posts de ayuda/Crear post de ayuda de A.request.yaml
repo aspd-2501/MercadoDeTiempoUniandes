@@ -31,6 +31,7 @@ scripts:
     code: |-
       pm.test("Código 201", () => pm.response.to.have.status(201));
       pm.test("Tiene id UUID", () => { const r = pm.response.json(); pm.expect(r.id).to.match(/^[0-9a-f-]{36}$/); });
+      pm.test("Su única franja es el horario preferido", () => { const r = pm.response.json(); pm.expect(r.horariosDisponibles[0].preferido).to.be.true; });
       { const r = pm.response.json(); pm.collectionVariables.set("postId", r.id); }
     language: text/javascript
 order: 1000

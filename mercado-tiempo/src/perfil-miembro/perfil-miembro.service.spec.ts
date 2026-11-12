@@ -5,14 +5,19 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { faker } from '@faker-js/faker';
 import { TypeOrmTestingConfig } from '../shared/testing-utils/typeorm-testing-config';
-import { PerfilMiembroService } from './perfil-miembro.service';
+import { PerfilMiembroService, SALDO_INICIAL } from './perfil-miembro.service';
 import { PerfilMiembroEntity } from './perfil-miembro.entity';
 import { UsuarioEntity } from '../usuario/usuario.entity';
+import { ModeradorEntity } from '../moderador/moderador.entity';
+import { TransaccionEntity } from '../transaccion/transaccion.entity';
+import { TipoTransaccion } from '../transaccion/tipo-transaccion.enum';
 
 describe('PerfilMiembroService', () => {
     let service: PerfilMiembroService;
     let perfilRepository: Repository<PerfilMiembroEntity>;
     let usuarioRepository: Repository<UsuarioEntity>;
+    let moderadorRepository: Repository<ModeradorEntity>;
+    let transaccionRepository: Repository<TransaccionEntity>;
 
     let perfilesList: PerfilMiembroEntity[];
 
@@ -25,6 +30,8 @@ describe('PerfilMiembroService', () => {
         service = module.get<PerfilMiembroService>(PerfilMiembroService);
         perfilRepository = module.get<Repository<PerfilMiembroEntity>>(getRepositoryToken(PerfilMiembroEntity));
         usuarioRepository = module.get<Repository<UsuarioEntity>>(getRepositoryToken(UsuarioEntity));
+        moderadorRepository = module.get(getRepositoryToken(ModeradorEntity));
+        transaccionRepository = module.get(getRepositoryToken(TransaccionEntity));
 
         await seedDatabase();
     });
@@ -37,6 +44,8 @@ describe('PerfilMiembroService', () => {
     };
 
     const seedDatabase = async () => {
+        await transaccionRepository.clear();
+        await moderadorRepository.clear();
         await perfilRepository.clear();
         await usuarioRepository.clear();
 
@@ -214,5 +223,84 @@ describe('PerfilMiembroService', () => {
         const usuarioSinPerfil = await createUsuario();
         await expect(() => service.findByUsuarioId(usuarioSinPerfil.id))
             .rejects.toHaveProperty("message", "The usuario with the given id does not have a perfil miembro");
+    });
+
+    // --- Saldo (inicial de 3 horas y solo lo cambia un moderador) ---
+
+    const nuevoPerfil = (usuario: UsuarioEntity, saldo?: number): PerfilMiembroEntity => ({
+        imagen: faker.image.url(), descripcion: faker.lorem.sentence(), nombre: faker.person.fullName(),
+        edad: 20, afiliacionUniandes: "Estudiante", estadoActividad: true, saldo, usuario,
+    }) as PerfilMiembroEntity;
+
+    it('create should start every perfil with SALDO_INICIAL (3) horas', async () => {
+        expect(SALDO_INICIAL).toBe(3);
+        const sinSaldo = await service.create(nuevoPerfil(await createUsuario()));
+        expect(sinSaldo.saldo).toBe(3);
+    });
+
+    it('create should ignore the saldo sent by the client', async () => {
+        const creado = await service.create(nuevoPerfil(await createUsuario(), 500));
+        expect(creado.saldo).toBe(3);
+        expect((await perfilRepository.findOneBy({ id: creado.id }))!.saldo).toBe(3);
+    });
+
+    it('update should not change the saldo', async () => {
+        const original = perfilesList[0];
+        const cambio = { ...original, descripcion: 'Nueva descripción', saldo: original.saldo + 50 } as PerfilMiembroEntity;
+        const updated = await service.update(original.id, cambio);
+        expect(updated.saldo).toBe(original.saldo);
+        expect((await perfilRepository.findOneBy({ id: original.id }))!.saldo).toBe(original.saldo);
+        expect(updated.descripcion).toBe('Nueva descripción');
+    });
+
+    const crearModerador = async (): Promise<UsuarioEntity> => {
+        const usuario = await createUsuario();
+        await moderadorRepository.save({ usuario });
+        return usuario;
+    };
+
+    it('ajustarSaldo should let a moderador set the saldo and record a Transaccion', async () => {
+        const moderador = await crearModerador();
+        const perfil = perfilesList[0];
+        await perfilRepository.update(perfil.id, { saldo: 3 });
+
+        const result = await service.ajustarSaldo(perfil.id, 20, moderador.id);
+        expect(result.saldo).toBe(20);
+        expect((await perfilRepository.findOneBy({ id: perfil.id }))!.saldo).toBe(20);
+
+        await service.ajustarSaldo(perfil.id, 5, moderador.id);
+        const movimientos = await transaccionRepository.find({ where: { perfil: { id: perfil.id } }, order: { saldoResultante: 'DESC' } });
+        expect(movimientos.map(t => [t.tipo, t.horas, t.saldoResultante])).toEqual([
+            [TipoTransaccion.AJUSTE_MODERADOR, 17, 20],
+            [TipoTransaccion.AJUSTE_MODERADOR, -15, 5],
+        ]);
+    });
+
+    it('ajustarSaldo should not record a Transaccion when the saldo does not change', async () => {
+        const moderador = await crearModerador();
+        const perfil = perfilesList[1];
+        await service.ajustarSaldo(perfil.id, perfil.saldo, moderador.id);
+        expect(await transaccionRepository.count()).toBe(0);
+    });
+
+    it('ajustarSaldo should reject a usuario that is not a moderador', async () => {
+        const perfil = perfilesList[0];
+        await expect(() => service.ajustarSaldo(perfil.id, 50, perfil.usuario.id))
+            .rejects.toHaveProperty("message", "Only a moderador can change the saldo of a perfil miembro");
+        expect((await perfilRepository.findOneBy({ id: perfil.id }))!.saldo).toBe(perfil.saldo);
+    });
+
+    it('ajustarSaldo should reject a negative or decimal saldo', async () => {
+        const moderador = await crearModerador();
+        await expect(() => service.ajustarSaldo(perfilesList[0].id, -1, moderador.id))
+            .rejects.toHaveProperty("message", "The saldo must be an integer greater than or equal to 0");
+        await expect(() => service.ajustarSaldo(perfilesList[0].id, 1.5, moderador.id))
+            .rejects.toHaveProperty("message", "The saldo must be an integer greater than or equal to 0");
+    });
+
+    it('ajustarSaldo should throw an exception for an invalid perfil', async () => {
+        const moderador = await crearModerador();
+        await expect(() => service.ajustarSaldo("0", 10, moderador.id))
+            .rejects.toHaveProperty("message", "The perfil miembro with the given id was not found");
     });
 });

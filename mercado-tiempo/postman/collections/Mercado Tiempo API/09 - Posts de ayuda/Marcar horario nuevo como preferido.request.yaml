@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/posts-ayuda/{{postId}}/horarios/{{horarioPostNuevoId}}/preferido"
+method: PUT
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Solo el nuevo es preferido", () => { const r = pm.response.json(); const pref = r.horariosDisponibles.filter(h => h.preferido); pm.expect(pref.length).to.eql(1); pm.expect(pref[0].id).to.eql(pm.collectionVariables.get("horarioPostNuevoId")); });
+    language: text/javascript
+order: 14100
