@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo1}}/participantes/{{perfilC}}"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "rol": "RECEPTOR"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: realizado", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("realizado"); });
+    language: text/javascript
+order: 29000

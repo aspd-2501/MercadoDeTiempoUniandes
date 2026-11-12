@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo2}}/solicitudes-modificacion/{{modif1}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("tipo", () => { const r = pm.response.json(); pm.expect(r.tipo).to.eql("MODIFICACION"); });
+    language: text/javascript
+order: 29000

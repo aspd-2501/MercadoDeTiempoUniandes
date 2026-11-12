@@ -39,6 +39,17 @@ export class PerfilMiembroService {
         return perfil;
     }
 
+    // Perfil de miembro de un usuario (el que se obtiene al iniciar sesión)
+    async findByUsuarioId(usuarioId: string): Promise<PerfilMiembroEntity> {
+        const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({
+            where: { usuario: { id: usuarioId } },
+            relations: { usuario: true }
+        });
+        if (!perfil)
+            throw new BusinessLogicException("The usuario with the given id does not have a perfil miembro", BusinessError.NOT_FOUND);
+        return perfil;
+    }
+
     async create(perfil: PerfilMiembroEntity): Promise<PerfilMiembroEntity> {
         if (!perfil.usuario)
             throw new BusinessLogicException("A perfil miembro must have a usuario", BusinessError.PRECONDITION_FAILED);

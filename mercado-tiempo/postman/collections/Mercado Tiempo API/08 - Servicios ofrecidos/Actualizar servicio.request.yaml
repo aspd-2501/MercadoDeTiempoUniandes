@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/servicios-ofrecidos/{{servicioId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Fotografía y video {{runId}}",
+      "descripcion": "Eventos y retratos",
+      "visible": true,
+      "perfilId": "{{perfilE}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Título actualizado", () => { const r = pm.response.json(); pm.expect(r.titulo).to.include("video"); });
+    language: text/javascript
+order: 11000

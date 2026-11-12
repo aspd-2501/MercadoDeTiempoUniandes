@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "horas": 2,
+      "fechaCreacion": "{{ahora}}",
+      "fechaRealizacion": "{{futuroInicio}}",
+      "postAyudaId": "{{postId}}",
+      "estado": 2
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: only when all participantes confirm", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("only when all participantes confirm"); });
+    language: text/javascript
+order: 3000

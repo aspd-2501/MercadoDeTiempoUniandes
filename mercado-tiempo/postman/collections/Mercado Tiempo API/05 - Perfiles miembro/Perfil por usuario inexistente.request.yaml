@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/perfiles-miembro/usuario/00000000-0000-0000-0000-000000000000"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 404", () => pm.response.to.have.status(404));
+      pm.test("Mensaje: does not have a perfil miembro", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("does not have a perfil miembro"); });
+    language: text/javascript
+order: 11400

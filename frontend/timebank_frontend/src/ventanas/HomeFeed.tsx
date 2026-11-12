@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, Bell, Clock3, Heart, Inbox, Plus } from 'lucide-react';
 import PostAyuda from '../componentes/posts/PostAyuda';
 import { obtenerPostAyuda, type PostAyudaAPI } from '../api/postsAyuda.api';
+import { useMiembroSesion } from '../contextos/MiembroSesionContext';
+
+//Llamados al API
 import {
   obtenerFeed,
   type PublicacionFeedAPI,
@@ -10,7 +13,6 @@ import {
 /**
  * VENTANA: Home / feed de publicaciones del Banco de Tiempo.
  * Consulta NestJS GET /feed y reutiliza PostAyuda para entradas POST_AYUDA.
- * Mantiene la tarjeta de saldo demo hasta integrar el login/contexto real.
  * No aplica filtros de búsqueda o categorías. La visibilidad y relevancia
  * de las publicaciones se resuelven en el backend; se mantiene la paginación.
  */
@@ -19,16 +21,13 @@ import {
 export interface MiembroHome {
   id: string;
   firstName: string;
-  faculty: string;
+  afiliacion: string;
   balance: number;
   initials: string;
   avatar?: string;
 }
 
 export interface HomeFeedProps {
-  miembro?: MiembroHome;
-  /** UUID del perfil real autenticado. Omitir mientras la sesión sea mock. */
-  perfilId?: string;
   notificacionesPendientes?: number;
   /** Acciones opcionales: se conectarán a la navegación en otra etapa. */
   onNotificaciones?: () => void;
@@ -41,15 +40,6 @@ export interface HomeFeedProps {
   onGuardarPost?: (postId: string) => void;
   onCompartirPost?: (postId: string) => void;
 }
-
-// ─────────────────── 00.1 SALDO DEMO (se migrará al conectar autenticación) ──────────
-const MIEMBRO_DEMO: MiembroHome = {
-  id: 'miembro-demo-1',
-  firstName: 'María',
-  faculty: 'Facultad de Ingeniería',
-  balance: 8,
-  initials: 'ML',
-};
 
 /** Un elemento del feed y, solo cuando aplica, su detalle de ayuda. */
 interface EntradaFeed {
@@ -85,9 +75,7 @@ const ANIMACION_BOTON =
 
 // ─────────────────── 01. VENTANA HOME ───────────────────
 export default function HomeFeed({
-  miembro = MIEMBRO_DEMO,
-  perfilId,
-  notificacionesPendientes = 3,
+  notificacionesPendientes = 0,
   onNotificaciones,
   onVerPerfil,
   onVerMovimientos,
@@ -98,6 +86,21 @@ export default function HomeFeed({
   onGuardarPost,
   onCompartirPost,
 }: HomeFeedProps) {
+
+  // 01.1 IDENTIDAD ACTUAL: datos del backend a través del contexto.
+  const { perfil, miembro: miembroSesion } = useMiembroSesion();
+  const perfilId = perfil?.id;
+  const miembro: MiembroHome | null = perfil && miembroSesion
+    ? {
+        id: perfil.id,
+        firstName: miembroSesion.firstName,
+        afiliacion: perfil.afiliacionUniandes,
+        balance: perfil.saldo,
+        initials: miembroSesion.initials,
+        avatar: perfil.imagen || undefined,
+      }
+    : null
+
   // 01.2 DATOS Y ESTADOS DEL FEED REAL
   const [entradas, setEntradas] = useState<EntradaFeed[]>([]);
   const [pagina, setPagina] = useState(1);
@@ -195,6 +198,16 @@ export default function HomeFeed({
     observador.observe(marcador);
     return () => observador.disconnect();
   }, [cargarMas, hayMas, cargando, cargandoMas, error, errorMas]);
+
+  // RutaProtegida normalmente garantiza que el perfil exista. No mostrar mocks
+  // si HomeFeed se reutiliza sin sesión o mientras se recupera /auth/me.
+  if (!miembro) {
+    return (
+      <div className="min-h-screen bg-[#F6F6F6] px-4 py-10 text-center text-sm text-[#737373]" role="status">
+        Cargando información del miembro…
+      </div>
+    );
+  }
 
   return (
     <div data-section="ventana-home" className="min-h-screen min-w-0 bg-[#F6F6F6]">
@@ -417,7 +430,7 @@ function BalanceCard({
             >
               Hola, {miembro.firstName} 👋
             </h2>
-            <p className="mt-0.5 text-sm text-white/70">{miembro.faculty}</p>
+            <p className="mt-0.5 text-sm text-white/70">{miembro.afiliacion}</p>
           </div>
           <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/20 ring-2 ring-white/30">
             {miembro.avatar ? (

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
+import { useNavigate } from 'react-router';
 import {
   Activity,
   Award,
@@ -23,12 +24,11 @@ import {
  * Este archivo conserva el diseño de Figma. Está organizado en secciones
  * semánticas con comentarios y atributos data-section para ubicar cada bloque.
  *
- * Solo muestra datos de demostración: sin API, navegación ni acciones reales.
- * Los botones tienen animaciones visuales y el interruptor usa estado local.
+ * El perfil se lee del contexto global de sesión; los servicios siguen siendo datos de prueba.
+ * Sin API ni navegación real. El interruptor actualiza el estado compartido.
  */
 
 // ─────────────────────────── TIPOS DE DATOS ───────────────────────────
-
 interface ServicioPerfil {
   id: string;
   title: string;
@@ -45,8 +45,7 @@ interface MiembroProfileProps {
   onVerMovimientos?: () => void;
 }
 
-// ─────────────────── DATOS SIMULADOS ───────────────────
-
+// ────────────────────────── DATOS DE PRUEBA ──────────────────────────
 const DEMO_SERVICES: ServicioPerfil[] = [
   {
     id: 'servicio-demo-1',
@@ -175,14 +174,27 @@ function Section({
 export default function MiembroProfile({
   services = DEMO_SERVICES,
   onDonarHoras,
-  onVerMovimientos
+  onVerMovimientos,
 }: MiembroProfileProps) {
+  // 00. MIEMBRO AUTENTICADO: fuente de datos compartida por todas las ventanas
+  const { miembro, actualizarDisponibilidad, cerrarSesion } = useMiembroSesion();
+  const navigate = useNavigate();
 
-  // 00. MIEMBRO AUTENTICADO
-  const { miembro, actualizarDisponibilidad } = useMiembroSesion();
+  function manejarCerrarSesion() {
+    cerrarSesion();
+    navigate('/login', { replace: true });
+  }
+
+  // Mientras no haya sesión, no mostramos información de un perfil ficticio.
+  if (!miembro) {
+    return (
+      <main className="min-h-screen bg-[#F6F6F6] p-6 text-center">
+        <p className="text-sm text-[#737373]">No hay un miembro con sesión iniciada.</p>
+      </main>
+    );
+  }
 
   const isAvailable = miembro.isAvailable;
-
   const visibleServices = services.filter((service) => service.isVisible);
   const stats = [
     { label: 'Intercambios', value: miembro.completedExchanges },
@@ -239,7 +251,7 @@ export default function MiembroProfile({
                 </div>
               </div>
               {/* Nombre y facultad: deben permanecer debajo del banner */}
-              <div className="min-w-0 flex-1 pt-6 pb-1">
+              <div className="min-w-0 flex-1 pt-8 pb-1">
                 <h1
                   className="break-words text-lg font-bold leading-tight text-[#0D0D0D]"
                   style={{ fontFamily: 'Outfit, sans-serif' }}
@@ -255,7 +267,7 @@ export default function MiembroProfile({
           </header>
 
           <div className="px-5 pb-5">
-            {/* 02.2 DISPONIBILIDAD: interruptor animado con estado local */}
+            {/* 02.2 DISPONIBILIDAD: interruptor conectado al contexto de sesión */}
             <div
               data-section="disponibilidad"
               className="mb-4 flex items-center justify-between gap-3 rounded-xl bg-[#F6F6F6] p-3"
@@ -273,7 +285,7 @@ export default function MiembroProfile({
                 role="switch"
                 aria-checked={isAvailable}
                 aria-label="Disponible para ayudar"
-                onClick={() => actualizarDisponibilidad(!isAvailable)}  
+                onClick={() => actualizarDisponibilidad(!isAvailable)}
                 className={`${BUTTON_FEEDBACK} relative h-6 w-12 shrink-0 rounded-full hover:shadow-md ${isAvailable ? 'bg-[#3C9DA0]' : 'bg-[#D0D0D0]'}`}
               >
                 <span
@@ -461,10 +473,11 @@ export default function MiembroProfile({
           ))}
         </nav>
 
-        {/* 09. PIE DEL PERFIL: botón para cerrar sesión (solo visual) */}
+        {/* 09. PIE DEL PERFIL: cerrar sesión */}
         <footer data-section="cerrar-sesion" className="pb-6 text-center">
           <button
             type="button"
+            onClick={manejarCerrarSesion}
             className={`${BUTTON_FEEDBACK} mx-auto flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[#D32F2F] hover:bg-red-50 hover:text-[#B71C1C]`}
           >
             <Icon name="logout" size={16} />

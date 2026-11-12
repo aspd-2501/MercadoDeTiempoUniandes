@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "idUniandes": "a.prueba{{runId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 400", () => pm.response.to.have.status(400));
+      pm.test("Error de validación", () => { const r = pm.response.json(); pm.expect(r.message).to.exist; });
+    language: text/javascript
+order: 5000

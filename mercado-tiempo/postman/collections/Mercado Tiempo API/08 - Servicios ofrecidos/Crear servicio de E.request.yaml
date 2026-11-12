@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/servicios-ofrecidos"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Fotografía de eventos {{runId}}",
+      "descripcion": "Cubro eventos estudiantiles",
+      "imagen": "https://picsum.photos/300",
+      "visible": true,
+      "perfilId": "{{perfilE}}",
+      "categoriaIds": [
+        "{{cat3}}"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("Tiene id UUID", () => { const r = pm.response.json(); pm.expect(r.id).to.match(/^[0-9a-f-]{36}$/); });
+      { const r = pm.response.json(); pm.collectionVariables.set("servicioId", r.id); }
+    language: text/javascript
+order: 1000

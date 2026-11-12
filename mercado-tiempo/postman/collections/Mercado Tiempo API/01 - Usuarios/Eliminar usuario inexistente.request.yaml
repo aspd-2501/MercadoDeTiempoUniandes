@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/usuarios/{{idInexistente}}"
+method: DELETE
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 404", () => pm.response.to.have.status(404));
+      pm.test("Mensaje: not found", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("not found"); });
+    language: text/javascript
+order: 17000

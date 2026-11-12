@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/depositos-horas/{{fondoId}}"
+method: DELETE
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: cannot be deleted while it has saldo", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("cannot be deleted while it has saldo"); });
+    language: text/javascript
+order: 30000

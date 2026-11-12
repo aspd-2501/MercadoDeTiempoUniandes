@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo2}}/solicitudes-modificacion/{{modif3}}/retirar"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "perfilId": "{{perfilB}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: Only the solicitante", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("Only the solicitante"); });
+    language: text/javascript
+order: 26000

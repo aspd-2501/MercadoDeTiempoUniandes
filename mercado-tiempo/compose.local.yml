@@ -1,0 +1,21 @@
+# Solo desarrollo local. Credenciales de ejemplo; no usar en producción.
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: mercado-tiempo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mercado-tiempo
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - mercado_tiempo_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d mercado-tiempo']
+      interval: 5s
+      timeout: 5s
+      retries: 15
+volumes:
+  mercado_tiempo_pgdata:

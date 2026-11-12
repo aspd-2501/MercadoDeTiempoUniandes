@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/posts-ayuda/{{postId}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Tutoría de Cálculo Integral {{runId}}",
+      "descripcion": "Repaso intensivo para el parcial 2",
+      "horas": 2,
+      "imagen": "https://picsum.photos/400",
+      "ofrece": true,
+      "cupo": 3,
+      "cupoLleno": false,
+      "fechaCreacion": "{{ahora}}",
+      "perfilAutorId": "{{perfilA}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Descripción actualizada", () => { const r = pm.response.json(); pm.expect(r.descripcion).to.include("intensivo"); });
+    language: text/javascript
+order: 11000

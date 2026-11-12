@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "horas": 2,
+      "fechaCreacion": "{{ahora}}",
+      "fechaRealizacion": "{{futuroInicio}}",
+      "postAyudaId": "{{postId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("Tiene id UUID", () => { const r = pm.response.json(); pm.expect(r.id).to.match(/^[0-9a-f-]{36}$/); });
+      pm.test("estado 0", () => { const r = pm.response.json(); pm.expect(r.estado).to.eql(0); });
+      { const r = pm.response.json(); pm.collectionVariables.set("acuerdo1", r.id); }
+    language: text/javascript
+order: 1000

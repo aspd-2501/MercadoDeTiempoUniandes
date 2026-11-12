@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/posts-comunitarios"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Temporal {{runId}}",
+      "descripcion": "Gracias Ana por la paciencia",
+      "imagen": "https://picsum.photos/500",
+      "fechaCreacion": "{{ahora}}",
+      "creadorId": "{{perfilB}}",
+      "perfilIds": [
+        "{{perfilA}}",
+        "{{perfilB}}"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      { const r = pm.response.json(); pm.collectionVariables.set("postComTmp", r.id); }
+    language: text/javascript
+order: 16000

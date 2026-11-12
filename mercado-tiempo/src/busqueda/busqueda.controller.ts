@@ -25,6 +25,7 @@ export class BusquedaController {
     }
 
     // GET /buscar/servicios?q=fotografia
+    // Posts que ofrecen ayuda y servicios de organizaciones (no los servicios de perfiles individuales)
     @Get('servicios')
     async buscarServicios(@Query('q') q?: string) {
         return await this.busquedaService.buscarServicios(q);

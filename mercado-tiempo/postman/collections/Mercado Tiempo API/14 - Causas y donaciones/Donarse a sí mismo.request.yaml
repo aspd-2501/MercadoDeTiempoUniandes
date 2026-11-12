@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/donaciones"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "horasDonadas": 3,
+      "fechaDonacion": "{{ahora}}",
+      "mensaje": "¡Ánimo!",
+      "perfilDonanteId": "{{perfilA}}",
+      "perfilReceptorId": "{{perfilA}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: cannot be the same", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("cannot be the same"); });
+    language: text/javascript
+order: 20000

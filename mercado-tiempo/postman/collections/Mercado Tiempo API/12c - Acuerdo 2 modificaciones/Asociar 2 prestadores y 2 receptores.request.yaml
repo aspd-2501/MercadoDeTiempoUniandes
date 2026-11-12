@@ -1,0 +1,35 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo2}}/participantes"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "participantes": [
+        {
+          "perfilId": "{{perfilA}}",
+          "rol": "PRESTADOR"
+        },
+        {
+          "perfilId": "{{perfilE}}",
+          "rol": "PRESTADOR"
+        },
+        {
+          "perfilId": "{{perfilB}}",
+          "rol": "RECEPTOR"
+        },
+        {
+          "perfilId": "{{perfilC}}",
+          "rol": "RECEPTOR"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: but not both", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("but not both"); });
+    language: text/javascript
+order: 2000

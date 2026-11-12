@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo2}}/disponibilidad/{{perfilA}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "franjas": []
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: cancelado", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("cancelado"); });
+    language: text/javascript
+order: 37000

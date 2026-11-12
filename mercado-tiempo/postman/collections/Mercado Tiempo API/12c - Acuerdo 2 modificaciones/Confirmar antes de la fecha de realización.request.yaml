@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo2}}/confirmaciones/{{perfilA}}"
+method: POST
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: before the fechaRealizacion", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("before the fechaRealizacion"); });
+    language: text/javascript
+order: 5000

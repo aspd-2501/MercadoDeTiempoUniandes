@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/posts-ayuda/{{postId}}/horarios/{{horarioPostId}}"
+method: DELETE
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: at least 1 horario", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("at least 1 horario"); });
+    language: text/javascript
+order: 16000

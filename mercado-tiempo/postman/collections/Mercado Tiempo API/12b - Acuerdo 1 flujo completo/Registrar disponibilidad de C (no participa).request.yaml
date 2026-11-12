@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo1}}/disponibilidad/{{perfilC}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "franjas": [
+        {
+          "fechaInicio": "{{pasadoCoincInicio}}",
+          "fechaFin": "{{pasadoCoincFin}}"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: not a participant", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("not a participant"); });
+    language: text/javascript
+order: 13000

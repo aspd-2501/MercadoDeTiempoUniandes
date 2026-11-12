@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/actividades/{{actividadId}}/perfiles/{{perfilA}}"
+method: POST
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: already enrolled", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("already enrolled"); });
+    language: text/javascript
+order: 15000

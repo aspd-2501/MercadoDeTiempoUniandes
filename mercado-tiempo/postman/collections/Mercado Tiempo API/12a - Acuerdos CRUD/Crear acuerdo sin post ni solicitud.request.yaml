@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "horas": 2,
+      "fechaCreacion": "{{ahora}}",
+      "fechaRealizacion": "{{futuroInicio}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: either a postAyuda or a solicitud", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("either a postAyuda or a solicitud"); });
+    language: text/javascript
+order: 2000

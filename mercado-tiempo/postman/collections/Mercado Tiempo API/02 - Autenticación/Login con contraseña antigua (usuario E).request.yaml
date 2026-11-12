@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "idUniandes": "e.prueba{{runId}}",
+      "contrasenia": "clave123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 404", () => pm.response.to.have.status(404));
+      pm.test("Mensaje: Invalid credentials", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("Invalid credentials"); });
+    language: text/javascript
+order: 3000

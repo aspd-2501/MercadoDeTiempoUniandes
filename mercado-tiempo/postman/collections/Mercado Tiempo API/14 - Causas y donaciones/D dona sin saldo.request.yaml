@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/donaciones"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "horasDonadas": 1,
+      "fechaDonacion": "{{ahora}}",
+      "mensaje": "¡Ánimo!",
+      "perfilDonanteId": "{{perfilD}}",
+      "perfilReceptorId": "{{perfilB}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: not have enough saldo", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("not have enough saldo"); });
+    language: text/javascript
+order: 19000
