@@ -19,7 +19,7 @@ export interface AcuerdoCardProps {
   acuerdo: AcuerdoAPI;
   miembroActualId: string;
   onVerAcuerdo?: (acuerdoId: string) => void;
-  onIrChat?: (chatId: string) => void;
+  onIrChat?: (acuerdoId: string) => void;
 }
 
 function fechaLegible(fecha?: string | null): string {
@@ -142,7 +142,7 @@ export default function AcuerdoCard({
           {activo && acuerdo.chat?.id && onIrChat && (
             <button
               type="button"
-              onClick={() => onIrChat(acuerdo.chat!.id)}
+              onClick={() => onIrChat(acuerdo.id)}
               className="inline-flex min-w-[120px] flex-1 items-center justify-center gap-1.5 rounded-xl bg-[#F6F6F6] px-3 py-2.5 text-sm font-medium text-[#0D0D0D] hover:bg-[#E8E8E8]"
             >
               <MessageCircle size={15} aria-hidden="true" />

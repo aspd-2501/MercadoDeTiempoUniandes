@@ -1,20 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, CheckCircle2, Clock3, Paperclip, Send } from 'lucide-react';
+import { ArrowLeft, Clock3, Paperclip, Send, UsersRound } from 'lucide-react';
 
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
-import { obtenerParticipantesChat, obtenerMensajesChat, enviarMensajeChat, type MensajeAPI } from '../../api/chats.api';
-import type { ChatResumen, InterlocutorChat, EstadoAcuerdoChat } from './ChatList';
+import { obtenerParticipantesChat, obtenerMensajesChat, enviarMensajeChat, type MensajeAPI, type ParticipanteChatAPI } from '../../api/chats.api';
+import { obtenerAcuerdo, obtenerParticipantesAcuerdo, EstadoAcuerdoAPI } from '../../api/acuerdos.api';
 
 /**
- * VENTANA: conversación individual del Banco de Tiempo.
+ * VENTANA: chat exclusivo de un acuerdo de servicio.
  *
  * Basada en ConversationView de Figma y adaptada a React Router.
- * - /chats/:chatId identifica la conversación.
+ * - /acuerdos/:acuerdoId/chat identifica el acuerdo, no un chat personal.
  * - El miembro autenticado proviene del contexto global.
- * - Los mensajes se consultan desde GET /chats/:id y GET /mensajes/:id.
+ * - El chat se obtiene exclusivamente a través de GET /acuerdos/:id.
  * - Enviar un mensaje usa POST /mensajes y luego refresca la conversación.
- * - Las acciones de acuerdos y perfil se conectarán mediante callbacks.
+ * - Solo los participantes del acuerdo y su chat pueden usar esta vista.
  *
  * Ubicación: src/ventanas/chat/Chat.tsx
  */
@@ -24,6 +24,22 @@ import type { ChatResumen, InterlocutorChat, EstadoAcuerdoChat } from './ChatLis
 // ─────────────────────────────────────────────────────────────────────────────
 
 type TipoMensajeChat = 'text' | 'system' | 'agreement-proposal';
+type EstadoAcuerdoChat = 'accepted' | 'completed' | 'pending' | 'cancelled';
+
+/** Solo información propia del acuerdo: no existe un interlocutor privado. */
+interface ChatAcuerdoVisual {
+  id: string;
+  acuerdoId: string;
+  tituloAcuerdo: string;
+  estadoAcuerdo: EstadoAcuerdoChat;
+}
+
+interface MiembroAvatar {
+  name: string;
+  avatar?: string;
+  avatarColor: string;
+}
+
 
 interface MensajeChat {
   id: string;
@@ -37,7 +53,6 @@ interface ChatProps {
   /** Opcionales: se conectarán cuando existan las rutas de perfil y acuerdos. */
   onAbrirPerfil?: (miembroId: string) => void;
   onVerAcuerdo?: (acuerdoId: string) => void;
-  onCrearAcuerdo?: (chatId: string) => void;
 }
 
 /** Los mensajes del chat son reales; nunca se agregan mensajes locales sin respuesta del servidor. */
@@ -53,57 +68,82 @@ function adaptarMensaje(m: MensajeAPI): MensajeChat {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function Chat(props: ChatProps) {
-  const { chatId } = useParams<{ chatId: string }>();
+  const { acuerdoId } = useParams<{ acuerdoId: string }>();
   const navigate = useNavigate();
   const { perfil } = useMiembroSesion();
-  const [chat, setChat] = useState<ChatResumen | null>(null);
+  const perfilId = perfil?.id;
+  const [chat, setChat] = useState<ChatAcuerdoVisual | null>(null);
+  const [participantes, setParticipantes] = useState<ParticipanteChatAPI[]>([]);
   const [mensajesIniciales, setMensajesIniciales] = useState<MensajeChat[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
-    if (!chatId || !perfil?.id) return;
+    if (!acuerdoId || !perfilId) {
+      setCargando(false);
+      setError('No se pudo identificar el acuerdo o el perfil de tu sesión.');
+      return;
+    }
     let vigente = true;
-    setCargando(true); setError(null); setChat(null);
+    setCargando(true);
+    setError(null);
+    setChat(null);
+    setParticipantes([]);
     void (async () => {
       try {
-        const participantes = await obtenerParticipantesChat(chatId);
-        if (!participantes.some(p => p.id === perfil.id))
-          throw new Error('No formas parte de esta conversación.');
-        const otros = participantes.filter(p => p.id !== perfil.id);
-        const interlocutor = otros[0];
-        if (!interlocutor) throw new Error('No se encontraron los participantes del chat.');
+        // Solo se accede al chat desde su acuerdo; no se aceptan IDs de chat en la URL.
+        const [acuerdo, integrantesAcuerdo] = await Promise.all([
+          obtenerAcuerdo(acuerdoId),
+          obtenerParticipantesAcuerdo(acuerdoId),
+        ]);
+        if (!integrantesAcuerdo.some(p => p.idPerfil === perfilId)) {
+          throw new Error('No participas en este acuerdo de servicio.');
+        }
+        const chatId = acuerdo.chat?.id;
+        if (!chatId) throw new Error('Este acuerdo todavía no tiene un chat asociado.');
+
+        const integrantesChat = await obtenerParticipantesChat(chatId);
+        // Protección de interfaz; las comprobaciones de autorización reales pertenecen al backend.
+        const idsAcuerdo = new Set(integrantesAcuerdo.map(p => p.idPerfil));
+        const idsChat = new Set(integrantesChat.map(p => p.id));
+        if (!idsChat.has(perfilId) || integrantesChat.some(p => !idsAcuerdo.has(p.id)) ||
+            integrantesAcuerdo.some(p => !idsChat.has(p.idPerfil))) {
+          throw new Error('Los participantes del chat no corresponden al acuerdo. Es necesario sincronizarlos en el backend.');
+        }
+
         const mensajes = await obtenerMensajesChat(chatId);
         if (!vigente) return;
+        const titulo = acuerdo.postAyuda?.titulo ?? acuerdo.solicitud?.titulo ?? 'Acuerdo de servicio';
+        const estado: EstadoAcuerdoChat =
+          acuerdo.estado === EstadoAcuerdoAPI.REALIZADO ? 'completed' :
+          acuerdo.estado === EstadoAcuerdoAPI.CANCELADO ? 'cancelled' :
+          acuerdo.estado === EstadoAcuerdoAPI.ACORDADO || acuerdo.estado === EstadoAcuerdoAPI.EN_MODIFICACION ? 'accepted' : 'pending';
         setChat({
           id: chatId,
-          interlocutor: {
-            id: interlocutor.id, name: otros.length === 1 ? interlocutor.nombre : `${interlocutor.nombre} y ${otros.length - 1} más`,
-            avatar: interlocutor.imagen ?? undefined,
-            avatarColor: '#3C9DA0', isAvailable: false, // estado en línea NO disponible en la API
-          },
-          lastMessage: mensajes.at(-1)?.contenido ?? '',
-          lastMessageAt: mensajes.at(-1)?.fecha ?? '', unreadCount: 0,
+          acuerdoId: acuerdo.id,
+          tituloAcuerdo: titulo,
+          estadoAcuerdo: estado,
         });
+        setParticipantes(integrantesChat);
         setMensajesIniciales(mensajes.map(adaptarMensaje));
       } catch (e) {
-        if (vigente) setError(e instanceof Error ? e.message : 'No se pudo cargar la conversación.');
+        if (vigente) setError(e instanceof Error ? e.message : 'No se pudo cargar el chat del acuerdo.');
       } finally {
         if (vigente) setCargando(false);
       }
     })();
     return () => { vigente = false; };
-  }, [chatId, perfil?.id, revision]);
+  }, [acuerdoId, perfilId, revision]);
 
-  if (cargando || error || !chat || !perfil?.id) {
+  if (cargando || error || !chat || !perfilId) {
     return (
       <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-white px-4 text-center">
         <p role={error ? 'alert' : 'status'} className="text-sm text-[#737373]">
           {cargando ? 'Cargando conversación…' : error ?? 'Conversación no encontrada.'}
         </p>
         {error && <button type="button" className="text-sm font-semibold text-[#3C9DA0]" onClick={() => setRevision(v => v + 1)}>Reintentar</button>}
-        <button type="button" onClick={() => navigate('/chats')} className="rounded-xl bg-[#3C9DA0] px-4 py-2 text-sm font-semibold text-white">Volver a Chats</button>
+        <button type="button" onClick={() => navigate(acuerdoId ? `/acuerdos/${acuerdoId}` : '/actividad')} className="rounded-xl bg-[#3C9DA0] px-4 py-2 text-sm font-semibold text-white">Volver al acuerdo</button>
       </main>
     );
   }
@@ -112,13 +152,14 @@ export default function Chat(props: ChatProps) {
     <Conversacion
       key={chat.id}
       chat={chat}
-      miId={perfil.id}
+      miId={perfilId}
+      participantes={participantes}
       mensajesIniciales={mensajesIniciales}
       onEnviarMensaje={async (contenido) => {
-        await enviarMensajeChat(chat.id, perfil.id, contenido);
+        await enviarMensajeChat(chat.id, perfilId, contenido);
         return (await obtenerMensajesChat(chat.id)).map(adaptarMensaje);
       }}
-      onVolver={() => navigate('/chats')}
+      onVolver={() => navigate(`/acuerdos/${acuerdoId}`)}
       {...props}
     />
   );
@@ -129,7 +170,8 @@ export default function Chat(props: ChatProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface ConversacionProps extends ChatProps {
-  chat: ChatResumen;
+  chat: ChatAcuerdoVisual;
+  participantes: ParticipanteChatAPI[];
   miId: string;
   onVolver: () => void;
   mensajesIniciales: MensajeChat[];
@@ -138,15 +180,15 @@ interface ConversacionProps extends ChatProps {
 
 function Conversacion({
   chat,
+  participantes,
   miId,
   onVolver,
   mensajesIniciales,
   onEnviarMensaje,
   onAbrirPerfil,
   onVerAcuerdo,
-  onCrearAcuerdo,
 }: ConversacionProps) {
-  const { interlocutor, agreement } = chat;
+  const { tituloAcuerdo, acuerdoId, estadoAcuerdo } = chat;
 
   // 02.1 Estado visual; los mensajes provienen del backend.
   const [mensajes, setMensajes] = useState<MensajeChat[]>(mensajesIniciales);
@@ -178,11 +220,11 @@ function Conversacion({
     }
   }
 
-  const puedeAccionarAcuerdo = agreement ? Boolean(onVerAcuerdo) : Boolean(onCrearAcuerdo);
+  const puedeAccionarAcuerdo = Boolean(onVerAcuerdo);
 
   return (
     <section
-      data-section="ventana-chat-individual"
+      data-section="chat-del-acuerdo"
       className="flex h-[calc(100dvh-6rem)] min-h-0 min-w-0 flex-col overflow-hidden bg-white lg:h-dvh"
     >
       {/* 03. ENCABEZADO DE LA CONVERSACIÓN */}
@@ -191,49 +233,41 @@ function Conversacion({
         className="z-20 shrink-0 border-b border-[#E8E8E8] bg-white px-4 pt-12 pb-3 lg:pt-4"
       >
         <div className="mx-auto flex w-full max-w-2xl min-w-0 items-center gap-3">
-          {/* 03.1 VOLVER A LA LISTA */}
+          {/* 03.1 REGRESAR AL ACUERDO */}
           <button
             type="button"
             onClick={onVolver}
-            aria-label="Volver a Chats"
+            aria-label="Volver al acuerdo"
             className="shrink-0 cursor-pointer rounded-full p-1 text-[#0D0D0D] transition-colors hover:bg-[#F6F6F6] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0]"
           >
             <ArrowLeft size={22} aria-hidden="true" />
           </button>
 
-          {/* 03.2 DATOS DEL INTERLOCUTOR */}
-          <button
-            type="button"
-            disabled={!onAbrirPerfil}
-            onClick={() => onAbrirPerfil?.(interlocutor.id)}
-            title={onAbrirPerfil ? 'Ver perfil' : 'Enlace al perfil pendiente de implementar'}
-            className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0] ${onAbrirPerfil ? 'cursor-pointer hover:bg-[#F6F6F6] active:scale-[0.99]' : 'cursor-default'}`}
-          >
-            <AvatarChat interlocutor={interlocutor} tamaño="sm" />
+          {/* 03.2 IDENTIDAD DEL ACUERDO Y SUS PARTICIPANTES */}
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#3C9DA0] text-white">
+              <UsersRound size={20} aria-hidden="true" />
+            </span>
             <span className="min-w-0">
-              <span className="flex min-w-0 items-center gap-1">
-                <span className="truncate text-sm font-semibold text-[#0D0D0D]">{interlocutor.name}</span>
-                <CheckCircle2 size={13} strokeWidth={2.5} className="shrink-0 text-[#3C9DA0]" aria-hidden="true" />
+              <span className="block truncate text-sm font-semibold text-[#0D0D0D]">
+                {tituloAcuerdo}
               </span>
               <span className="block text-xs text-[#9E9E9E]">
-                Miembro de la comunidad
+                Chat del acuerdo · {participantes.length} participantes
               </span>
             </span>
-          </button>
+          </div>
 
-          {/* 03.3 ACCESO AL ACUERDO O A SU CREACIÓN */}
+          {/* 03.3 ACCESO AL ACUERDO */}
           <button
             type="button"
             disabled={!puedeAccionarAcuerdo}
-            onClick={() => {
-              if (agreement) onVerAcuerdo?.(agreement.id);
-              else onCrearAcuerdo?.(chat.id);
-            }}
-            title={puedeAccionarAcuerdo ? undefined : 'Funcionalidad de acuerdos pendiente de implementar'}
-            className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0] ${puedeAccionarAcuerdo ? 'cursor-pointer active:scale-95' : 'cursor-default'} ${agreement ? 'bg-[#E8F5F6] text-[#3C9DA0]' : 'bg-[#3C9DA0] text-white'}`}
+            onClick={() => onVerAcuerdo?.(acuerdoId)}
+            title={puedeAccionarAcuerdo ? undefined : 'No se pudo identificar el acuerdo'}
+            className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0] ${puedeAccionarAcuerdo ? 'cursor-pointer active:scale-95' : 'cursor-default'} bg-[#E8F5F6] text-[#3C9DA0]`}
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
-            {agreement ? 'Ver acuerdo' : 'Crear acuerdo'}
+            Ver acuerdo
           </button>
         </div>
       </header>
@@ -242,13 +276,14 @@ function Conversacion({
       <div
         ref={contenedorMensajesRef}
         role="log"
-        aria-label={`Mensajes con ${interlocutor.name}`}
+        aria-label={`Mensajes del acuerdo ${tituloAcuerdo}`}
         data-section="mensajes-chat"
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"
       >
         <div className="mx-auto w-full max-w-2xl space-y-3">
           {mensajes.map((mensaje) => {
             const esPropio = mensaje.senderId === miId;
+            const emisor = participantes.find(p => p.id === mensaje.senderId);
 
             // 04.1 NOTIFICACIÓN DEL SISTEMA
             if (mensaje.type === 'system') {
@@ -267,16 +302,16 @@ function Conversacion({
                 <div key={mensaje.id} className="flex justify-center" data-section="mensaje-propuesta-acuerdo">
                   <button
                     type="button"
-                    disabled={!agreement || !onVerAcuerdo}
-                    onClick={() => agreement && onVerAcuerdo?.(agreement.id)}
-                    className={`w-full max-w-xs rounded-2xl border border-[#3C9DA0] bg-[#E8F5F6] p-4 text-left ${agreement && onVerAcuerdo ? 'cursor-pointer transition-colors hover:bg-[#D7EEEF] active:scale-[0.99]' : 'cursor-default'}`}
+                    disabled={!onVerAcuerdo}
+                    onClick={() => onVerAcuerdo?.(acuerdoId)}
+                    className={`w-full max-w-xs rounded-2xl border border-[#3C9DA0] bg-[#E8F5F6] p-4 text-left ${onVerAcuerdo ? 'cursor-pointer transition-colors hover:bg-[#D7EEEF] active:scale-[0.99]' : 'cursor-default'}`}
                   >
                     <span className="mb-2 flex items-center gap-2 text-xs font-bold text-[#3C9DA0]">
                       <Clock3 size={16} aria-hidden="true" />
                       <span style={{ fontFamily: 'Outfit, sans-serif' }}>ACUERDO PROPUESTO</span>
                     </span>
                     <span className="block text-sm font-medium text-[#0D0D0D]">{mensaje.text}</span>
-                    {agreement && <EstadoAcuerdo estado={agreement.status} />}
+                    <EstadoAcuerdo estado={estadoAcuerdo} />
                   </button>
                 </div>
               );
@@ -291,10 +326,24 @@ function Conversacion({
               >
                 {!esPropio && (
                   <div className="mt-auto shrink-0">
-                    <AvatarChat interlocutor={interlocutor} tamaño="xs" />
+                    <AvatarChat interlocutor={{
+                      name: emisor?.nombre ?? 'Participante',
+                      avatar: emisor?.imagen ?? undefined,
+                      avatarColor: '#3C9DA0',
+                    }} tamaño="xs" />
                   </div>
                 )}
                 <div className="max-w-[78%] min-w-0 sm:max-w-[72%]">
+                  {!esPropio && (
+                    <button
+                      type="button"
+                      disabled={!onAbrirPerfil}
+                      onClick={() => onAbrirPerfil?.(mensaje.senderId)}
+                      className="mb-1 text-xs font-semibold text-[#737373] disabled:cursor-default"
+                    >
+                      {emisor?.nombre ?? 'Participante'}
+                    </button>
+                  )}
                   <p
                     className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${esPropio ? 'rounded-br-md bg-[#3C9DA0] text-white' : 'rounded-bl-md bg-[#F6F6F6] text-[#0D0D0D]'}`}
                   >
@@ -372,11 +421,9 @@ function Conversacion({
 function AvatarChat({
   interlocutor,
   tamaño,
-  mostrarEstado = false,
 }: {
-  interlocutor: InterlocutorChat;
+  interlocutor: MiembroAvatar;
   tamaño: 'sm' | 'xs';
-  mostrarEstado?: boolean;
 }) {
   const iniciales = interlocutor.name
     .trim()
@@ -389,7 +436,7 @@ function AvatarChat({
   const clasesTamaño = tamaño === 'sm' ? 'h-9 w-9 text-xs' : 'h-7 w-7 text-[10px]';
 
   return (
-    <span className={`relative block shrink-0 ${clasesTamaño}`} data-section="avatar-interlocutor">
+    <span className={`relative block shrink-0 ${clasesTamaño}`} data-section="avatar-participante">
       <span
         className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full font-bold text-white ${clasesTamaño}`}
         style={{ backgroundColor: interlocutor.avatarColor }}
@@ -400,12 +447,6 @@ function AvatarChat({
           iniciales
         )}
       </span>
-      {mostrarEstado && (
-        <span
-          aria-label={interlocutor.isAvailable ? 'Disponible' : 'No disponible'}
-          className={`absolute right-0 bottom-0 h-3 w-3 rounded-full border-2 border-white ${interlocutor.isAvailable ? 'bg-green-500' : 'bg-[#C0C0C0]'}`}
-        />
-      )}
     </span>
   );
 }

@@ -47,18 +47,17 @@ export interface AutorPostAyuda {
 
 export interface ResultadoParticipacion {
   acuerdoId: string;
-  /** Solo para indicar explícitamente cuando App usa un mock. */
-  esDemostracion?: boolean;
   chatId?: string;
 }
 
 export interface PostAyudaDetailProps {
   onBack?: () => void;
   onVerPerfil?: (miembroId: string) => void;
-  /** Una API futura registrará la participación y devolverá el ID real. */
+  /** Un único POST transaccional registra la participación; nunca varios POST desde React. */
   onParticipar?: (postId: string) => Promise<ResultadoParticipacion>;
   onVerAcuerdo?: (acuerdoId: string) => void;
-  onIrChat?: (chatId: string) => void;
+  /** Los chats se abren siempre desde el ID del acuerdo, no desde un chat independiente. */
+  onIrChat?: (acuerdoId: string) => void;
   onVolverInicio?: () => void;
 }
 
@@ -175,8 +174,8 @@ export default function PostAyudaDetail({
   const { postId } = useParams<{ postId: string }>();
 
   // 02. OBTENER EL MIEMBRO AUTENTICADO
-  const { miembro } = useMiembroSesion();
-  const currentUserId = miembro.id;
+  const { perfil } = useMiembroSesion();
+  const currentUserId = perfil?.id ?? '';
 
   // 03. BUSCAR LA PUBLICACIÓN: los mocks antiguos siguen sirviendo para Home,
   // pero los UUID de Explorar se consultan por API real.
@@ -239,7 +238,7 @@ export default function PostAyudaDetail({
     }
   };
 
-  // ─── Estado local de demostración para la participación ───
+  // ─── Resultado del servidor: no se simulan participaciones reales ───
   const [resultadoParticipacion, setResultadoParticipacion] = useState<ResultadoParticipacion | null>(null);
   const [enviandoParticipacion, setEnviandoParticipacion] = useState(false);
   const [errorParticipacion, setErrorParticipacion] = useState('');
@@ -316,9 +315,11 @@ export default function PostAyudaDetail({
   const maxSlots = postApi ? postApi.cupo : postMock!.maxParticipants ?? 1;
   const slotsLeft = postApi ? null : maxSlots - confirmedParticipants.length;
   const isFull = postApi ? postApi.cupoLleno : (slotsLeft ?? 0) <= 0;
+  // No se inventa un estado de participación del backend. Los duplicados se validan en el servidor.
   const currentUserJoined = postApi
-    ? false // No inferimos participación real sin consultar el backend.
+    ? Boolean(resultadoParticipacion)
     : Boolean(resultadoParticipacion) || confirmedParticipants.includes(currentUserId);
+  const esAutorPost = Boolean(postApi && currentUserId && postApi.perfilAutor?.id === currentUserId);
 
   // No existe "preferido" en PostAyudaEntity: mostramos todas las franjas.
   const franjasPropuestas: IntervaloDisponibilidad[] = postApi
@@ -333,27 +334,27 @@ export default function PostAyudaDetail({
   const horaPreferida = franjaPreferida
     ? `${mostrarHora24(franjaPreferida.startTime)} – ${mostrarHora24(franjaPreferida.endTime)}`
     : postMock?.preferredTime;
-  const participacionDisponible = !postApi && Boolean(onParticipar);
+  // Si el backend aún no tiene el endpoint transaccional, App no proporciona onParticipar.
+  const participacionDisponible = Boolean(postApi && onParticipar && currentUserId && !esAutorPost);
 
-  // 05. SOLICITAR PARTICIPACIÓN: App decide si usa API o un mock.
-  // La vista no crea ni asigna acuerdos, únicamente consume el ID retornado.
+  // 05. SOLICITAR PARTICIPACIÓN: un solo POST atómico a través de App.
+  // El acuerdo y el chat solo se muestran como creados cuando el backend lo confirma.
   async function handleJoin() {
-    if (!post) return;
-    if (currentUserJoined || isFull || enviandoParticipacion || !onParticipar || postApi) return;
+    if (!postApi || !currentUserId || esAutorPost || currentUserJoined || isFull || enviandoParticipacion || !onParticipar) return;
     setEnviandoParticipacion(true);
     setErrorParticipacion('');
     try {
-      const resultado = await onParticipar(post.id);
-      if (!resultado.acuerdoId) {
-        throw new Error('No se recibió el identificador del acuerdo.');
+      const resultado = await onParticipar(postApi.id);
+      if (!resultado.acuerdoId || !resultado.chatId) {
+        throw new Error('La respuesta de participación no contiene los identificadores del acuerdo y su chat.');
       }
       setResultadoParticipacion(resultado);
-      // Actualización temporal de la interfaz; solo la API persistirá participantes.
-      setConfirmedParticipants((anteriores) =>
-        anteriores.includes(currentUserId) ? anteriores : [...anteriores, currentUserId],
+    } catch (error: unknown) {
+      // Ante un timeout no sabemos si el servidor alcanzó a confirmar la transacción.
+      // No reintentamos automáticamente para evitar participaciones duplicadas.
+      setErrorParticipacion(
+        `No pudimos confirmar la participación. Revisa Actividad antes de intentarlo nuevamente.${error instanceof Error && error.message ? ` Detalle: ${error.message}` : ''}`,
       );
-    } catch {
-      setErrorParticipacion('No fue posible continuar con la participación. Inténtalo nuevamente.');
     } finally {
       setEnviandoParticipacion(false);
     }
@@ -385,11 +386,6 @@ export default function PostAyudaDetail({
               ? `Puedes consultar el acuerdo de servicio con ${author.firstName}. Las condiciones todavía deben definirse.`
               : `Puedes consultar el acuerdo de servicio para ayudar a ${author.firstName}. Las condiciones todavía deben definirse.`}
           </p>
-          {resultadoParticipacion.esDemostracion && (
-            <p className="text-xs text-[#737373] mb-5 max-w-sm">
-              Modo demostración: esta acción solo abre un acuerdo de prueba. No se ha guardado una participación nueva en el servidor.
-            </p>
-          )}
 
           {/* 07.3 BOTONES DE LA CONFIRMACIÓN */}
           <div data-section="acciones-confirmacion" className="w-full max-w-xs space-y-3">
@@ -405,7 +401,7 @@ export default function PostAyudaDetail({
             {resultadoParticipacion.chatId && (
               <button
                 type="button"
-                onClick={() => onIrChat?.(resultadoParticipacion.chatId!)}
+                onClick={() => onIrChat?.(resultadoParticipacion.acuerdoId)}
                 disabled={!onIrChat}
                 className="w-full py-3 rounded-xl border border-[#E8E8E8] text-[#0D0D0D] font-medium text-sm btn-press disabled:opacity-50"
               >
@@ -659,9 +655,9 @@ export default function PostAyudaDetail({
           <button
             type="button"
             onClick={handleJoin}
-            disabled={isFull || currentUserJoined || enviandoParticipacion || !participacionDisponible}
+            disabled={isFull || esAutorPost || currentUserJoined || enviandoParticipacion || !participacionDisponible}
             className={`w-full py-4 rounded-2xl font-bold text-base btn-press transition-all ${
-              isFull || currentUserJoined || enviandoParticipacion || !participacionDisponible
+              isFull || esAutorPost || currentUserJoined || enviandoParticipacion || !participacionDisponible
                 ? 'bg-[#F0F0F0] text-[#9E9E9E]'
                 : 'bg-[#3C9DA0] text-white hover:bg-[#2D8B8E] shadow-lg shadow-[#3C9DA0]/20'
             }`}
@@ -671,6 +667,8 @@ export default function PostAyudaDetail({
               ? 'Continuando…'
               : currentUserJoined
               ? 'Ya estás participando'
+              : esAutorPost
+                ? 'Es tu publicación'
               : isFull
                 ? 'Cupos completos'
                 : isOffer
@@ -680,8 +678,11 @@ export default function PostAyudaDetail({
           {errorParticipacion && (
             <p className="mt-2 text-sm text-[#D32F2F]" role="alert">{errorParticipacion}</p>
           )}
-          {!participacionDisponible && (
-            <p className="mt-2 text-xs text-[#737373]">La participación real se habilitará cuando conectemos el endpoint correspondiente. Esta publicación sí está cargada desde el backend.</p>
+          {!participacionDisponible && !esAutorPost && !isFull && (
+            <p className="mt-2 text-xs text-[#737373]">
+              La publicación se consulta desde el backend, pero la participación todavía requiere
+              el endpoint transaccional de creación de acuerdo y chat.
+            </p>
           )}
         </section>
       </main>

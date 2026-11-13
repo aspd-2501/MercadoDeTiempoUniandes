@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Route, Routes, Outlet, useNavigate, useLocation } from 'react-router';
+import { Route, Routes, Outlet, Navigate, useNavigate, useLocation } from 'react-router';
 
 // Componentes globales
 import NavBarDesktop from './componentes/navBar/NavBarDesktop';
@@ -15,7 +15,6 @@ import DonarHoras from './ventanas/transferencias/DonarHoras';
 import MiembroDetail from './ventanas/miembro/MiembroDetail';
 import ServiciosMiembro from './ventanas/miembro/ServiciosMiembro';
 import AniadirServicio from './ventanas/creacionYEdicion/AniadirServicio';
-import ChatList from './ventanas/chats/ChatList';
 import Chat from './ventanas/chats/Chat';
 import Explorar from './ventanas/Explorar';
 import Calendario from './ventanas/Calendario';
@@ -29,8 +28,15 @@ import { useMiembroSesion } from './contextos/MiembroSesionContext';
 import Login from './ventanas/LoginYRegistro/Login';
 import Onboarding from './ventanas/LoginYRegistro/Onboarding';
 import { registrarCuenta } from './api/identidad.api';
+import { participarEnPublicacion } from './api/participaciones.api';
 
 import './App.css';
+
+/**
+ * Se habilita SOLO cuando el backend publique y pruebe el POST transaccional.
+ * Mientras tanto, los botones de participación real permanecen deshabilitados.
+ */
+const PARTICIPACION_HABILITADA = import.meta.env.VITE_PARTICIPACION_HABILITADA === 'true';
 
 /**
  * Interfaz compartida por todas las rutas privadas.
@@ -192,7 +198,7 @@ function App() {
                 <Actividad
                   onExplorar={() => navigate('/explorar')}
                   onVerAcuerdo={(id) => navigate(`/acuerdos/${id}`)}
-                  onIrChat={(id) => navigate(`/chats/${id}`)}
+                  onIrChat={(id) => navigate(`/acuerdos/${id}/chat`)}
                 />
               }
             />
@@ -220,10 +226,11 @@ function App() {
               element={
                 <PostAyudaDetail
                   onBack={() => navigate(-1)}
-                  onIrChat={(chatId) => navigate(`/chats/${chatId}`)}
                   onVerPerfil={(miembroId) => navigate(`/${miembroId}`)}
                   onVolverInicio={() => navigate('/')}
                   onVerAcuerdo={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}`)}
+                  onIrChat={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}/chat`)}
+                  onParticipar={PARTICIPACION_HABILITADA ? participarEnPublicacion : undefined}
                 />
               }
             />
@@ -256,7 +263,7 @@ function App() {
                 <AcuerdoDetail
                   onVolver={() => navigate(-1)}
                   onVerPost={(postId) => navigate(`/posts/${postId}`)}
-                  onIrChat={(chatId) => navigate(`/chats/${chatId}`)}
+                  onIrChat={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}/chat`)}
                 />
               }
             />
@@ -269,15 +276,19 @@ function App() {
                 <HistorialMiembro onDonarHoras={() => navigate('/donar-horas')} />
               }
             />
+            {/* Enlaces de chats antiguos: no abrir chats independientes del acuerdo. */}
+            <Route path="/chats/*" element={<Navigate to="/actividad" replace />} />
 
-            {/* Chats */}
+            {/* Chat exclusivo del acuerdo. No existe mensajería directa entre miembros. */}
             <Route
-              path="/chats"
+              path="/acuerdos/:acuerdoId/chat"
               element={
-                <ChatList onAbrirChat={(chatId) => navigate(`/chats/${chatId}`)} />
+                <Chat
+                  onAbrirPerfil={(id) => navigate(`/${id}`)}
+                  onVerAcuerdo={(id) => navigate(`/acuerdos/${id}`)}
+                />
               }
             />
-            <Route path="/chats/:chatId" element={<Chat onAbrirPerfil={(id) => navigate(`/${id}`)} />} />
 
             {/* Calendario */}
             <Route

@@ -18,7 +18,7 @@ export interface ActividadProps {
   onVolver?: () => void;
   onExplorar?: () => void;
   onVerAcuerdo?: (acuerdoId: string) => void;
-  onIrChat?: (chatId: string) => void;
+  onIrChat?: (acuerdoId: string) => void;
 }
 
 const PESTANAS: { etiqueta: string; filtro: FiltroAcuerdosAPI }[] = [

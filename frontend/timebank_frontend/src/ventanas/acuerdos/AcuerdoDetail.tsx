@@ -40,7 +40,7 @@ import type { IntervaloDisponibilidad } from '../../tipos/disponibilidad';
 export interface AcuerdoDetailProps {
   onVolver?: () => void;
   onVerPost?: (postId: string) => void;
-  onIrChat?: (chatId: string) => void;
+  onIrChat?: (acuerdoId: string) => void;
   onGuardarDisponibilidad?: (
     acuerdoId: string,
     franjas: IntervaloDisponibilidad[],
@@ -663,7 +663,7 @@ export default function AcuerdoDetail({
               <button
                 type="button"
                 disabled={!onIrChat || !acuerdo.chatId}
-                onClick={() => acuerdo.chatId && onIrChat?.(acuerdo.chatId)}
+                onClick={() => acuerdo.chatId && onIrChat?.(acuerdo.id)}
                 className={`${ESTILO_ACCION} flex min-w-[140px] flex-1 items-center justify-center gap-2 bg-[#3C9DA0] text-white`}
               >
                 <MessageCircle size={17} aria-hidden="true" /> Ir al chat
