@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, Check, ChevronRight, Clock3, ImagePlus, Star, TriangleAlert, X } from 'lucide-react';
 
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
+import { urlImagen } from '../../api/imagenes.api';
 import { obtenerServiciosMiembro } from '../../api/perfilResumen.api';
 import { obtenerCategoriasRegistro, type CategoriaAPI } from '../../api/identidad.api';
 import type { ServicioOfrecidoAPI } from '../../api/serviciosOfrecidos.api';
@@ -30,22 +31,23 @@ export type TipoCreacionAyuda = 'pide' | 'ofrece';
 export interface NuevaPublicacionAyuda {
   type: 'help-request' | 'help-offer';
   title: string;
-  category: string;
+  categoryId: string;
   description: string;
   estimatedHours: number;
   availability: IntervaloDisponibilidad[];
   preferredAvailabilityId: string;
   maxParticipants: number;
   servicioCatalogoId?: string;
-  imagen?: File;
-  imagenUrlCatalogo?: string;
+  /** URL HTTP(S) o ruta de imagen ya guardada en el backend. */
+  imagenUrl: string;
 }
 
 export interface CrearPostAyudaProps {
   tipo: TipoCreacionAyuda;
   onVolver?: () => void;
   /** Debe guardar mediante API. Si no se proporciona, no se afirma que el post está publicado. */
-  onPublicar?: (publicacion: NuevaPublicacionAyuda) => Promise<void> | void;
+  onPublicar: (publicacion: NuevaPublicacionAyuda) => Promise<string>;
+  onVerPublicacion?: (postId: string) => void;
   onVolverInicio?: () => void;
 }
 
@@ -59,6 +61,7 @@ export default function CrearPostAyuda({
   tipo,
   onVolver,
   onPublicar,
+  onVerPublicacion,
   onVolverInicio,
 }: CrearPostAyudaProps) {
   const { perfil } = useMiembroSesion();
@@ -69,32 +72,20 @@ export default function CrearPostAyuda({
     esOferta ? 'catalogo' : 'formulario',
   );
   const [titulo, setTitulo] = useState('');
-  const [categoria, setCategoria] = useState('');
+  const [categoriaId, setCategoriaId] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [horas, setHoras] = useState('1');
   const [personas, setPersonas] = useState('1');
   const [franjas, setFranjas] = useState<IntervaloDisponibilidad[]>(() => [crearPrimeraFranja()]);
   const [preferidaId, setPreferidaId] = useState('franja-1');
   const [servicioCatalogoId, setServicioCatalogoId] = useState<string | undefined>();
-  const [imagenUrlCatalogo, setImagenUrlCatalogo] = useState<string | undefined>();
-  const [imagenArchivo, setImagenArchivo] = useState<File | undefined>();
-  const [imagenVistaPrevia, setImagenVistaPrevia] = useState<string | undefined>();
+  const [imagenUrl, setImagenUrl] = useState('');
+  const [postCreadoId, setPostCreadoId] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [mensajeError, setMensajeError] = useState('');
+  const [publicacionPorVerificar, setPublicacionPorVerificar] = useState(false);
 
-  // 01.2 LA PREVISUALIZACIÓN SE CREA AL SELECCIONAR LA IMAGEN Y SE LIBERA AL CAMBIARLA.
-  useEffect(() => {
-    return () => {
-      if (imagenVistaPrevia) URL.revokeObjectURL(imagenVistaPrevia);
-    };
-  }, [imagenVistaPrevia]);
-
-  function cambiarImagen(archivo?: File) {
-    setImagenArchivo(archivo);
-    setImagenVistaPrevia(archivo ? URL.createObjectURL(archivo) : undefined);
-  }
-
-  // 01.3 CATÁLOGO Y CATEGORÍAS REALES. El backend decide qué servicios son visibles.
+  // 01.2 CATÁLOGO Y CATEGORÍAS REALES. El backend decide qué servicios son visibles.
   const [serviciosPropios, setServiciosPropios] = useState<ServicioOfrecidoAPI[]>([]);
   const [cargandoCatalogo, setCargandoCatalogo] = useState(esOferta);
   const [errorCatalogo, setErrorCatalogo] = useState<string | null>(null);
@@ -123,7 +114,7 @@ export default function CrearPostAyuda({
     return () => { vigente = false; };
   }, [esOferta, perfil?.id]);
 
-  // 01.4 COMPROBACIONES BÁSICAS DEL FORMULARIO (NO REEMPLAZAN VALIDACIÓN DE API).
+  // 01.3 COMPROBACIONES BÁSICAS DEL FORMULARIO (NO REEMPLAZAN VALIDACIÓN DE API).
   // Las horas de servicio y los créditos del Banco de Tiempo siempre son enteros positivos.
   const horasEnterasValidas = /^\d+$/.test(horas) &&
     Number.isSafeInteger(Number(horas)) && Number(horas) > 0;
@@ -134,20 +125,36 @@ export default function CrearPostAyuda({
   const franjasValidas = horasEnterasValidas && franjas.length > 0 &&
     franjas.every((franja) => cumpleDuracionMinima(franja, Number(horas)));
   const preferidaExiste = franjas.some((franja) => franja.id === preferidaId);
+  // La versión del backend compartida exige una imagen no vacía y todavía no
+  // admite subir archivos. Aceptamos una URL o una ruta ya persistida del catálogo.
+  function imagenCompatible(valor: string): boolean {
+    const url = valor.trim();
+    if (url.startsWith('/uploads/')) return true;
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  }
   const formularioValido = Boolean(
-    titulo.trim() && categoria.trim() && descripcion.trim() &&
-    franjasValidas && preferidaExiste && horasEnterasValidas && Number(personas) > 0,
+    perfil?.id && titulo.trim() && categoriaId && descripcion.trim() &&
+    imagenCompatible(imagenUrl) &&
+    franjasValidas && preferidaExiste && horasEnterasValidas && Number(personas) > 0 &&
+    !cargandoCategorias && !errorCategorias && !publicacionPorVerificar,
   );
-  const categoriasDisponibles = categoriasApi.map(c => c.nombre);
 
   // 02. PRECARGA DE DATOS DESDE EL CATÁLOGO.
   function utilizarServicio(servicio: ServicioOfrecidoAPI) {
     setTitulo(servicio.titulo);
     setDescripcion(servicio.descripcion);
     // La entidad servicio no almacena una duración. El miembro la define aquí.
-    setCategoria(servicio.categorias?.[0]?.categoria?.nombre ?? '');
+    const categoriaDelCatalogo = servicio.categorias?.find((c) =>
+      categoriasApi.some((disponible) => disponible.id === c.idCategoria),
+    );
+    setCategoriaId(categoriaDelCatalogo?.idCategoria ?? '');
     setServicioCatalogoId(servicio.id);
-    setImagenUrlCatalogo(servicio.imagen ?? undefined);
+    setImagenUrl(servicio.imagen ?? '');
     setPaso('formulario');
   }
 
@@ -159,36 +166,45 @@ export default function CrearPostAyuda({
     }
   }
 
-  // 03. ENVÍO A TRAVÉS DEL CALLBACK DE LA CAPA SUPERIOR (FUTURA API).
+  // 03. PUBLICACIÓN REAL A TRAVÉS DEL CALLBACK DE APP Y LA CAPA API.
   async function publicar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setMensajeError('');
-    if (!formularioValido || enviando) return;
-    if (!onPublicar) {
-      setMensajeError('El formulario está listo, pero publicar aún requiere conectar el backend. No se guardó ninguna publicación.');
-      return;
-    }
-
+    if (!formularioValido || enviando || publicacionPorVerificar) return;
     const datos: NuevaPublicacionAyuda = {
       type: esOferta ? 'help-offer' : 'help-request',
       title: titulo.trim(),
-      category: categoria,
+      categoryId: categoriaId,
       description: descripcion.trim(),
       estimatedHours: Number(horas),
       availability: franjas,
       preferredAvailabilityId: preferidaId,
       maxParticipants: Number(personas),
       servicioCatalogoId,
-      imagen: imagenArchivo,
-      imagenUrlCatalogo: imagenArchivo ? undefined : imagenUrlCatalogo,
+      imagenUrl: imagenUrl.trim(),
     };
 
     setEnviando(true);
     try {
-      await onPublicar(datos);
+      const idCreado = await onPublicar(datos);
+      setPostCreadoId(idCreado);
       setPaso('exito');
-    } catch {
-      setMensajeError('No fue posible publicar. Comprueba tu conexión e inténtalo nuevamente.');
+    } catch (error: unknown) {
+      const mensaje = error instanceof Error ? error.message : 'Error desconocido.';
+      if (mensaje.includes('each value in categoriaIds must be a UUID')) {
+        setMensajeError(
+          'El backend exige categorías con UUID v4, pero la base de datos de prueba contiene UUID v5. ' +
+          'Solicita corregir la validación de CrearPostAyudaDto. La solicitud fue rechazada antes de crear el post.',
+        );
+      } else {
+        // El backend guarda post, categorías y horarios en operaciones separadas.
+        // Tras un fallo no podemos garantizar que no exista un registro parcial.
+        setPublicacionPorVerificar(true);
+        setMensajeError(
+          `No pudimos confirmar el registro: ${mensaje}. Antes de repetir la publicación, ` +
+          'comprueba mediante GET /posts-ayuda o en PostgreSQL si ya existe, para evitar duplicados.',
+        );
+      }
     } finally {
       setEnviando(false);
     }
@@ -205,10 +221,19 @@ export default function CrearPostAyuda({
         <p className="max-w-sm text-sm text-[#737373]">
           {esOferta ? 'Tu oferta fue registrada correctamente.' : 'Tu solicitud fue registrada correctamente.'}
         </p>
+        {postCreadoId && onVerPublicacion && (
+          <button
+            type="button"
+            onClick={() => onVerPublicacion(postCreadoId)}
+            className="mt-6 rounded-xl bg-[#3C9DA0] px-6 py-3 text-sm font-semibold text-white hover:bg-[#2D8B8E]"
+          >
+            Ver publicación
+          </button>
+        )}
         <button
           type="button"
           onClick={onVolverInicio ?? onVolver}
-          className="mt-6 rounded-xl bg-[#3C9DA0] px-6 py-3 text-sm font-semibold text-white hover:bg-[#2D8B8E]"
+          className={`${postCreadoId && onVerPublicacion ? 'mt-3' : 'mt-6'} rounded-xl border border-[#3C9DA0] px-6 py-3 text-sm font-semibold text-[#3C9DA0] hover:bg-[#E8F5F6]`}
         >
           Volver al inicio
         </button>
@@ -319,15 +344,15 @@ export default function CrearPostAyuda({
             {cargandoCategorias && <p role="status" className="text-xs text-[#737373]">Cargando categorías…</p>}
             {errorCategorias && <p role="alert" className="text-xs text-red-600">{errorCategorias}</p>}
             <div className="flex flex-wrap gap-2">
-              {categoriasDisponibles.map((opcion) => (
+              {categoriasApi.map((opcion) => (
                 <button
-                  key={opcion}
+                  key={opcion.id}
                   type="button"
-                  aria-pressed={categoria === opcion}
-                  onClick={() => setCategoria(opcion)}
-                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C9DA0] ${categoria === opcion ? 'bg-[#3C9DA0] text-white' : 'bg-[#E8F5F6] text-[#3C9DA0] hover:bg-[#D8F0F0]'}`}
+                  aria-pressed={categoriaId === opcion.id}
+                  onClick={() => setCategoriaId(opcion.id)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C9DA0] ${categoriaId === opcion.id ? 'bg-[#3C9DA0] text-white' : 'bg-[#E8F5F6] text-[#3C9DA0] hover:bg-[#D8F0F0]'}`}
                 >
-                  {opcion}
+                  {opcion.nombre}
                 </button>
               ))}
             </div>
@@ -395,7 +420,7 @@ export default function CrearPostAyuda({
           <section aria-labelledby="titulo-disponibilidad" className="rounded-2xl bg-[#F6F6F6] p-4">
             <h2 id="titulo-disponibilidad" className="text-sm font-bold text-[#0D0D0D]">Disponibilidad</h2>
             <p className="mb-3 mt-1 text-xs leading-relaxed text-[#737373]">
-              Propón varias franjas de al menos {horasEnterasValidas ? `${horas} hora${Number(horas) === 1 ? '' : 's'}` : 'la duración indicada'} cada una y marca tu horario preferido. Esto no confirma automáticamente ningún acuerdo.
+              Propón varias franjas de al menos {horasEnterasValidas ? `${horas} hora${Number(horas) === 1 ? '' : 's'}` : 'la duración indicada'} cada una y marca tu horario preferido. Esto no confirma automáticamente ningún acuerdo. El backend todavía no guarda cuál franja marcaste como preferida.
             </p>
             <EditorFranjasDisponibilidad
               franjas={franjas}
@@ -406,39 +431,46 @@ export default function CrearPostAyuda({
             />
           </section>
 
-          {/* 06.6 IMAGEN Y PREVISUALIZACIÓN */}
-          <div>
-            <label htmlFor="imagen-post-ayuda" className={CLASE_ETIQUETA}>Imagen (opcional)</label>
-            <label
-              htmlFor="imagen-post-ayuda"
-              className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border-2 border-dashed border-[#E8E8E8] p-4 hover:border-[#3C9DA0]"
-            >
-              {imagenVistaPrevia || imagenUrlCatalogo ? (
-                <img src={imagenVistaPrevia ?? imagenUrlCatalogo} alt="Vista previa de imagen" className="max-h-48 w-full rounded-xl object-contain" />
+          {/* 06.6 IMAGEN: el backend exige un texto, no dispone de endpoint de carga de archivos. */}
+          <div className="space-y-2">
+            <label htmlFor="imagen-url-post-ayuda" className={CLASE_ETIQUETA}>URL de imagen *</label>
+            <input
+              id="imagen-url-post-ayuda"
+              type="text"
+              value={imagenUrl}
+              onChange={(evento) => setImagenUrl(evento.target.value)}
+              placeholder="https://ejemplo.com/imagen.jpg"
+              aria-invalid={Boolean(imagenUrl.trim()) && !imagenCompatible(imagenUrl)}
+              required
+              className={CLASE_CAMPO}
+            />
+            <div className="flex min-h-28 flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border-2 border-dashed border-[#E8E8E8] p-4">
+              {imagenCompatible(imagenUrl) ? (
+                <img
+                  src={urlImagen(imagenUrl.trim())}
+                  alt="Vista previa de imagen"
+                  className="max-h-48 w-full rounded-xl object-contain"
+                />
               ) : (
                 <>
                   <ImagePlus size={26} className="text-[#C0C0C0]" aria-hidden="true" />
-                  <span className="text-sm text-[#9E9E9E]">Agregar imagen</span>
+                  <span className="text-sm text-[#9E9E9E]">Vista previa de imagen</span>
                 </>
               )}
-              <span className="text-xs text-[#9E9E9E]">{imagenArchivo ? imagenArchivo.name : 'Seleccionar archivo de imagen'}</span>
-            </label>
-            <input
-              id="imagen-post-ayuda"
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(evento) => cambiarImagen(evento.target.files?.[0])}
-            />
-            {(imagenArchivo || imagenUrlCatalogo) && (
+              <span className="text-xs text-[#9E9E9E]">Puedes usar la imagen de tu servicio o pegar una URL.</span>
+            </div>
+            {imagenUrl && (
               <button
                 type="button"
-                onClick={() => { cambiarImagen(undefined); setImagenUrlCatalogo(undefined); }}
-                className="mt-2 inline-flex items-center gap-1 text-xs text-[#737373] hover:text-[#0D0D0D]"
+                onClick={() => setImagenUrl('')}
+                className="inline-flex items-center gap-1 text-xs text-[#737373] hover:text-[#0D0D0D]"
               >
                 <X size={14} aria-hidden="true" /> Quitar imagen
               </button>
             )}
+            <p className="text-xs text-[#737373]">
+              Por ahora el backend requiere una imagen, pero no permite subir archivos directamente.
+            </p>
           </div>
 
           {/* 06.7 RECORDATORIO Y ENVÍO */}
@@ -448,9 +480,18 @@ export default function CrearPostAyuda({
           </div>
 
           {mensajeError && (
-            <p role="alert" className="rounded-xl border border-[#F2CECE] bg-red-50 p-3 text-sm text-red-700">
-              {mensajeError}
-            </p>
+            <div role="alert" className="space-y-2 rounded-xl border border-[#F2CECE] bg-red-50 p-3 text-sm text-red-700">
+              <p>{mensajeError}</p>
+              {publicacionPorVerificar && onVolverInicio && (
+                <button
+                  type="button"
+                  onClick={onVolverInicio}
+                  className="rounded-lg border border-red-300 px-3 py-2 text-xs font-semibold hover:bg-red-100"
+                >
+                  Volver al inicio
+                </button>
+              )}
+            </div>
           )}
 
           <button
@@ -459,13 +500,9 @@ export default function CrearPostAyuda({
             className={`w-full rounded-2xl py-4 text-base font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C9DA0] ${formularioValido && !enviando ? 'bg-[#3C9DA0] text-white hover:bg-[#2D8B8E]' : 'cursor-not-allowed bg-[#F0F0F0] text-[#9E9E9E]'}`}
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
-            {enviando ? 'Publicando…' : esOferta ? 'Publicar oferta' : 'Publicar solicitud'}
+            {enviando ? 'Publicando…' : publicacionPorVerificar ? 'Verifica si ya se publicó' : esOferta ? 'Publicar oferta' : 'Publicar solicitud'}
           </button>
-          {!onPublicar && (
-            <p className="text-center text-xs text-[#9E9E9E]">
-              Prototipo de frontend: para guardar la publicación se debe conectar el backend.
-            </p>
-          )}
+
         </form>
       </main>
     </div>

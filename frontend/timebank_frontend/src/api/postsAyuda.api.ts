@@ -60,3 +60,36 @@ export function obtenerCategoriasPost(postId: string): Promise<CategoriaPostAPI[
     `/posts-ayuda/${encodeURIComponent(postId)}/categorias`,
   );
 }
+
+
+/** DTO real de POST /posts-ayuda: creación con categorías y franjas en una petición. */
+export interface NuevaPublicacionPostAPI {
+  titulo: string;
+  descripcion: string;
+  horas: number;
+  imagen: string;
+  ofrece: boolean;
+  cupo: number;
+  categoriaIds: string[];
+  horarios: Array<{ fechaInicio: string; fechaFin: string }>;
+}
+
+/**
+ * Guarda la publicación en PostgreSQL mediante el backend.
+ * El servidor todavía no envuelve los guardados internos en una transacción:
+ * no reintentar automáticamente si ocurre un error posterior al POST.
+ */
+export function crearPostAyuda(
+  perfilAutorId: string,
+  datos: NuevaPublicacionPostAPI,
+): Promise<PostAyudaAPI> {
+  return clienteApi<PostAyudaAPI>('/posts-ayuda', {
+    metodo: 'POST',
+    datos: {
+      ...datos,
+      perfilAutorId,
+      cupoLleno: false,
+      fechaCreacion: new Date().toISOString(),
+    },
+  });
+}

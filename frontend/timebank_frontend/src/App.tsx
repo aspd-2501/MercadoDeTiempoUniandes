@@ -18,7 +18,7 @@ import AniadirServicio from './ventanas/creacionYEdicion/AniadirServicio';
 import Chat from './ventanas/chats/Chat';
 import Explorar from './ventanas/Explorar';
 import Calendario from './ventanas/Calendario';
-import CrearPostAyuda from './ventanas/postAyuda/CrearPostAyuda';
+import CrearPostAyuda, { type NuevaPublicacionAyuda } from './ventanas/postAyuda/CrearPostAyuda';
 import AcuerdoDetail from './ventanas/acuerdos/AcuerdoDetail';
 import Actividad from './ventanas/Actividad';
 
@@ -28,6 +28,7 @@ import { useMiembroSesion } from './contextos/MiembroSesionContext';
 import Login from './ventanas/LoginYRegistro/Login';
 import Onboarding from './ventanas/LoginYRegistro/Onboarding';
 import { registrarCuenta } from './api/identidad.api';
+import { crearPostAyuda } from './api/postsAyuda.api';
 import { participarEnPublicacion } from './api/participaciones.api';
 
 import './App.css';
@@ -126,8 +127,35 @@ function LayoutPrivado() {
 
 function App() {
   const navigate = useNavigate();
-  const { iniciarSesion, establecerAutenticacion } = useMiembroSesion();
+  const { iniciarSesion, establecerAutenticacion, perfil } = useMiembroSesion();
 
+
+  async function publicarAyuda(datos: NuevaPublicacionAyuda): Promise<string> {
+    if (!perfil?.id) {
+      throw new Error('No se encontró un perfil autenticado para publicar.');
+    }
+
+    // Los intervalos de React representan hora LOCAL; el servidor espera ISO 8601.
+    const horarios = datos.availability.map((franja) => ({
+      fechaInicio: new Date(`${franja.date}T${franja.startTime}:00`).toISOString(),
+      fechaFin: new Date(`${franja.date}T${franja.endTime}:00`).toISOString(),
+    }));
+
+    const publicado = await crearPostAyuda(perfil.id, {
+      titulo: datos.title,
+      descripcion: datos.description,
+      horas: datos.estimatedHours,
+      imagen: datos.imagenUrl,
+      ofrece: datos.type === 'help-offer',
+      cupo: datos.maxParticipants,
+      categoriaIds: [datos.categoryId],
+      horarios,
+    });
+    if (!publicado?.id) {
+      throw new Error('El servidor no confirmó el identificador de la publicación creada.');
+    }
+    return publicado.id;
+  }
 
   return (
     <div className="min-h-screen bg-[#F6F6F6]">
@@ -240,6 +268,8 @@ function App() {
               element={
                 <CrearPostAyuda
                   tipo="pide"
+                  onPublicar={publicarAyuda}
+                  onVerPublicacion={(postId) => navigate(`/posts/${postId}`)}
                   onVolver={() => navigate(-1)}
                   onVolverInicio={() => navigate('/')}
                 />
@@ -250,6 +280,8 @@ function App() {
               element={
                 <CrearPostAyuda
                   tipo="ofrece"
+                  onPublicar={publicarAyuda}
+                  onVerPublicacion={(postId) => navigate(`/posts/${postId}`)}
                   onVolver={() => navigate(-1)}
                   onVolverInicio={() => navigate('/')}
                 />
