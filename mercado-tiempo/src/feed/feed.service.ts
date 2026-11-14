@@ -73,13 +73,13 @@ export class FeedService {
         const pagina = filtros.pagina ?? 1;
         const tamano = filtros.tamano ?? 10;
         if (!Number.isInteger(pagina) || pagina < 1)
-            throw new BusinessLogicException("The pagina must be an integer greater than 0", BusinessError.BAD_REQUEST);
+            throw new BusinessLogicException("La página debe ser un número entero mayor que 0", BusinessError.BAD_REQUEST);
         if (!Number.isInteger(tamano) || tamano < 1 || tamano > 50)
-            throw new BusinessLogicException("The tamano must be an integer between 1 and 50", BusinessError.BAD_REQUEST);
+            throw new BusinessLogicException("El tamaño debe ser un número entero entre 1 y 50", BusinessError.BAD_REQUEST);
 
         const tipos = filtros.tipos && filtros.tipos.length > 0 ? filtros.tipos : TIPOS_POR_DEFECTO;
         if (tipos.some(t => !TIPOS_PUBLICACION.includes(t)))
-            throw new BusinessLogicException("The tipos must be POST_AYUDA, POST_COMUNITARIO or CAUSA", BusinessError.BAD_REQUEST);
+            throw new BusinessLogicException("Los tipos deben ser POST_AYUDA, POST_COMUNITARIO o CAUSA", BusinessError.BAD_REQUEST);
 
         const categoriasDeInteres = filtros.perfilId ? await this.categoriasDeInteres(filtros.perfilId) : new Set<string>();
 
@@ -117,7 +117,7 @@ export class FeedService {
             }
         });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         return new Set([
             ...(perfil.intereses ?? []).map(i => i.categoria?.nombre),

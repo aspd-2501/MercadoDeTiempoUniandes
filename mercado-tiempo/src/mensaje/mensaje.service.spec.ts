@@ -108,7 +108,7 @@ describe('MensajeService', () => {
         } as MensajeEntity;
 
         await expect(() => service.create(mensaje))
-            .rejects.toHaveProperty("message", "A mensaje must have an emisor");
+            .rejects.toHaveProperty("message", "Un mensaje debe tener un emisor");
     });
 
     it('create should throw an exception for an invalid emisor', async () => {
@@ -122,7 +122,7 @@ describe('MensajeService', () => {
         } as MensajeEntity;
 
         await expect(() => service.create(mensaje))
-            .rejects.toHaveProperty("message", "The perfil emisor with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil emisor");
     });
 
     it('create should throw an exception without a chat', async () => {
@@ -134,7 +134,7 @@ describe('MensajeService', () => {
         } as MensajeEntity;
 
         await expect(() => service.create(mensaje))
-            .rejects.toHaveProperty("message", "A mensaje must belong to a chat");
+            .rejects.toHaveProperty("message", "Un mensaje debe pertenecer a un chat");
     });
 
     it('create should throw an exception for an invalid chat', async () => {
@@ -148,7 +148,7 @@ describe('MensajeService', () => {
         } as MensajeEntity;
 
         await expect(() => service.create(mensaje))
-            .rejects.toHaveProperty("message", "The chat with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el chat");
     });
 
     it('create should throw an exception when emisor is not a participante of the chat', async () => {
@@ -161,7 +161,7 @@ describe('MensajeService', () => {
         } as MensajeEntity;
 
         await expect(() => service.create(mensaje))
-            .rejects.toHaveProperty("message", "The emisor is not a participant in the chat");
+            .rejects.toHaveProperty("message", "El emisor no es participante del chat");
     });
 
     it('create should throw an exception for empty contenido', async () => {
@@ -174,7 +174,7 @@ describe('MensajeService', () => {
         } as MensajeEntity;
 
         await expect(() => service.create(mensaje))
-            .rejects.toHaveProperty("message", "A mensaje cannot have empty contenido");
+            .rejects.toHaveProperty("message", "El mensaje no puede estar vacío");
     });
 
     it('findAll should return all mensajes', async () => {
@@ -204,7 +204,7 @@ describe('MensajeService', () => {
 
     it('findOne should throw an exception for an invalid mensaje', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The mensaje with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el mensaje");
     });
 
     it('findByChatId should return mensajes for a chat', async () => {
@@ -221,7 +221,7 @@ describe('MensajeService', () => {
 
     it('findByChatId should throw an exception for an invalid chat', async () => {
         await expect(() => service.findByChatId("0"))
-            .rejects.toHaveProperty("message", "The chat with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el chat");
     });
 
     it('delete should remove a mensaje', async () => {
@@ -239,6 +239,6 @@ describe('MensajeService', () => {
 
     it('delete should throw an exception for an invalid mensaje', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The mensaje with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el mensaje");
     });
 });

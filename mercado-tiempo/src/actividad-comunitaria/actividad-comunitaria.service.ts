@@ -33,7 +33,7 @@ export class ActividadComunitariaService {
             relations: { organizacion: true, inscritos: true }
         });
         if (!actividad)
-            throw new BusinessLogicException("The actividad comunitaria with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la actividad comunitaria", BusinessError.NOT_FOUND);
         return actividad;
     }
 
@@ -44,7 +44,7 @@ export class ActividadComunitariaService {
     async update(id: string, actividad: ActividadComunitariaEntity): Promise<ActividadComunitariaEntity> {
         const persisted: ActividadComunitariaEntity | null = await this.actividadComunitariaRepository.findOne({ where: { id } });
         if (!persisted)
-            throw new BusinessLogicException("The actividad comunitaria with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la actividad comunitaria", BusinessError.NOT_FOUND);
         actividad.id = id;
         return await this.actividadComunitariaRepository.save(actividad);
     }
@@ -52,7 +52,7 @@ export class ActividadComunitariaService {
     async delete(id: string) {
         const actividad: ActividadComunitariaEntity | null = await this.actividadComunitariaRepository.findOne({ where: { id } });
         if (!actividad)
-            throw new BusinessLogicException("The actividad comunitaria with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la actividad comunitaria", BusinessError.NOT_FOUND);
         await this.actividadComunitariaRepository.remove(actividad);
     }
 
@@ -61,18 +61,18 @@ export class ActividadComunitariaService {
     async addPerfilActividad(actividadId: string, perfilId: string): Promise<ActividadComunitariaEntity> {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         const actividad: ActividadComunitariaEntity | null = await this.actividadComunitariaRepository.findOne({
             where: { id: actividadId },
             relations: { inscritos: true }
         });
         if (!actividad)
-            throw new BusinessLogicException("The actividad comunitaria with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la actividad comunitaria", BusinessError.NOT_FOUND);
 
         const yaInscrito = actividad.inscritos.some(i => i.idPerfil === perfilId);
         if (yaInscrito)
-            throw new BusinessLogicException("The perfil is already enrolled in the actividad", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil ya está inscrito en la actividad", BusinessError.PRECONDITION_FAILED);
 
         const inscripcion = this.inscripcionRepository.create({ idActividad: actividadId, idPerfil: perfilId });
         await this.inscripcionRepository.save(inscripcion);
@@ -87,18 +87,18 @@ export class ActividadComunitariaService {
     async findPerfilByActividadIdPerfilId(actividadId: string, perfilId: string): Promise<PerfilMiembroEntity> {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         const actividad: ActividadComunitariaEntity | null = await this.actividadComunitariaRepository.findOne({
             where: { id: actividadId },
             relations: { inscritos: true }
         });
         if (!actividad)
-            throw new BusinessLogicException("The actividad comunitaria with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la actividad comunitaria", BusinessError.NOT_FOUND);
 
         const inscripcion = actividad.inscritos.find(i => i.idPerfil === perfilId);
         if (!inscripcion)
-            throw new BusinessLogicException("The perfil with the given id is not enrolled in the actividad", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil no está inscrito en la actividad", BusinessError.PRECONDITION_FAILED);
 
         return perfil;
     }
@@ -109,7 +109,7 @@ export class ActividadComunitariaService {
             relations: { inscritos: { perfil: true } }
         });
         if (!actividad)
-            throw new BusinessLogicException("The actividad comunitaria with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la actividad comunitaria", BusinessError.NOT_FOUND);
 
         return actividad.inscritos.map(i => i.perfil);
     }
@@ -120,12 +120,12 @@ export class ActividadComunitariaService {
             relations: { inscritos: true }
         });
         if (!actividad)
-            throw new BusinessLogicException("The actividad comunitaria with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la actividad comunitaria", BusinessError.NOT_FOUND);
 
         for (const p of perfiles) {
             const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: p.id } });
             if (!perfil)
-                throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
         }
 
         await this.inscripcionRepository.delete({ idActividad: actividadId });
@@ -145,18 +145,18 @@ export class ActividadComunitariaService {
     async deletePerfilActividad(actividadId: string, perfilId: string) {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         const actividad: ActividadComunitariaEntity | null = await this.actividadComunitariaRepository.findOne({
             where: { id: actividadId },
             relations: { inscritos: true }
         });
         if (!actividad)
-            throw new BusinessLogicException("The actividad comunitaria with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la actividad comunitaria", BusinessError.NOT_FOUND);
 
         const inscripcion = actividad.inscritos.find(i => i.idPerfil === perfilId);
         if (!inscripcion)
-            throw new BusinessLogicException("The perfil with the given id is not enrolled in the actividad", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil no está inscrito en la actividad", BusinessError.PRECONDITION_FAILED);
 
         await this.inscripcionRepository.delete({ idActividad: actividadId, idPerfil: perfilId });
     }

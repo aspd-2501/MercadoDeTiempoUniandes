@@ -43,22 +43,22 @@ describe('ImagenService', () => {
 
     it('guardar should reject a request without file', async () => {
         await expect(() => service.guardar(undefined))
-            .rejects.toHaveProperty("message", "An image file must be sent in the field 'archivo'");
+            .rejects.toHaveProperty("message", "Debes enviar una imagen en el campo 'archivo'");
     });
 
     it('guardar should reject files that are not images', async () => {
         await expect(() => service.guardar(archivo(Buffer.from('%PDF-1.4'), 'application/pdf')))
-            .rejects.toHaveProperty("message", "The file must be a JPG, PNG, WEBP or GIF image");
+            .rejects.toHaveProperty("message", "El archivo debe ser una imagen JPG, PNG, WEBP o GIF");
     });
 
     it('guardar should reject a file renamed as an image', async () => {
         await expect(() => service.guardar(archivo(Buffer.from('no soy una imagen'), 'image/png')))
-            .rejects.toHaveProperty("message", "The file must be a JPG, PNG, WEBP or GIF image");
+            .rejects.toHaveProperty("message", "El archivo debe ser una imagen JPG, PNG, WEBP o GIF");
     });
 
     it('guardar should reject images larger than 5 MB', async () => {
         const grande = Buffer.concat([PNG, Buffer.alloc(TAMANIO_MAXIMO_IMAGEN)]);
         await expect(() => service.guardar(archivo(grande, 'image/png')))
-            .rejects.toHaveProperty("message", "The image must not be larger than 5 MB");
+            .rejects.toHaveProperty("message", "La imagen no puede pesar más de 5 MB");
     });
 });

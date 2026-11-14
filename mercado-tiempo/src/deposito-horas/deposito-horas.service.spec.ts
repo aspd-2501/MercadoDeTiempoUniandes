@@ -46,7 +46,7 @@ describe('DepositoHorasService', () => {
 
     it('findOne should throw an exception for an invalid deposito', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The deposito horas with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el depósito de horas");
     });
 
     it('findFondo should return the fondo comunitario', async () => {
@@ -57,7 +57,7 @@ describe('DepositoHorasService', () => {
     it('findFondo should throw an exception when the fondo does not exist', async () => {
         await depositoHorasRepository.clear();
         await expect(() => service.findFondo())
-            .rejects.toHaveProperty("message", "The fondo comunitario has not been created");
+            .rejects.toHaveProperty("message", "El fondo comunitario no ha sido creado");
     });
 
     it('create should create the fondo when none exists', async () => {
@@ -69,13 +69,13 @@ describe('DepositoHorasService', () => {
 
     it('create should throw an exception when the fondo already exists', async () => {
         await expect(() => service.create({ id: "", saldo: 0 } as DepositoHorasEntity))
-            .rejects.toHaveProperty("message", "The fondo comunitario already exists; there can only be one deposito horas");
+            .rejects.toHaveProperty("message", "El fondo comunitario ya existe; solo puede haber un depósito de horas");
     });
 
     it('create should throw an exception for a negative saldo', async () => {
         await depositoHorasRepository.clear();
         await expect(() => service.create({ id: "", saldo: -10 } as DepositoHorasEntity))
-            .rejects.toHaveProperty("message", "The saldo of a deposito horas cannot be negative");
+            .rejects.toHaveProperty("message", "El saldo de un depósito de horas no puede ser negativo");
     });
 
     it('delete should remove the fondo when its saldo is 0', async () => {
@@ -86,11 +86,11 @@ describe('DepositoHorasService', () => {
 
     it('delete should throw an exception while the fondo has saldo', async () => {
         await expect(() => service.delete(fondo.id))
-            .rejects.toHaveProperty("message", "The fondo comunitario cannot be deleted while it has saldo");
+            .rejects.toHaveProperty("message", "El fondo comunitario no se puede eliminar mientras tenga saldo");
     });
 
     it('delete should throw an exception for an invalid deposito', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The deposito horas with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el depósito de horas");
     });
 });

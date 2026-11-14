@@ -33,23 +33,23 @@ export class PerfilOrganizacionService {
             relations: { perfil: true, miembros: true }
         });
         if (!organizacion)
-            throw new BusinessLogicException("The perfil organizacion with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil de organización", BusinessError.NOT_FOUND);
         return organizacion;
     }
 
     async create(organizacion: PerfilOrganizacionEntity): Promise<PerfilOrganizacionEntity> {
         if (!organizacion.perfil)
-            throw new BusinessLogicException("A perfil organizacion must have a perfil", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un perfil de organización debe tener un perfil", BusinessError.PRECONDITION_FAILED);
 
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({
             where: { id: organizacion.perfil.id },
             relations: { perfilOrganizacion: true }
         });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         if (perfil.perfilOrganizacion)
-            throw new BusinessLogicException("The perfil already has a perfil organizacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil ya tiene un perfil de organización", BusinessError.PRECONDITION_FAILED);
 
         organizacion.numMiembros = 1;
         const nuevaOrganizacion = await this.perfilOrganizacionRepository.save(organizacion);
@@ -63,7 +63,7 @@ export class PerfilOrganizacionService {
     async delete(id: string) {
         const organizacion: PerfilOrganizacionEntity | null = await this.perfilOrganizacionRepository.findOne({ where: { id } });
         if (!organizacion)
-            throw new BusinessLogicException("The perfil organizacion with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil de organización", BusinessError.NOT_FOUND);
         await this.perfilOrganizacionRepository.remove(organizacion);
     }
 
@@ -72,18 +72,18 @@ export class PerfilOrganizacionService {
     async addMiembroOrganizacion(organizacionId: string, perfilId: string): Promise<PerfilOrganizacionEntity> {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         const organizacion: PerfilOrganizacionEntity | null = await this.perfilOrganizacionRepository.findOne({
             where: { id: organizacionId },
             relations: { miembros: true }
         });
         if (!organizacion)
-            throw new BusinessLogicException("The perfil organizacion with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil de organización", BusinessError.NOT_FOUND);
 
         const yaEsMiembro = organizacion.miembros.some(m => m.idPerfil === perfilId);
         if (yaEsMiembro)
-            throw new BusinessLogicException("The perfil is already a miembro of the organizacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil ya es miembro de la organización", BusinessError.PRECONDITION_FAILED);
 
         const miembro = this.miembroRepository.create({ idOrganizacion: organizacionId, idPerfil: perfilId });
         await this.miembroRepository.save(miembro);
@@ -104,7 +104,7 @@ export class PerfilOrganizacionService {
             relations: { miembros: { perfil: true } }
         });
         if (!organizacion)
-            throw new BusinessLogicException("The perfil organizacion with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil de organización", BusinessError.NOT_FOUND);
 
         return organizacion.miembros.map(m => m.perfil);
     }
@@ -112,21 +112,21 @@ export class PerfilOrganizacionService {
     async deleteMiembroOrganizacion(organizacionId: string, perfilId: string) {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         const organizacion: PerfilOrganizacionEntity | null = await this.perfilOrganizacionRepository.findOne({
             where: { id: organizacionId },
             relations: { miembros: true }
         });
         if (!organizacion)
-            throw new BusinessLogicException("The perfil organizacion with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil de organización", BusinessError.NOT_FOUND);
 
         const miembro = organizacion.miembros.find(m => m.idPerfil === perfilId);
         if (!miembro)
-            throw new BusinessLogicException("The perfil with the given id is not a miembro of the organizacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil no es miembro de la organización", BusinessError.PRECONDITION_FAILED);
 
         if (organizacion.miembros.length <= 1)
-            throw new BusinessLogicException("A perfil organizacion must keep at least 1 miembro", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un perfil de organización debe conservar al menos 1 miembro", BusinessError.PRECONDITION_FAILED);
         
         await this.miembroRepository.delete({ idOrganizacion: organizacionId, idPerfil: perfilId });
 

@@ -130,36 +130,36 @@ describe('SolicitudModificacionService', () => {
 
     it('create should throw an exception for an invalid acuerdo', async () => {
         await expect(() => service.create("0", modificacion(participantes[0])))
-            .rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el acuerdo");
     });
 
     it('create should throw an exception for a solicitante that is not a participant', async () => {
         await expect(() => service.create(acuerdo.id, modificacion(ajeno)))
-            .rejects.toHaveProperty("message", "The perfil with the given id is not a participant in the acuerdo");
+            .rejects.toHaveProperty("message", "El perfil no es participante del acuerdo");
     });
 
     it('create should throw an exception when there is already a pending solicitud', async () => {
         await service.create(acuerdo.id, modificacion(participantes[0]));
         await expect(() => service.create(acuerdo.id, cancelacion(participantes[1])))
-            .rejects.toHaveProperty("message", "The acuerdo already has a pending solicitud de modificacion");
+            .rejects.toHaveProperty("message", "El acuerdo ya tiene una solicitud de modificación pendiente");
     });
 
     it('create should throw an exception for a modificacion without changes', async () => {
         const sinCambios = { tipo: TipoSolicitudModificacion.MODIFICACION, solicitante: participantes[0] } as SolicitudModificacionEntity;
         await expect(() => service.create(acuerdo.id, sinCambios))
-            .rejects.toHaveProperty("message", "A modificacion must change the horas or the fechaRealizacion");
+            .rejects.toHaveProperty("message", "Una modificación debe cambiar las horas o la fecha de realización");
     });
 
     it('create should throw an exception for a cancelado acuerdo', async () => {
         await acuerdoRepository.update(acuerdo.id, { estado: EstadoAcuerdo.CANCELADO });
         await expect(() => service.create(acuerdo.id, modificacion(participantes[0])))
-            .rejects.toHaveProperty("message", "The acuerdo is cancelado and cannot be modified");
+            .rejects.toHaveProperty("message", "El acuerdo está cancelado y no se puede modificar");
     });
 
     it('create should throw an exception when a RECEPTOR cannot pay the new horas', async () => {
         await perfilRepository.update(participantes[1].id, { saldo: 3 });
         await expect(() => service.create(acuerdo.id, modificacion(participantes[0], 4)))
-            .rejects.toHaveProperty("message", "A RECEPTOR does not have enough saldo to pay its share of the acuerdo");
+            .rejects.toHaveProperty("message", "Un receptor no tiene saldo suficiente para pagar su parte del acuerdo");
     });
 
     // --- aprobar: modificación ---
@@ -181,20 +181,20 @@ describe('SolicitudModificacionService', () => {
     it('aprobar should throw an exception when the perfil already approved', async () => {
         const solicitud = await service.create(acuerdo.id, modificacion(participantes[0]));
         await expect(() => service.aprobar(acuerdo.id, solicitud.id, participantes[0].id))
-            .rejects.toHaveProperty("message", "The perfil already approved the solicitud de modificacion");
+            .rejects.toHaveProperty("message", "El perfil ya aprobó la solicitud de modificación");
     });
 
     it('aprobar should throw an exception for a perfil that is not a participant', async () => {
         const solicitud = await service.create(acuerdo.id, modificacion(participantes[0]));
         await expect(() => service.aprobar(acuerdo.id, solicitud.id, ajeno.id))
-            .rejects.toHaveProperty("message", "The perfil with the given id is not a participant in the acuerdo");
+            .rejects.toHaveProperty("message", "El perfil no es participante del acuerdo");
     });
 
     it('aprobar should throw an exception for a solicitud that is no longer pending', async () => {
         const solicitud = await service.create(acuerdo.id, modificacion(participantes[0]));
         await service.rechazar(acuerdo.id, solicitud.id, participantes[1].id);
         await expect(() => service.aprobar(acuerdo.id, solicitud.id, participantes[2].id))
-            .rejects.toHaveProperty("message", "The solicitud de modificacion is no longer pending");
+            .rejects.toHaveProperty("message", "La solicitud de modificación ya no está pendiente");
     });
 
     // --- rechazar ---
@@ -212,7 +212,7 @@ describe('SolicitudModificacionService', () => {
     it('rechazar should throw an exception for a cancelacion', async () => {
         const solicitud = await service.create(acuerdo.id, cancelacion(participantes[0]));
         await expect(() => service.rechazar(acuerdo.id, solicitud.id, participantes[1].id))
-            .rejects.toHaveProperty("message", "A solicitud de cancelacion cannot be rejected; it needs the approval of all participantes");
+            .rejects.toHaveProperty("message", "Una solicitud de cancelación no se puede rechazar; necesita la aprobación de todos los participantes");
     });
 
     // --- cancelación ---
@@ -239,7 +239,7 @@ describe('SolicitudModificacionService', () => {
     it('retirar should throw an exception for a perfil that is not the solicitante', async () => {
         const solicitud = await service.create(acuerdo.id, cancelacion(participantes[1]));
         await expect(() => service.retirar(acuerdo.id, solicitud.id, participantes[0].id))
-            .rejects.toHaveProperty("message", "Only the solicitante can withdraw the solicitud de modificacion");
+            .rejects.toHaveProperty("message", "Solo quien hizo la solicitud de modificación puede retirarla");
     });
 
     // --- consultas ---
@@ -255,6 +255,6 @@ describe('SolicitudModificacionService', () => {
 
     it('findOne should throw an exception for an invalid solicitud', async () => {
         await expect(() => service.findOne(acuerdo.id, "0"))
-            .rejects.toHaveProperty("message", "The solicitud de modificacion with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la solicitud de modificación");
     });
 });

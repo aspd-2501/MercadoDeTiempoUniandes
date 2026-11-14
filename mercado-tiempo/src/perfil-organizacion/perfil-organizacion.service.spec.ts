@@ -83,7 +83,7 @@ describe('PerfilOrganizacionService', () => {
 
     it('findOne should throw an exception for an invalid organizacion', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The perfil organizacion with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil de organización");
     });
 
         it('create should return a new organizacion with its perfil as first miembro', async () => {
@@ -103,21 +103,21 @@ describe('PerfilOrganizacionService', () => {
     it('create should throw an exception without a perfil', async () => {
         const nuevaOrganizacion: PerfilOrganizacionEntity = { id: "", numMiembros: 0 } as PerfilOrganizacionEntity;
         await expect(() => service.create(nuevaOrganizacion))
-            .rejects.toHaveProperty("message", "A perfil organizacion must have a perfil");
+            .rejects.toHaveProperty("message", "Un perfil de organización debe tener un perfil");
     });
 
     it('create should throw an exception for an invalid perfil', async () => {
         const invalidPerfil: PerfilMiembroEntity = { id: "0" } as PerfilMiembroEntity;
         const nuevaOrganizacion: PerfilOrganizacionEntity = { id: "", numMiembros: 0, perfil: invalidPerfil } as PerfilOrganizacionEntity;
         await expect(() => service.create(nuevaOrganizacion))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('create should throw an exception when perfil already has a perfil organizacion', async () => {
         const perfilOcupado = await perfilRepository.findOne({ where: { id: organizacion.perfil.id } });
         const nuevaOrganizacion: PerfilOrganizacionEntity = { id: "", numMiembros: 0, perfil: perfilOcupado } as PerfilOrganizacionEntity;
         await expect(() => service.create(nuevaOrganizacion))
-            .rejects.toHaveProperty("message", "The perfil already has a perfil organizacion");
+            .rejects.toHaveProperty("message", "El perfil ya tiene un perfil de organización");
     });
 
     it('delete should remove an organizacion', async () => {
@@ -128,7 +128,7 @@ describe('PerfilOrganizacionService', () => {
 
     it('delete should throw an exception for an invalid organizacion', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The perfil organizacion with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil de organización");
     });
 
     it('addMiembroOrganizacion should add a perfil and increment numMiembros', async () => {
@@ -140,19 +140,19 @@ describe('PerfilOrganizacionService', () => {
 
     it('addMiembroOrganizacion should throw an exception for an invalid perfil', async () => {
         await expect(() => service.addMiembroOrganizacion(organizacion.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('addMiembroOrganizacion should throw an exception for an invalid organizacion', async () => {
         const nuevoPerfil = await createPerfil();
         await expect(() => service.addMiembroOrganizacion("0", nuevoPerfil.id))
-            .rejects.toHaveProperty("message", "The perfil organizacion with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil de organización");
     });
 
     it('addMiembroOrganizacion should throw an exception for an already enrolled perfil', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.addMiembroOrganizacion(organizacion.id, perfil.id))
-            .rejects.toHaveProperty("message", "The perfil is already a miembro of the organizacion");
+            .rejects.toHaveProperty("message", "El perfil ya es miembro de la organización");
     });
 
     it('findMiembrosByOrganizacionId should return perfiles by organizacion', async () => {
@@ -162,7 +162,7 @@ describe('PerfilOrganizacionService', () => {
 
     it('findMiembrosByOrganizacionId should throw an exception for an invalid organizacion', async () => {
         await expect(() => service.findMiembrosByOrganizacionId("0"))
-            .rejects.toHaveProperty("message", "The perfil organizacion with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil de organización");
     });
 
     it('deleteMiembroOrganizacion should remove a perfil and decrement numMiembros', async () => {
@@ -179,25 +179,25 @@ describe('PerfilOrganizacionService', () => {
 
     it('deleteMiembroOrganizacion should throw an exception for an invalid perfil', async () => {
         await expect(() => service.deleteMiembroOrganizacion(organizacion.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('deleteMiembroOrganizacion should throw an exception for an invalid organizacion', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.deleteMiembroOrganizacion("0", perfil.id))
-            .rejects.toHaveProperty("message", "The perfil organizacion with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil de organización");
     });
 
     it('deleteMiembroOrganizacion should throw an exception for a non-member perfil', async () => {
         const nuevoPerfil = await createPerfil();
         await expect(() => service.deleteMiembroOrganizacion(organizacion.id, nuevoPerfil.id))
-            .rejects.toHaveProperty("message", "The perfil with the given id is not a miembro of the organizacion");
+            .rejects.toHaveProperty("message", "El perfil no es miembro de la organización");
     });
 
     it('deleteMiembroOrganizacion should throw an exception when it would leave 0 miembros', async () => {
         await service.deleteMiembroOrganizacion(organizacion.id, perfilesList[0].id);
         await service.deleteMiembroOrganizacion(organizacion.id, perfilesList[1].id);
         await expect(() => service.deleteMiembroOrganizacion(organizacion.id, perfilesList[2].id))
-            .rejects.toHaveProperty("message", "A perfil organizacion must keep at least 1 miembro");
+            .rejects.toHaveProperty("message", "Un perfil de organización debe conservar al menos 1 miembro");
     });
 });

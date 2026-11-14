@@ -26,7 +26,7 @@ export class TransaccionService {
     async findByPerfilId(perfilId: string): Promise<TransaccionEntity[]> {
         const perfil = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         return await this.transaccionRepository.find({
             where: { perfil: { id: perfilId } },
@@ -40,7 +40,7 @@ export class TransaccionService {
     async findByDepositoId(depositoId: string): Promise<TransaccionEntity[]> {
         const deposito = await this.depositoHorasRepository.findOne({ where: { id: depositoId } });
         if (!deposito)
-            throw new BusinessLogicException("The deposito horas with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el depósito de horas", BusinessError.NOT_FOUND);
 
         return await this.transaccionRepository.find({
             where: { deposito: { id: depositoId } },

@@ -207,28 +207,28 @@ describe('DisponibilidadAcuerdoService', () => {
         await service.registrarDisponibilidad(acuerdo.id, autor.id, [f(8, 12)]);
         await service.registrarDisponibilidad(acuerdo.id, receptor.id, [f(8, 12)]);
         await expect(() => service.registrarDisponibilidad(acuerdo.id, receptor.id, [f(14, 18)]))
-            .rejects.toHaveProperty("message", "The acuerdo already has a horario acordado");
+            .rejects.toHaveProperty("message", "El acuerdo ya tiene un horario acordado");
     });
 
     it('registrarDisponibilidad should throw an exception for a perfil that is not a participant', async () => {
         const ajeno = await createPerfil();
         await expect(() => service.registrarDisponibilidad(acuerdo.id, ajeno.id, [f(8, 12)]))
-            .rejects.toHaveProperty("message", "The perfil with the given id is not a participant in the acuerdo");
+            .rejects.toHaveProperty("message", "El perfil no es participante del acuerdo");
     });
 
     it('registrarDisponibilidad should throw an exception for a franja that ends before it starts', async () => {
         await expect(() => service.registrarDisponibilidad(acuerdo.id, receptor.id, [f(12, 8)]))
-            .rejects.toHaveProperty("message", "The fechaFin of a horario must be after its fechaInicio");
+            .rejects.toHaveProperty("message", "El horario debe terminar después de empezar");
     });
 
     it('registrarDisponibilidad should throw an exception for a cancelado acuerdo', async () => {
         await acuerdoRepository.update(acuerdo.id, { estado: EstadoAcuerdo.CANCELADO });
         await expect(() => service.registrarDisponibilidad(acuerdo.id, receptor.id, [f(8, 12)]))
-            .rejects.toHaveProperty("message", "The acuerdo is cancelado and cannot be modified");
+            .rejects.toHaveProperty("message", "El acuerdo está cancelado y no se puede modificar");
     });
 
     it('findDisponibilidad should throw an exception for an invalid acuerdo', async () => {
         await expect(() => service.findDisponibilidad("0"))
-            .rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el acuerdo");
     });
 });

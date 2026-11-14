@@ -30,7 +30,7 @@ describe('calcularReparto', () => {
 
     it('lanza error con varios prestadores y varios receptores', () => {
         expect(() => calcularReparto(1, [prestador('p'), prestador('q'), receptor('a'), receptor('b')]))
-            .toThrow("An acuerdo can have several PRESTADORES or several RECEPTORES, but not both");
+            .toThrow("Un acuerdo puede tener varios prestadores o varios receptores, pero no ambos");
     });
 
     it('en toda composición permitida las horas que salen son iguales a las que entran', () => {
@@ -57,7 +57,7 @@ describe('validarComposicion', () => {
 
     it('no permite varios a varios', () => {
         expect(() => validarComposicion([prestador('p'), prestador('q'), receptor('a'), receptor('b')]))
-            .toThrow("An acuerdo can have several PRESTADORES or several RECEPTORES, but not both");
+            .toThrow("Un acuerdo puede tener varios prestadores o varios receptores, pero no ambos");
     });
 });
 
@@ -68,6 +68,6 @@ describe('validarSaldosReceptores', () => {
 
     it('lanza error si el receptor no puede pagar las horas de todos los prestadores', () => {
         expect(() => validarSaldosReceptores(2, [prestador('p'), prestador('q'), receptor('a', 3)]))
-            .toThrow("A RECEPTOR does not have enough saldo to pay its share of the acuerdo");
+            .toThrow("Un receptor no tiene saldo suficiente para pagar su parte del acuerdo");
     });
 });

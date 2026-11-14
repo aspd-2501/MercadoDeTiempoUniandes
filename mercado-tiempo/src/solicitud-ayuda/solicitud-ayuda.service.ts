@@ -39,30 +39,30 @@ export class SolicitudAyudaService {
             relations: { perfilAutor: true, prestador: { perfil: true }, servicioOfrecido: true }
         });
         if (!solicitud)
-            throw new BusinessLogicException("The solicitud ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la solicitud de ayuda", BusinessError.NOT_FOUND);
         return solicitud;
     }
 
     async create(solicitud: SolicitudAyudaEntity): Promise<SolicitudAyudaEntity> {
         // Solicitante
         if (!solicitud.perfilAutor)
-            throw new BusinessLogicException("A solicitud ayuda must have a perfil autor", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Una solicitud de ayuda debe tener un autor", BusinessError.PRECONDITION_FAILED);
         const autor = await this.perfilMiembroRepository.findOne({ where: { id: solicitud.perfilAutor.id } });
         if (!autor)
-            throw new BusinessLogicException("The perfil autor with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil del autor", BusinessError.NOT_FOUND);
 
         // Prestador: la organización a la que se envía la solicitud
         if (!solicitud.prestador)
-            throw new BusinessLogicException("A solicitud ayuda must have a prestador", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Una solicitud de ayuda debe tener un prestador", BusinessError.PRECONDITION_FAILED);
         const prestador = await this.perfilOrganizacionRepository.findOne({
             where: { id: solicitud.prestador.id },
             relations: { perfil: true }
         });
         if (!prestador)
-            throw new BusinessLogicException("The perfil organizacion prestador with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la organización prestadora", BusinessError.NOT_FOUND);
 
         if (prestador.perfil?.id === autor.id)
-            throw new BusinessLogicException("The perfil autor cannot be the prestador of its own solicitud", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El autor no puede ser el prestador de su propia solicitud", BusinessError.PRECONDITION_FAILED);
 
         // Servicio (opcional): debe ser uno de los que ofrece la organización
         if (solicitud.servicioOfrecido) {
@@ -71,9 +71,9 @@ export class SolicitudAyudaService {
                 relations: { perfil: true }
             });
             if (!servicio)
-                throw new BusinessLogicException("The servicio ofrecido with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el servicio ofrecido", BusinessError.NOT_FOUND);
             if (servicio.perfil?.id !== prestador.perfil?.id)
-                throw new BusinessLogicException("The servicio ofrecido does not belong to the prestador", BusinessError.PRECONDITION_FAILED);
+                throw new BusinessLogicException("El servicio ofrecido no pertenece al prestador", BusinessError.PRECONDITION_FAILED);
         }
 
         solicitud.aceptada = false;
@@ -86,7 +86,7 @@ export class SolicitudAyudaService {
             relations: { perfilAutor: true, prestador: true }
         });
         if (!persisted)
-            throw new BusinessLogicException("The solicitud ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la solicitud de ayuda", BusinessError.NOT_FOUND);
 
         // El solicitante, el prestador y la aceptación no se cambian con update
         solicitud.id = id;
@@ -99,7 +99,7 @@ export class SolicitudAyudaService {
     async delete(id: string) {
         const solicitud: SolicitudAyudaEntity | null = await this.solicitudRepository.findOne({ where: { id } });
         if (!solicitud)
-            throw new BusinessLogicException("The solicitud ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la solicitud de ayuda", BusinessError.NOT_FOUND);
         await this.solicitudRepository.remove(solicitud);
     }
 
@@ -108,10 +108,10 @@ export class SolicitudAyudaService {
     async aceptarSolicitud(id: string): Promise<SolicitudAyudaEntity> {
         const solicitud: SolicitudAyudaEntity | null = await this.solicitudRepository.findOne({ where: { id } });
         if (!solicitud)
-            throw new BusinessLogicException("The solicitud ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la solicitud de ayuda", BusinessError.NOT_FOUND);
 
         if (solicitud.aceptada)
-            throw new BusinessLogicException("The solicitud ayuda is already aceptada", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("La solicitud de ayuda ya fue aceptada", BusinessError.PRECONDITION_FAILED);
 
         solicitud.aceptada = true;
         await this.solicitudRepository.save(solicitud);

@@ -91,7 +91,7 @@ describe('AuthService', () => {
     it('login should throw an exception for a wrong contrasenia', async () => {
         const usuario = await crearUsuario();
         await expect(() => service.login(usuario.idUniandes, 'otra-clave'))
-            .rejects.toHaveProperty("message", "Invalid credentials");
+            .rejects.toHaveProperty("message", "Usuario o contraseña incorrectos");
     });
 
     it('sesion should return the same data as the login for the usuario of the token', async () => {
@@ -104,6 +104,6 @@ describe('AuthService', () => {
 
     it('sesion should throw an exception for a usuario that no longer exists', async () => {
         await expect(() => service.sesion("0"))
-            .rejects.toHaveProperty("message", "The usuario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el usuario");
     });
 });

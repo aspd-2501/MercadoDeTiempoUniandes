@@ -169,7 +169,7 @@ describe('HorarioDisponibleService', () => {
         } as HorarioDisponibleEntity;
 
         await expect(() => service.create(horario))
-            .rejects.toHaveProperty("message", "A horario disponible must have a perfil");
+            .rejects.toHaveProperty("message", "Un horario disponible debe tener un perfil");
     });
 
     it('create should throw an exception for an invalid perfil', async () => {
@@ -182,7 +182,7 @@ describe('HorarioDisponibleService', () => {
         } as HorarioDisponibleEntity;
 
         await expect(() => service.create(horario))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('create should throw an exception when fechaFin is before fechaInicio', async () => {
@@ -196,7 +196,7 @@ describe('HorarioDisponibleService', () => {
         } as HorarioDisponibleEntity;
 
         await expect(() => service.create(horario))
-            .rejects.toHaveProperty("message", "fechaFin must be after fechaInicio");
+            .rejects.toHaveProperty("message", "La fecha de fin debe ser posterior a la de inicio");
     });
 
     it('create should throw an exception with no origen', async () => {
@@ -207,7 +207,7 @@ describe('HorarioDisponibleService', () => {
         } as HorarioDisponibleEntity;
 
         await expect(() => service.create(horario))
-            .rejects.toHaveProperty("message", "A horario disponible must have exactly one origen: an acuerdo, a solicitud, a postAyuda or an actividad");
+            .rejects.toHaveProperty("message", "Un horario disponible debe tener exactamente un origen: un acuerdo, una solicitud, un post de ayuda o una actividad");
     });
 
     it('create should throw an exception with more than one origen', async () => {
@@ -220,7 +220,7 @@ describe('HorarioDisponibleService', () => {
         } as HorarioDisponibleEntity;
 
         await expect(() => service.create(horario))
-            .rejects.toHaveProperty("message", "A horario disponible must have exactly one origen: an acuerdo, a solicitud, a postAyuda or an actividad");
+            .rejects.toHaveProperty("message", "Un horario disponible debe tener exactamente un origen: un acuerdo, una solicitud, un post de ayuda o una actividad");
     });
 
     it('create should throw an exception for an invalid acuerdo', async () => {
@@ -233,7 +233,7 @@ describe('HorarioDisponibleService', () => {
         } as HorarioDisponibleEntity;
 
         await expect(() => service.create(horario))
-            .rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el acuerdo");
     });
 
     it('findOne should return a horario by id', async () => {
@@ -249,7 +249,7 @@ describe('HorarioDisponibleService', () => {
 
     it('findOne should throw an exception for an invalid horario', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The horario disponible with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el horario disponible");
     });
 
     it('delete should remove a horario', async () => {
@@ -266,6 +266,6 @@ describe('HorarioDisponibleService', () => {
 
     it('delete should throw an exception for an invalid horario', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The horario disponible with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el horario disponible");
     });
 });

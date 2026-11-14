@@ -44,7 +44,7 @@ export class PerfilMiembroService {
             relations: { usuario: true }
         });
         if (!perfil)
-            throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil de miembro", BusinessError.NOT_FOUND);
         return perfil;
     }
 
@@ -55,23 +55,23 @@ export class PerfilMiembroService {
             relations: { usuario: true }
         });
         if (!perfil)
-            throw new BusinessLogicException("The usuario with the given id does not have a perfil miembro", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("El usuario todavía no tiene un perfil de miembro", BusinessError.NOT_FOUND);
         return perfil;
     }
 
     async create(perfil: PerfilMiembroEntity): Promise<PerfilMiembroEntity> {
         if (!perfil.usuario)
-            throw new BusinessLogicException("A perfil miembro must have a usuario", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un perfil de miembro debe tener un usuario", BusinessError.PRECONDITION_FAILED);
 
         const usuario: UsuarioEntity | null = await this.usuarioRepository.findOne({
             where: { id: perfil.usuario.id },
             relations: { perfil: true }
         });
         if (!usuario)
-            throw new BusinessLogicException("The usuario with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el usuario", BusinessError.NOT_FOUND);
 
         if (usuario.perfil)
-            throw new BusinessLogicException("The usuario already has a perfil miembro", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El usuario ya tiene un perfil de miembro", BusinessError.PRECONDITION_FAILED);
 
         // El saldo no lo elige el cliente: todos empiezan con SALDO_INICIAL
         perfil.saldo = SALDO_INICIAL;
@@ -81,7 +81,7 @@ export class PerfilMiembroService {
     async update(id: string, perfil: PerfilMiembroEntity): Promise<PerfilMiembroEntity> {
         const persisted: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id } });
         if (!persisted)
-            throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil de miembro", BusinessError.NOT_FOUND);
         perfil.id = id;
         // Editar el perfil nunca cambia el saldo (eso solo lo hace un moderador con ajustarSaldo)
         perfil.saldo = persisted.saldo;
@@ -92,16 +92,16 @@ export class PerfilMiembroService {
     // Deja el saldo en el valor indicado y registra la diferencia como una Transaccion AJUSTE_MODERADOR.
     async ajustarSaldo(perfilId: string, saldo: number, usuarioModeradorId: string): Promise<PerfilMiembroEntity> {
         if (!Number.isInteger(saldo) || saldo < 0)
-            throw new BusinessLogicException("The saldo must be an integer greater than or equal to 0", BusinessError.BAD_REQUEST);
+            throw new BusinessLogicException("El saldo debe ser un número entero mayor o igual a 0", BusinessError.BAD_REQUEST);
 
         const moderador = await this.moderadorRepository.findOne({ where: { usuario: { id: usuarioModeradorId } } });
         if (!moderador)
-            throw new BusinessLogicException("Only a moderador can change the saldo of a perfil miembro", BusinessError.FORBIDDEN);
+            throw new BusinessLogicException("Solo un moderador puede cambiar el saldo de un miembro", BusinessError.FORBIDDEN);
 
         return await this.perfilMiembroRepository.manager.transaction(async manager => {
             const perfil = await manager.findOne(PerfilMiembroEntity, { where: { id: perfilId } });
             if (!perfil)
-                throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el perfil de miembro", BusinessError.NOT_FOUND);
 
             const diferencia = saldo - perfil.saldo;
             if (diferencia !== 0) {
@@ -118,7 +118,7 @@ export class PerfilMiembroService {
     async delete(id: string) {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil de miembro", BusinessError.NOT_FOUND);
         await this.perfilMiembroRepository.remove(perfil);
     }
 
@@ -130,20 +130,20 @@ export class PerfilMiembroService {
             relations: { intereses: { categoria: true } }
         });
         if (!perfil)
-            throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil de miembro", BusinessError.NOT_FOUND);
         return perfil.intereses.map(i => i.categoria);
     }
 
     async associateInteresesPerfil(perfilId: string, categoriaIds: string[]): Promise<CategoriaEntity[]> {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil de miembro", BusinessError.NOT_FOUND);
 
         const idsUnicos = [...new Set(categoriaIds ?? [])];
         for (const idCategoria of idsUnicos) {
             const categoria = await this.categoriaRepository.findOne({ where: { id: idCategoria } });
             if (!categoria)
-                throw new BusinessLogicException("The categoria with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró la categoría", BusinessError.NOT_FOUND);
         }
 
         await this.perfilInteresRepository.delete({ idPerfil: perfilId });
@@ -158,7 +158,7 @@ export class PerfilMiembroService {
     async deleteInteresPerfil(perfilId: string, categoriaId: string) {
         const relacion = await this.perfilInteresRepository.findOne({ where: { idPerfil: perfilId, idCategoria: categoriaId } });
         if (!relacion)
-            throw new BusinessLogicException("The categoria is not an interes of the perfil miembro", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("La categoría no es un interés del miembro", BusinessError.PRECONDITION_FAILED);
         await this.perfilInteresRepository.remove(relacion);
     }
 
@@ -168,7 +168,7 @@ export class PerfilMiembroService {
     async cambiarEstadoActividad(perfilId: string, activo: boolean): Promise<PerfilMiembroEntity> {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil miembro with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil de miembro", BusinessError.NOT_FOUND);
 
         await this.perfilMiembroRepository.update(perfilId, { estadoActividad: activo });
         return await this.findOne(perfilId);

@@ -118,7 +118,7 @@ describe('SolicitudAyudaService', () => {
         } as SolicitudAyudaEntity;
 
         await expect(() => service.create(nuevaSolicitud))
-            .rejects.toHaveProperty("message", "A solicitud ayuda must have a prestador");
+            .rejects.toHaveProperty("message", "Una solicitud de ayuda debe tener un prestador");
     });
 
     it('create should throw an exception for an invalid prestador', async () => {
@@ -135,7 +135,7 @@ describe('SolicitudAyudaService', () => {
         } as SolicitudAyudaEntity;
 
         await expect(() => service.create(nuevaSolicitud))
-            .rejects.toHaveProperty("message", "The perfil organizacion prestador with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la organización prestadora");
     });
 
     it('create should throw an exception when the autor is the perfil of the prestador', async () => {
@@ -151,7 +151,7 @@ describe('SolicitudAyudaService', () => {
         } as SolicitudAyudaEntity;
 
         await expect(() => service.create(nuevaSolicitud))
-            .rejects.toHaveProperty("message", "The perfil autor cannot be the prestador of its own solicitud");
+            .rejects.toHaveProperty("message", "El autor no puede ser el prestador de su propia solicitud");
     });
 
     it('create should throw an exception when the servicio ofrecido does not belong to the prestador', async () => {
@@ -174,7 +174,7 @@ describe('SolicitudAyudaService', () => {
         } as SolicitudAyudaEntity;
 
         await expect(() => service.create(nuevaSolicitud))
-            .rejects.toHaveProperty("message", "The servicio ofrecido does not belong to the prestador");
+            .rejects.toHaveProperty("message", "El servicio ofrecido no pertenece al prestador");
     });
 
     it('create should throw an exception without a perfil autor', async () => {
@@ -188,7 +188,7 @@ describe('SolicitudAyudaService', () => {
         } as SolicitudAyudaEntity;
 
         await expect(() => service.create(nuevaSolicitud))
-            .rejects.toHaveProperty("message", "A solicitud ayuda must have a perfil autor");
+            .rejects.toHaveProperty("message", "Una solicitud de ayuda debe tener un autor");
     });
 
     it('create should throw an exception for an invalid perfil autor', async () => {
@@ -205,7 +205,7 @@ describe('SolicitudAyudaService', () => {
         } as SolicitudAyudaEntity;
 
         await expect(() => service.create(nuevaSolicitud))
-            .rejects.toHaveProperty("message", "The perfil autor with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil del autor");
     });
 
     it('create should throw an exception for an invalid servicio ofrecido', async () => {
@@ -223,7 +223,7 @@ describe('SolicitudAyudaService', () => {
         } as SolicitudAyudaEntity;
 
         await expect(() => service.create(nuevaSolicitud))
-            .rejects.toHaveProperty("message", "The servicio ofrecido with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el servicio ofrecido");
     });
 
     it('findOne should return a solicitud ayuda by id', async () => {
@@ -234,7 +234,7 @@ describe('SolicitudAyudaService', () => {
 
     it('findOne should throw an exception for an invalid solicitud ayuda', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The solicitud ayuda with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la solicitud de ayuda");
     });
 
     it('update should modify a solicitud ayuda', async () => {
@@ -246,7 +246,7 @@ describe('SolicitudAyudaService', () => {
     it('update should throw an exception for an invalid solicitud ayuda', async () => {
         const invalida = { ...solicitud, titulo: faker.lorem.words(3) };
         await expect(() => service.update("0", invalida))
-            .rejects.toHaveProperty("message", "The solicitud ayuda with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la solicitud de ayuda");
     });
 
     it('aceptarSolicitud should mark a solicitud as aceptada', async () => {
@@ -257,13 +257,13 @@ describe('SolicitudAyudaService', () => {
 
     it('aceptarSolicitud should throw an exception for an invalid solicitud ayuda', async () => {
         await expect(() => service.aceptarSolicitud("0"))
-            .rejects.toHaveProperty("message", "The solicitud ayuda with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la solicitud de ayuda");
     });
 
     it('aceptarSolicitud should throw an exception when already aceptada', async () => {
         await service.aceptarSolicitud(solicitud.id);
         await expect(() => service.aceptarSolicitud(solicitud.id))
-            .rejects.toHaveProperty("message", "The solicitud ayuda is already aceptada");
+            .rejects.toHaveProperty("message", "La solicitud de ayuda ya fue aceptada");
     });
 
     it('delete should remove a solicitud ayuda', async () => {
@@ -274,6 +274,6 @@ describe('SolicitudAyudaService', () => {
 
     it('delete should throw an exception for an invalid solicitud ayuda', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The solicitud ayuda with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la solicitud de ayuda");
     });
 });

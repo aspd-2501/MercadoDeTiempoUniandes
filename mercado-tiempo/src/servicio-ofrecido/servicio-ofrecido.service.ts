@@ -38,7 +38,7 @@ export class ServicioOfrecidoService {
     async findByPerfilId(perfilId: string, incluirOcultos = false): Promise<ServicioOfrecidoEntity[]> {
         const perfil = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         return await this.servicioOfrecidoRepository.find({
             where: incluirOcultos ? { perfil: { id: perfilId } } : { perfil: { id: perfilId }, visible: true },
@@ -53,16 +53,16 @@ export class ServicioOfrecidoService {
             relations: { perfil: true, categorias: true }
         });
         if (!servicio)
-            throw new BusinessLogicException("The servicio ofrecido with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el servicio ofrecido", BusinessError.NOT_FOUND);
         return servicio;
     }
 
     async create(servicio: ServicioOfrecidoEntity, categoriaIds: string[]): Promise<ServicioOfrecidoEntity> {
         if (!servicio.perfil)
-            throw new BusinessLogicException("A servicio ofrecido must have a perfil", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un servicio ofrecido debe tener un perfil", BusinessError.PRECONDITION_FAILED);
         const perfil = await this.perfilMiembroRepository.findOne({ where: { id: servicio.perfil.id } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         await this.validarCategorias(categoriaIds);
 
@@ -83,7 +83,7 @@ export class ServicioOfrecidoService {
     async update(id: string, servicio: ServicioOfrecidoEntity): Promise<ServicioOfrecidoEntity> {
         const persisted: ServicioOfrecidoEntity | null = await this.servicioOfrecidoRepository.findOne({ where: { id } });
         if (!persisted)
-            throw new BusinessLogicException("The servicio ofrecido with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el servicio ofrecido", BusinessError.NOT_FOUND);
         servicio.id = id;
         return await this.servicioOfrecidoRepository.save(servicio);
     }
@@ -91,7 +91,7 @@ export class ServicioOfrecidoService {
     async delete(id: string) {
         const servicio: ServicioOfrecidoEntity | null = await this.servicioOfrecidoRepository.findOne({ where: { id } });
         if (!servicio)
-            throw new BusinessLogicException("The servicio ofrecido with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el servicio ofrecido", BusinessError.NOT_FOUND);
         await this.servicioOfrecidoRepository.remove(servicio);
     }
 
@@ -103,7 +103,7 @@ export class ServicioOfrecidoService {
             relations: { categorias: { categoria: true } }
         });
         if (!servicio)
-            throw new BusinessLogicException("The servicio ofrecido with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el servicio ofrecido", BusinessError.NOT_FOUND);
 
         return servicio.categorias.map(c => c.categoria);
     }
@@ -111,7 +111,7 @@ export class ServicioOfrecidoService {
     async associateCategoriasServicio(servicioId: string, categoriaIds: string[]): Promise<ServicioOfrecidoEntity> {
         const servicio: ServicioOfrecidoEntity | null = await this.servicioOfrecidoRepository.findOne({ where: { id: servicioId } });
         if (!servicio)
-            throw new BusinessLogicException("The servicio ofrecido with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el servicio ofrecido", BusinessError.NOT_FOUND);
 
         await this.validarCategorias(categoriaIds);
 
@@ -131,12 +131,12 @@ export class ServicioOfrecidoService {
 
     private async validarCategorias(categoriaIds: string[]) {
         if (!categoriaIds || categoriaIds.length < 1 || categoriaIds.length > 3)
-            throw new BusinessLogicException("A servicio ofrecido must have between 1 and 3 categorias", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un servicio ofrecido debe tener entre 1 y 3 categorías", BusinessError.PRECONDITION_FAILED);
 
         for (const idCategoria of categoriaIds) {
             const categoria = await this.categoriaRepository.findOne({ where: { id: idCategoria } });
             if (!categoria)
-                throw new BusinessLogicException("The categoria with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró la categoría", BusinessError.NOT_FOUND);
         }
     }
 }

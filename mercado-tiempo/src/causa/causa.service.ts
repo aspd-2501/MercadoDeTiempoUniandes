@@ -25,7 +25,7 @@ export class CausaService {
             relations: { perfilCreador: true, perfilReceptor: true }
         });
         if (!causa)
-            throw new BusinessLogicException("The causa with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la causa", BusinessError.NOT_FOUND);
         return causa;
     }
 
@@ -36,7 +36,7 @@ export class CausaService {
     async update(id: string, causa: CausaEntity): Promise<CausaEntity> {
         const persisted: CausaEntity | null = await this.causaRepository.findOne({ where: { id } });
         if (!persisted)
-            throw new BusinessLogicException("The causa with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la causa", BusinessError.NOT_FOUND);
         causa.id = id;
         return await this.causaRepository.save(causa);
     }
@@ -44,7 +44,7 @@ export class CausaService {
     async delete(id: string) {
         const causa: CausaEntity | null = await this.causaRepository.findOne({ where: { id } });
         if (!causa)
-            throw new BusinessLogicException("The causa with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la causa", BusinessError.NOT_FOUND);
         await this.causaRepository.remove(causa);
     }
 }

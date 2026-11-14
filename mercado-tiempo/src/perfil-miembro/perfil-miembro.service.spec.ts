@@ -85,7 +85,7 @@ describe('PerfilMiembroService', () => {
 
     it('findOne should throw an exception for an invalid perfil', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The perfil miembro with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil de miembro");
     });
 
     it('create should return a new perfil with its usuario', async () => {
@@ -126,7 +126,7 @@ describe('PerfilMiembroService', () => {
         } as PerfilMiembroEntity;
 
         await expect(() => service.create(perfil))
-            .rejects.toHaveProperty("message", "A perfil miembro must have a usuario");
+            .rejects.toHaveProperty("message", "Un perfil de miembro debe tener un usuario");
     });
 
     it('create should throw an exception for an invalid usuario', async () => {
@@ -144,7 +144,7 @@ describe('PerfilMiembroService', () => {
         } as PerfilMiembroEntity;
 
         await expect(() => service.create(perfil))
-            .rejects.toHaveProperty("message", "The usuario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el usuario");
     });
 
     it('create should throw an exception when usuario already has a perfil', async () => {
@@ -166,7 +166,7 @@ describe('PerfilMiembroService', () => {
         } as PerfilMiembroEntity;
 
         await expect(() => service.create(perfil))
-            .rejects.toHaveProperty("message", "The usuario already has a perfil miembro");
+            .rejects.toHaveProperty("message", "El usuario ya tiene un perfil de miembro");
     });
 
     it('update should modify a perfil', async () => {
@@ -181,7 +181,7 @@ describe('PerfilMiembroService', () => {
         let perfil: PerfilMiembroEntity = perfilesList[0];
         perfil = { ...perfil, descripcion: faker.lorem.sentence() };
         await expect(() => service.update("0", perfil))
-            .rejects.toHaveProperty("message", "The perfil miembro with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil de miembro");
     });
 
     it('delete should remove a perfil', async () => {
@@ -194,7 +194,7 @@ describe('PerfilMiembroService', () => {
 
     it('delete should throw an exception for an invalid perfil', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The perfil miembro with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil de miembro");
     });
 
     // --- Estado de actividad (RF-006) ---
@@ -207,7 +207,7 @@ describe('PerfilMiembroService', () => {
 
     it('cambiarEstadoActividad should throw an exception for an invalid perfil', async () => {
         await expect(() => service.cambiarEstadoActividad("0", false))
-            .rejects.toHaveProperty("message", "The perfil miembro with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil de miembro");
     });
 
     // --- Perfil a partir del usuario (inicio de sesión) ---
@@ -222,7 +222,7 @@ describe('PerfilMiembroService', () => {
     it('findByUsuarioId should throw an exception for a usuario without perfil', async () => {
         const usuarioSinPerfil = await createUsuario();
         await expect(() => service.findByUsuarioId(usuarioSinPerfil.id))
-            .rejects.toHaveProperty("message", "The usuario with the given id does not have a perfil miembro");
+            .rejects.toHaveProperty("message", "El usuario todavía no tiene un perfil de miembro");
     });
 
     // --- Saldo (inicial de 3 horas y solo lo cambia un moderador) ---
@@ -286,21 +286,21 @@ describe('PerfilMiembroService', () => {
     it('ajustarSaldo should reject a usuario that is not a moderador', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.ajustarSaldo(perfil.id, 50, perfil.usuario.id))
-            .rejects.toHaveProperty("message", "Only a moderador can change the saldo of a perfil miembro");
+            .rejects.toHaveProperty("message", "Solo un moderador puede cambiar el saldo de un miembro");
         expect((await perfilRepository.findOneBy({ id: perfil.id }))!.saldo).toBe(perfil.saldo);
     });
 
     it('ajustarSaldo should reject a negative or decimal saldo', async () => {
         const moderador = await crearModerador();
         await expect(() => service.ajustarSaldo(perfilesList[0].id, -1, moderador.id))
-            .rejects.toHaveProperty("message", "The saldo must be an integer greater than or equal to 0");
+            .rejects.toHaveProperty("message", "El saldo debe ser un número entero mayor o igual a 0");
         await expect(() => service.ajustarSaldo(perfilesList[0].id, 1.5, moderador.id))
-            .rejects.toHaveProperty("message", "The saldo must be an integer greater than or equal to 0");
+            .rejects.toHaveProperty("message", "El saldo debe ser un número entero mayor o igual a 0");
     });
 
     it('ajustarSaldo should throw an exception for an invalid perfil', async () => {
         const moderador = await crearModerador();
         await expect(() => service.ajustarSaldo("0", 10, moderador.id))
-            .rejects.toHaveProperty("message", "The perfil miembro with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil de miembro");
     });
 });

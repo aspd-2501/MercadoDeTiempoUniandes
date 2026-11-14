@@ -39,7 +39,7 @@ export class DonacionService {
             relations: { perfilDonante: true, depositoDonante: true, perfilReceptor: true, depositoReceptor: true, causa: true }
         });
         if (!donacion)
-            throw new BusinessLogicException("The donacion with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la donación", BusinessError.NOT_FOUND);
         return donacion;
     }
 
@@ -48,7 +48,7 @@ export class DonacionService {
 
     async create(donacion: DonacionEntity): Promise<DonacionEntity> {
         if (!donacion.horasDonadas || donacion.horasDonadas <= 0 || !Number.isInteger(donacion.horasDonadas))
-            throw new BusinessLogicException("The horasDonadas must be a positive integer", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Las horas donadas deben ser un número entero mayor que 0", BusinessError.PRECONDITION_FAILED);
 
         await this.validarDonante(donacion);
         await this.validarReceptor(donacion);
@@ -56,7 +56,7 @@ export class DonacionService {
         if (donacion.causa) {
             const causa = await this.causaRepository.findOne({ where: { id: donacion.causa.id } });
             if (!causa)
-                throw new BusinessLogicException("The causa with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró la causa", BusinessError.NOT_FOUND);
         }
 
         // Todo en una sola transacción de BD: o se mueven las horas y se guarda la donación, o nada
@@ -86,9 +86,9 @@ export class DonacionService {
         if (perfil) {
             const actual = await manager.findOne(PerfilMiembroEntity, { where: { id: perfil.id } });
             if (!actual)
-                throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
             if (actual.saldo + horas < 0)
-                throw new BusinessLogicException("The perfil donante does not have enough saldo", BusinessError.PRECONDITION_FAILED);
+                throw new BusinessLogicException("No tienes saldo suficiente para donar esas horas", BusinessError.PRECONDITION_FAILED);
 
             const saldoResultante = actual.saldo + horas;
             await manager.update(PerfilMiembroEntity, actual.id, { saldo: saldoResultante });
@@ -98,9 +98,9 @@ export class DonacionService {
         } else if (deposito) {
             const actual = await manager.findOne(DepositoHorasEntity, { where: { id: deposito.id } });
             if (!actual)
-                throw new BusinessLogicException("The deposito horas with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el depósito de horas", BusinessError.NOT_FOUND);
             if (actual.saldo + horas < 0)
-                throw new BusinessLogicException("The fondo comunitario does not have enough saldo", BusinessError.PRECONDITION_FAILED);
+                throw new BusinessLogicException("El fondo comunitario no tiene saldo suficiente", BusinessError.PRECONDITION_FAILED);
 
             const saldoResultante = actual.saldo + horas;
             await manager.update(DepositoHorasEntity, actual.id, { saldo: saldoResultante });
@@ -117,16 +117,16 @@ export class DonacionService {
         const tieneDeposito = !!donacion.depositoDonante;
 
         if (tienePerfil === tieneDeposito)
-            throw new BusinessLogicException("A donacion must have exactly one donante: a perfil or a deposito", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Una donación debe tener exactamente un donante: un perfil o un depósito", BusinessError.PRECONDITION_FAILED);
 
         if (tienePerfil) {
             const perfil = await this.perfilMiembroRepository.findOne({ where: { id: donacion.perfilDonante.id } });
             if (!perfil)
-                throw new BusinessLogicException("The perfil donante with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el perfil donante", BusinessError.NOT_FOUND);
         } else {
             const deposito = await this.depositoHorasRepository.findOne({ where: { id: donacion.depositoDonante.id } });
             if (!deposito)
-                throw new BusinessLogicException("The deposito donante with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el depósito donante", BusinessError.NOT_FOUND);
         }
     }
 
@@ -135,24 +135,24 @@ export class DonacionService {
         const tieneDeposito = !!donacion.depositoReceptor;
 
         if (tienePerfil === tieneDeposito)
-            throw new BusinessLogicException("A donacion must have exactly one receptor: a perfil or a deposito", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Una donación debe tener exactamente un receptor: un perfil o un depósito", BusinessError.PRECONDITION_FAILED);
 
         if (tienePerfil) {
             const perfil = await this.perfilMiembroRepository.findOne({ where: { id: donacion.perfilReceptor.id } });
             if (!perfil)
-                throw new BusinessLogicException("The perfil receptor with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el perfil receptor", BusinessError.NOT_FOUND);
         } else {
             const deposito = await this.depositoHorasRepository.findOne({ where: { id: donacion.depositoReceptor.id } });
             if (!deposito)
-                throw new BusinessLogicException("The deposito receptor with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el depósito receptor", BusinessError.NOT_FOUND);
         }
     }
 
     private async validarDistintos(donacion: DonacionEntity) {
         if (donacion.perfilDonante && donacion.perfilReceptor && donacion.perfilDonante.id === donacion.perfilReceptor.id)
-            throw new BusinessLogicException("The donante and receptor perfiles cannot be the same", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("No puedes donarte horas a ti mismo", BusinessError.PRECONDITION_FAILED);
 
         if (donacion.depositoDonante && donacion.depositoReceptor && donacion.depositoDonante.id === donacion.depositoReceptor.id)
-            throw new BusinessLogicException("The donante and receptor depositos cannot be the same", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El depósito donante y el receptor no pueden ser el mismo", BusinessError.PRECONDITION_FAILED);
     }
 }

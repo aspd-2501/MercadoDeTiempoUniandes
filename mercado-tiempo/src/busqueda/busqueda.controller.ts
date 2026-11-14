@@ -20,7 +20,7 @@ export class BusquedaController {
     @Get('posts-ayuda')
     async buscarPostsAyuda(@Query('q') q?: string, @Query('tipo') tipo?: TipoPostBusqueda) {
         if (tipo && !Object.values(TipoPostBusqueda).includes(tipo))
-            throw new BusinessLogicException("The tipo must be solicitud or ofrecimiento", BusinessError.BAD_REQUEST);
+            throw new BusinessLogicException("El tipo debe ser solicitud u ofrecimiento", BusinessError.BAD_REQUEST);
         return await this.busquedaService.buscarPostsAyuda(q, tipo);
     }
 

@@ -110,7 +110,7 @@ describe('ReconocimientoService', () => {
 
     it('findOne should throw an exception for an invalid reconocimiento', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The reconocimiento with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el reconocimiento");
     });
 
     it('create should return a new reconocimiento', async () => {
@@ -135,7 +135,7 @@ describe('ReconocimientoService', () => {
     it('update should throw an exception for an invalid reconocimiento', async () => {
         const invalido = { ...reconocimiento, nombre: faker.lorem.words(2) };
         await expect(() => service.update("0", invalido))
-            .rejects.toHaveProperty("message", "The reconocimiento with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el reconocimiento");
     });
 
     it('delete should remove a reconocimiento', async () => {
@@ -146,7 +146,7 @@ describe('ReconocimientoService', () => {
 
     it('delete should throw an exception for an invalid reconocimiento', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The reconocimiento with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el reconocimiento");
     });
 
     it('otorgarReconocimiento should save a reconocimiento without otorgante nor post', async () => {
@@ -166,42 +166,42 @@ describe('ReconocimientoService', () => {
 
     it('otorgarReconocimiento should throw an exception for an invalid reconocimiento', async () => {
         await expect(() => service.otorgarReconocimiento("0", perfilA.id))
-            .rejects.toHaveProperty("message", "The reconocimiento with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el reconocimiento");
     });
 
     it('otorgarReconocimiento should throw an exception for an invalid perfil receptor', async () => {
         await expect(() => service.otorgarReconocimiento(reconocimiento.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil receptor with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil receptor");
     });
 
     it('otorgarReconocimiento should throw an exception when otorgante equals receptor', async () => {
         await expect(() => service.otorgarReconocimiento(reconocimiento.id, perfilA.id, perfilA.id))
-            .rejects.toHaveProperty("message", "A perfil cannot otorgar a reconocimiento to itself");
+            .rejects.toHaveProperty("message", "Un perfil no puede otorgarse un reconocimiento a sí mismo");
     });
 
     it('otorgarReconocimiento should throw an exception for an invalid perfil otorgante', async () => {
         await expect(() => service.otorgarReconocimiento(reconocimiento.id, perfilA.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil otorgante with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil que otorga el reconocimiento");
     });
 
     it('otorgarReconocimiento should throw an exception for a post without otorgante', async () => {
         await expect(() => service.otorgarReconocimiento(reconocimiento.id, perfilA.id, undefined, post.id))
-            .rejects.toHaveProperty("message", "A reconocimiento tied to a post comunitario requires a perfil otorgante");
+            .rejects.toHaveProperty("message", "Un reconocimiento ligado a un post comunitario necesita un perfil que lo otorgue");
     });
 
     it('otorgarReconocimiento should throw an exception for an invalid post comunitario', async () => {
         await expect(() => service.otorgarReconocimiento(reconocimiento.id, perfilB.id, perfilA.id, "0"))
-            .rejects.toHaveProperty("message", "The post comunitario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post comunitario");
     });
 
     it('otorgarReconocimiento should throw an exception when receptor is not a participante of the post', async () => {
         await expect(() => service.otorgarReconocimiento(reconocimiento.id, perfilAjeno.id, perfilA.id, post.id))
-            .rejects.toHaveProperty("message", "The perfil receptor must be a participante of the post comunitario");
+            .rejects.toHaveProperty("message", "Quien recibe el reconocimiento debe ser participante del post comunitario");
     });
 
     it('otorgarReconocimiento should throw an exception when otorgante is not a participante of the post', async () => {
         await expect(() => service.otorgarReconocimiento(reconocimiento.id, perfilB.id, perfilAjeno.id, post.id))
-            .rejects.toHaveProperty("message", "The perfil otorgante must be a participante of the post comunitario");
+            .rejects.toHaveProperty("message", "Quien otorga el reconocimiento debe ser participante del post comunitario");
     });
 
     it('findOtorgamientosByPerfilReceptorId should return otorgamientos for a perfil', async () => {
@@ -212,6 +212,6 @@ describe('ReconocimientoService', () => {
 
     it('findOtorgamientosByPerfilReceptorId should throw an exception for an invalid perfil', async () => {
         await expect(() => service.findOtorgamientosByPerfilReceptorId("0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 });

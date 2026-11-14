@@ -52,31 +52,31 @@ export class PostAyudaService {
             relations: { perfilAutor: true, categorias: true, horariosDisponibles: true }
         });
         if (!post)
-            throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
         return post;
     }
 
     async create(post: PostAyudaEntity, categoriaIds: string[], horarios: FranjaHoraria[]): Promise<PostAyudaEntity> {
         if (!post.perfilAutor)
-            throw new BusinessLogicException("A post ayuda must have a perfil autor", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un post de ayuda debe tener un autor", BusinessError.PRECONDITION_FAILED);
         const autor = await this.perfilMiembroRepository.findOne({ where: { id: post.perfilAutor.id } });
         if (!autor)
-            throw new BusinessLogicException("The perfil autor with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil del autor", BusinessError.NOT_FOUND);
 
         if (!post.horas || post.horas <= 0)
-            throw new BusinessLogicException("The horas of a post ayuda must be positive", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Las horas del post de ayuda deben ser mayores que 0", BusinessError.PRECONDITION_FAILED);
 
         await this.validarCategorias(categoriaIds);
 
         // RF-036: al menos una franja, y cada una debe alcanzar para las horas del post
         if (!horarios || horarios.length < 1)
-            throw new BusinessLogicException("A post ayuda must have at least 1 horario disponible", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un post de ayuda debe tener al menos 1 horario disponible", BusinessError.PRECONDITION_FAILED);
         horarios.forEach(franja => this.validarFranja(franja, post.horas));
 
         // Exactamente un horario preferido: el marcado o, si no hay ninguno, el que empieza primero
         const marcadas = horarios.filter(franja => franja.preferido === true);
         if (marcadas.length > 1)
-            throw new BusinessLogicException("Only one horario of a post ayuda can be preferido", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Solo un horario del post de ayuda puede ser el preferido", BusinessError.PRECONDITION_FAILED);
         const preferida = marcadas[0] ?? [...horarios].sort((a, b) => inicioMs(a) - inicioMs(b))[0];
 
         const nuevoPost = await this.postAyudaRepository.save(post);
@@ -103,7 +103,7 @@ export class PostAyudaService {
     async update(id: string, post: PostAyudaEntity): Promise<PostAyudaEntity> {
         const persisted: PostAyudaEntity | null = await this.postAyudaRepository.findOne({ where: { id } });
         if (!persisted)
-            throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
         post.id = id;
         return await this.postAyudaRepository.save(post);
     }
@@ -111,7 +111,7 @@ export class PostAyudaService {
     async delete(id: string) {
         const post: PostAyudaEntity | null = await this.postAyudaRepository.findOne({ where: { id } });
         if (!post)
-            throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
         await this.postAyudaRepository.remove(post);
     }
 
@@ -123,7 +123,7 @@ export class PostAyudaService {
             relations: { horariosDisponibles: true }
         });
         if (!post)
-            throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
 
         return post.horariosDisponibles.sort((a, b) => inicioMs(a) - inicioMs(b));
     }
@@ -135,10 +135,10 @@ export class PostAyudaService {
             relations: { horariosDisponibles: true }
         });
         if (!post)
-            throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
 
         if (!post.horariosDisponibles.some(h => h.id === horarioId))
-            throw new BusinessLogicException("The horario disponible is not associated with the post ayuda", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El horario disponible no pertenece al post de ayuda", BusinessError.PRECONDITION_FAILED);
 
         await this.cambiarPreferido(postId, horarioId);
         return await this.findOne(postId);
@@ -150,7 +150,7 @@ export class PostAyudaService {
             relations: { perfilAutor: true }
         });
         if (!post)
-            throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
 
         this.validarFranja(franja, post.horas);
 
@@ -174,14 +174,14 @@ export class PostAyudaService {
             relations: { horariosDisponibles: true }
         });
         if (!post)
-            throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
 
         const horario = post.horariosDisponibles.find(h => h.id === horarioId);
         if (!horario)
-            throw new BusinessLogicException("The horario disponible is not associated with the post ayuda", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El horario disponible no pertenece al post de ayuda", BusinessError.PRECONDITION_FAILED);
 
         if (post.horariosDisponibles.length <= 1)
-            throw new BusinessLogicException("A post ayuda must keep at least 1 horario disponible", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un post de ayuda debe conservar al menos 1 horario disponible", BusinessError.PRECONDITION_FAILED);
 
         await this.horarioRepository.remove(horario);
 
@@ -210,7 +210,7 @@ export class PostAyudaService {
             relations: { categorias: { categoria: true } }
         });
         if (!post)
-            throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
 
         return post.categorias.map(c => c.categoria);
     }
@@ -218,7 +218,7 @@ export class PostAyudaService {
     async associateCategoriasPost(postId: string, categoriaIds: string[]): Promise<PostAyudaEntity> {
         const post: PostAyudaEntity | null = await this.postAyudaRepository.findOne({ where: { id: postId } });
         if (!post)
-            throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
 
         await this.validarCategorias(categoriaIds);
 
@@ -242,21 +242,21 @@ export class PostAyudaService {
         const fin = new Date(franja.fechaFin).getTime();
 
         if (isNaN(inicio) || isNaN(fin) || fin <= inicio)
-            throw new BusinessLogicException("The fechaFin of a horario must be after its fechaInicio", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El horario debe terminar después de empezar", BusinessError.PRECONDITION_FAILED);
 
         const horasFranja = (fin - inicio) / (1000 * 60 * 60);
         if (horasFranja < horas)
-            throw new BusinessLogicException("Each horario must last at least the horas of the post ayuda", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Cada horario debe durar al menos las horas del post de ayuda", BusinessError.PRECONDITION_FAILED);
     }
 
     private async validarCategorias(categoriaIds: string[]) {
         if (!categoriaIds || categoriaIds.length < 1 || categoriaIds.length > 3)
-            throw new BusinessLogicException("A post ayuda must have between 1 and 3 categorias", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un post de ayuda debe tener entre 1 y 3 categorías", BusinessError.PRECONDITION_FAILED);
 
         for (const idCategoria of categoriaIds) {
             const categoria = await this.categoriaRepository.findOne({ where: { id: idCategoria } });
             if (!categoria)
-                throw new BusinessLogicException("The categoria with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró la categoría", BusinessError.NOT_FOUND);
         }
     }
 }

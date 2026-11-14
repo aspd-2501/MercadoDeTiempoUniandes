@@ -48,19 +48,19 @@ export class AcuerdoService {
             relations: { postAyuda: true, solicitud: true, participantes: true, horariosDisponibles: true, horarioAcordado: true, chat: true, solicitudesModificacion: true }
         });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
         return acuerdo;
     }
 
     async create(acuerdo: AcuerdoEntity): Promise<AcuerdoEntity> {
         if (!!acuerdo.postAyuda === !!acuerdo.solicitud)
-            throw new BusinessLogicException("An acuerdo must have either a postAyuda or a solicitud, but not both", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un acuerdo debe venir de un post de ayuda o de una solicitud, pero no de ambos", BusinessError.PRECONDITION_FAILED);
 
         if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
-            throw new BusinessLogicException("An acuerdo becomes realizado only when all participantes confirm the prestacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un acuerdo queda realizado solo cuando todos los participantes confirman la prestación", BusinessError.PRECONDITION_FAILED);
 
         if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
-            throw new BusinessLogicException("An acuerdo cannot be created as cancelado", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un acuerdo no se puede crear cancelado", BusinessError.PRECONDITION_FAILED);
 
         acuerdo.estado = acuerdo.estado ?? EstadoAcuerdo.EN_CREACION;
         return await this.acuerdoRepository.save(acuerdo);
@@ -69,15 +69,15 @@ export class AcuerdoService {
     async update(id: string, acuerdo: AcuerdoEntity): Promise<AcuerdoEntity> {
         const persisted: AcuerdoEntity | null = await this.acuerdoRepository.findOne({ where: { id } });
         if (!persisted)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
 
         this.validarAcuerdoActivo(persisted);
 
         if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
-            throw new BusinessLogicException("An acuerdo becomes realizado only when all participantes confirm the prestacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un acuerdo queda realizado solo cuando todos los participantes confirman la prestación", BusinessError.PRECONDITION_FAILED);
 
         if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
-            throw new BusinessLogicException("An acuerdo can only be cancelado through a solicitud de cancelacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un acuerdo solo se puede cancelar con una solicitud de cancelación", BusinessError.PRECONDITION_FAILED);
 
         // Si cambian las horas, todos los receptores deben poder pagar su nueva cuota
         if (acuerdo.horas != null && acuerdo.horas !== persisted.horas)
@@ -92,7 +92,7 @@ export class AcuerdoService {
     async delete(id: string) {
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({ where: { id } });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
         await this.acuerdoRepository.remove(acuerdo);
     }
 
@@ -101,19 +101,19 @@ export class AcuerdoService {
     async addParticipanteAcuerdo(acuerdoId: string, perfilId: string, rol: RolParticipante): Promise<AcuerdoEntity> {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
             where: { id: acuerdoId },
             relations: { participantes: true }
         });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
         this.validarAcuerdoActivo(acuerdo);
 
         const yaParticipa = acuerdo.participantes.some(p => p.idPerfil === perfilId);
         if (yaParticipa)
-            throw new BusinessLogicException("The perfil is already a participant in the acuerdo", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil ya es participante del acuerdo", BusinessError.PRECONDITION_FAILED);
 
         // Un receptor nuevo o un prestador nuevo cambian las cuotas: todos deben poder pagar
         const actuales = await this.participantesConSaldo(acuerdoId);
@@ -132,18 +132,18 @@ export class AcuerdoService {
     async findParticipanteByAcuerdoIdPerfilId(acuerdoId: string, perfilId: string): Promise<ParticipanteAcuerdoEntity> {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
             where: { id: acuerdoId },
             relations: { participantes: true }
         });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
 
         const participante = acuerdo.participantes.find(p => p.idPerfil === perfilId);
         if (!participante)
-            throw new BusinessLogicException("The perfil with the given id is not a participant in the acuerdo", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil no es participante del acuerdo", BusinessError.PRECONDITION_FAILED);
 
         return participante;
     }
@@ -154,7 +154,7 @@ export class AcuerdoService {
             relations: { participantes: { perfil: true } }
         });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
 
         return acuerdo.participantes;
     }
@@ -168,14 +168,14 @@ export class AcuerdoService {
             relations: { participantes: true }
         });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
         this.validarAcuerdoActivo(acuerdo);
 
         const nuevos: ParticipanteReparto[] = [];
         for (const p of participantes) {
             const perfil = await this.perfilMiembroRepository.findOne({ where: { id: p.perfilId } });
             if (!perfil)
-                throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
             nuevos.push({ idPerfil: perfil.id, rol: p.rol, saldo: perfil.saldo });
         }
         validarSaldosReceptores(acuerdo.horas, nuevos);
@@ -197,19 +197,19 @@ export class AcuerdoService {
     async deleteParticipanteAcuerdo(acuerdoId: string, perfilId: string) {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
             where: { id: acuerdoId },
             relations: { participantes: true }
         });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
         this.validarAcuerdoActivo(acuerdo);
 
         const participante = acuerdo.participantes.find(p => p.idPerfil === perfilId);
         if (!participante)
-            throw new BusinessLogicException("The perfil with the given id is not a participant in the acuerdo", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil no es participante del acuerdo", BusinessError.PRECONDITION_FAILED);
 
         await this.participanteRepository.delete({ idAcuerdo: acuerdoId, idPerfil: perfilId });
     }
@@ -222,7 +222,7 @@ export class AcuerdoService {
             relations: { postAyuda: true, solicitud: true }
         });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
         this.validarAcuerdoActivo(acuerdo);
 
         const horario: HorarioDisponibleEntity | null = await this.horarioRepository.findOne({
@@ -230,14 +230,14 @@ export class AcuerdoService {
             relations: { acuerdo: true, postAyuda: true, solicitud: true }
         });
         if (!horario)
-            throw new BusinessLogicException("The horario disponible with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el horario disponible", BusinessError.NOT_FOUND);
 
         const perteneceAlAcuerdo =
             horario.acuerdo?.id === acuerdo.id ||
             (!!acuerdo.postAyuda && horario.postAyuda?.id === acuerdo.postAyuda.id) ||
             (!!acuerdo.solicitud && horario.solicitud?.id === acuerdo.solicitud.id);
         if (!perteneceAlAcuerdo)
-            throw new BusinessLogicException("The horario disponible is not associated with the acuerdo", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El horario disponible no pertenece al acuerdo", BusinessError.PRECONDITION_FAILED);
 
         acuerdo.horarioAcordado = horario;
         await this.acuerdoRepository.save(acuerdo);
@@ -257,13 +257,13 @@ export class AcuerdoService {
     async setChatAcuerdo(acuerdoId: string, chatId: string): Promise<AcuerdoEntity> {
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({ where: { id: acuerdoId } });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
 
         const chat: ChatEntity | null = await this.chatRepository.findOne({ where: { id: chatId }, relations: { acuerdo: true } });
         if (!chat)
-            throw new BusinessLogicException("The chat with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el chat", BusinessError.NOT_FOUND);
         if (chat.acuerdo && chat.acuerdo.id !== acuerdoId)
-            throw new BusinessLogicException("The chat already belongs to another acuerdo", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El chat ya pertenece a otro acuerdo", BusinessError.PRECONDITION_FAILED);
 
         acuerdo.chat = chat;
         await this.acuerdoRepository.save(acuerdo);
@@ -279,27 +279,27 @@ export class AcuerdoService {
             relations: { participantes: true }
         });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
         this.validarAcuerdoActivo(acuerdo);
 
         if (acuerdo.estado !== EstadoAcuerdo.ACORDADO)
-            throw new BusinessLogicException("The acuerdo must be acordado to confirm the prestacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El acuerdo debe estar acordado para confirmar la prestación", BusinessError.PRECONDITION_FAILED);
 
         if (new Date(acuerdo.fechaRealizacion).getTime() > Date.now())
-            throw new BusinessLogicException("The prestacion cannot be confirmed before the fechaRealizacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("La prestación no se puede confirmar antes de la fecha de realización", BusinessError.PRECONDITION_FAILED);
 
         const participante = acuerdo.participantes.find(p => p.idPerfil === perfilId);
         if (!participante)
-            throw new BusinessLogicException("The perfil with the given id is not a participant in the acuerdo", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil no es participante del acuerdo", BusinessError.PRECONDITION_FAILED);
 
         if (participante.confirmoPrestacion)
-            throw new BusinessLogicException("The perfil already confirmed the prestacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil ya confirmó la prestación", BusinessError.PRECONDITION_FAILED);
 
         const tienePrestador = acuerdo.participantes.some(p => p.rol === RolParticipante.PRESTADOR);
         const tieneReceptor = acuerdo.participantes.some(p => p.rol === RolParticipante.RECEPTOR);
         if (!tienePrestador || !tieneReceptor)
             throw new BusinessLogicException(
-                "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be realizado",
+                "Un acuerdo debe tener al menos un prestador y un receptor para quedar realizado",
                 BusinessError.PRECONDITION_FAILED
             );
 
@@ -329,7 +329,7 @@ export class AcuerdoService {
             relations: { participantes: { perfil: true } }
         });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
 
         const reparto = calcularReparto(acuerdo.horas, acuerdo.participantes.map(p => ({
             idPerfil: p.idPerfil, rol: p.rol, saldo: p.perfil.saldo,
@@ -372,7 +372,7 @@ export class AcuerdoService {
     private async obtenerFondoComunitario(manager: EntityManager): Promise<DepositoHorasEntity> {
         const depositos = await manager.find(DepositoHorasEntity);
         if (depositos.length > 1)
-            throw new BusinessLogicException("There must be exactly one deposito horas: the fondo comunitario", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Debe haber exactamente un depósito de horas: el fondo comunitario", BusinessError.PRECONDITION_FAILED);
         if (depositos.length === 1)
             return depositos[0];
         return await manager.save(DepositoHorasEntity, manager.create(DepositoHorasEntity, { saldo: 0 }));
@@ -392,8 +392,8 @@ export class AcuerdoService {
 
     private validarAcuerdoActivo(acuerdo: AcuerdoEntity) {
         if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
-            throw new BusinessLogicException("The acuerdo is realizado and cannot be modified", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El acuerdo ya se realizó y no se puede modificar", BusinessError.PRECONDITION_FAILED);
         if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
-            throw new BusinessLogicException("The acuerdo is cancelado and cannot be modified", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El acuerdo está cancelado y no se puede modificar", BusinessError.PRECONDITION_FAILED);
     }
 }

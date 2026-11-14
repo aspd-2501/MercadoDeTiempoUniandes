@@ -64,20 +64,20 @@ export class DisponibilidadAcuerdoService {
         const acuerdo = await this.findAcuerdo(acuerdoId);
 
         if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
-            throw new BusinessLogicException("The acuerdo is realizado and cannot be modified", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El acuerdo ya se realizó y no se puede modificar", BusinessError.PRECONDITION_FAILED);
         if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
-            throw new BusinessLogicException("The acuerdo is cancelado and cannot be modified", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El acuerdo está cancelado y no se puede modificar", BusinessError.PRECONDITION_FAILED);
         if (acuerdo.horarioAcordado)
-            throw new BusinessLogicException("The acuerdo already has a horario acordado", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El acuerdo ya tiene un horario acordado", BusinessError.PRECONDITION_FAILED);
 
         const participante = acuerdo.participantes.find(p => p.idPerfil === perfilId);
         if (!participante)
-            throw new BusinessLogicException("The perfil with the given id is not a participant in the acuerdo", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil no es participante del acuerdo", BusinessError.PRECONDITION_FAILED);
 
         for (const franja of franjas) {
             if (isNaN(new Date(franja.inicio).getTime()) || isNaN(new Date(franja.fin).getTime())
                 || new Date(franja.fin).getTime() <= new Date(franja.inicio).getTime())
-                throw new BusinessLogicException("The fechaFin of a horario must be after its fechaInicio", BusinessError.PRECONDITION_FAILED);
+                throw new BusinessLogicException("El horario debe terminar después de empezar", BusinessError.PRECONDITION_FAILED);
         }
 
         await this.acuerdoRepository.manager.transaction(async manager => {
@@ -167,7 +167,7 @@ export class DisponibilidadAcuerdoService {
             relations: { participantes: true, horarioAcordado: true, postAyuda: { perfilAutor: true } }
         });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
         return acuerdo;
     }
 }

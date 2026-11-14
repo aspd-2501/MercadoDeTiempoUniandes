@@ -25,7 +25,7 @@ export class CategoriaService {
             relations: { postsDeAyuda: true, serviciosOfrecidos: true, perfilesInteresados: true }
         });
         if (!categoria)
-            throw new BusinessLogicException("The categoria with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la categoría", BusinessError.NOT_FOUND);
         return categoria;
     }
 
@@ -36,7 +36,7 @@ export class CategoriaService {
     async update(id: string, categoria: CategoriaEntity): Promise<CategoriaEntity> {
         const persisted: CategoriaEntity | null = await this.categoriaRepository.findOne({ where: { id } });
         if (!persisted)
-            throw new BusinessLogicException("The categoria with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la categoría", BusinessError.NOT_FOUND);
         categoria.id = id;
         return await this.categoriaRepository.save(categoria);
     }
@@ -44,7 +44,7 @@ export class CategoriaService {
     async delete(id: string) {
         const categoria: CategoriaEntity | null = await this.categoriaRepository.findOne({ where: { id } });
         if (!categoria)
-            throw new BusinessLogicException("The categoria with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la categoría", BusinessError.NOT_FOUND);
         await this.categoriaRepository.remove(categoria);
     }
 }

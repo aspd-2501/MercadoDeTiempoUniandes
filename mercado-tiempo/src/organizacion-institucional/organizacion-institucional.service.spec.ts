@@ -58,7 +58,7 @@ describe('OrganizacionInstitucionalService', () => {
 
     it('findOne should throw an exception for an invalid organizacion', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The organizacion institucional with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la organización institucional");
     });
 
     it('create should return a new organizacion', async () => {
@@ -89,7 +89,7 @@ describe('OrganizacionInstitucionalService', () => {
         let organizacion: OrganizacionInstitucionalEntity = organizacionesList[0];
         organizacion = { ...organizacion, nombre: faker.company.name() };
         await expect(() => service.update("0", organizacion))
-            .rejects.toHaveProperty("message", "The organizacion institucional with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la organización institucional");
     });
 
     it('delete should remove an organizacion', async () => {
@@ -102,6 +102,6 @@ describe('OrganizacionInstitucionalService', () => {
 
     it('delete should throw an exception for an invalid organizacion', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The organizacion institucional with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la organización institucional");
     });
 });

@@ -158,7 +158,7 @@ describe('PostAyudaService', () => {
         } as PostAyudaEntity;
 
         await expect(() => service.create(nuevoPost, [categoriasList[2].id], []))
-            .rejects.toHaveProperty("message", "A post ayuda must have at least 1 horario disponible");
+            .rejects.toHaveProperty("message", "Un post de ayuda debe tener al menos 1 horario disponible");
     });
 
     it('create should throw an exception for a horario shorter than the horas of the post', async () => {
@@ -176,7 +176,7 @@ describe('PostAyudaService', () => {
         } as PostAyudaEntity;
 
         await expect(() => service.create(nuevoPost, [categoriasList[2].id], [crearFranja(3), crearFranja(1)]))
-            .rejects.toHaveProperty("message", "Each horario must last at least the horas of the post ayuda");
+            .rejects.toHaveProperty("message", "Cada horario debe durar al menos las horas del post de ayuda");
     });
 
     it('create should throw an exception for a horario that ends before it starts', async () => {
@@ -195,7 +195,7 @@ describe('PostAyudaService', () => {
         const { fechaInicio, fechaFin } = crearFranja(2);
 
         await expect(() => service.create(nuevoPost, [categoriasList[2].id], [{ fechaInicio: fechaFin, fechaFin: fechaInicio }]))
-            .rejects.toHaveProperty("message", "The fechaFin of a horario must be after its fechaInicio");
+            .rejects.toHaveProperty("message", "El horario debe terminar después de empezar");
     });
 
     it('create should throw an exception without a perfil autor', async () => {
@@ -212,7 +212,7 @@ describe('PostAyudaService', () => {
         } as PostAyudaEntity;
 
         await expect(() => service.create(nuevoPost, [categoriasList[2].id], [crearFranja(nuevoPost.horas)]))
-            .rejects.toHaveProperty("message", "A post ayuda must have a perfil autor");
+            .rejects.toHaveProperty("message", "Un post de ayuda debe tener un autor");
     });
 
     it('create should throw an exception for an invalid perfil autor', async () => {
@@ -231,7 +231,7 @@ describe('PostAyudaService', () => {
         } as PostAyudaEntity;
 
         await expect(() => service.create(nuevoPost, [categoriasList[2].id], [crearFranja(nuevoPost.horas)]))
-            .rejects.toHaveProperty("message", "The perfil autor with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil del autor");
     });
 
     it('create should throw an exception with no categorias', async () => {
@@ -249,7 +249,7 @@ describe('PostAyudaService', () => {
         } as PostAyudaEntity;
 
         await expect(() => service.create(nuevoPost, [], [crearFranja(nuevoPost.horas)]))
-            .rejects.toHaveProperty("message", "A post ayuda must have between 1 and 3 categorias");
+            .rejects.toHaveProperty("message", "Un post de ayuda debe tener entre 1 y 3 categorías");
     });
 
     it('create should throw an exception with more than 3 categorias', async () => {
@@ -268,7 +268,7 @@ describe('PostAyudaService', () => {
 
         const ids = categoriasList.slice(0, 4).map(c => c.id);
         await expect(() => service.create(nuevoPost, ids, [crearFranja(nuevoPost.horas)]))
-            .rejects.toHaveProperty("message", "A post ayuda must have between 1 and 3 categorias");
+            .rejects.toHaveProperty("message", "Un post de ayuda debe tener entre 1 y 3 categorías");
     });
 
     it('create should throw an exception for an invalid categoria', async () => {
@@ -286,7 +286,7 @@ describe('PostAyudaService', () => {
         } as PostAyudaEntity;
 
         await expect(() => service.create(nuevoPost, ["0"], [crearFranja(nuevoPost.horas)]))
-            .rejects.toHaveProperty("message", "The categoria with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la categoría");
     });
 
     it('findOne should return a post ayuda by id', async () => {
@@ -297,7 +297,7 @@ describe('PostAyudaService', () => {
 
     it('findOne should throw an exception for an invalid post ayuda', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The post ayuda with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post de ayuda");
     });
 
     it('update should modify a post ayuda', async () => {
@@ -309,7 +309,7 @@ describe('PostAyudaService', () => {
     it('update should throw an exception for an invalid post ayuda', async () => {
         const invalidPost = { ...post, titulo: faker.lorem.words(3) };
         await expect(() => service.update("0", invalidPost))
-            .rejects.toHaveProperty("message", "The post ayuda with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post de ayuda");
     });
 
     it('findCategoriasByPostId should return the categorias of a post', async () => {
@@ -319,7 +319,7 @@ describe('PostAyudaService', () => {
 
     it('findCategoriasByPostId should throw an exception for an invalid post ayuda', async () => {
         await expect(() => service.findCategoriasByPostId("0"))
-            .rejects.toHaveProperty("message", "The post ayuda with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post de ayuda");
     });
 
     it('associateCategoriasPost should update the categorias of a post', async () => {
@@ -329,13 +329,13 @@ describe('PostAyudaService', () => {
 
     it('associateCategoriasPost should throw an exception for an invalid post ayuda', async () => {
         await expect(() => service.associateCategoriasPost("0", [categoriasList[3].id]))
-            .rejects.toHaveProperty("message", "The post ayuda with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post de ayuda");
     });
 
     it('associateCategoriasPost should throw an exception with more than 3 categorias', async () => {
         const ids = categoriasList.slice(0, 4).map(c => c.id);
         await expect(() => service.associateCategoriasPost(post.id, ids))
-            .rejects.toHaveProperty("message", "A post ayuda must have between 1 and 3 categorias");
+            .rejects.toHaveProperty("message", "Un post de ayuda debe tener entre 1 y 3 categorías");
     });
 
     it('delete should remove a post ayuda', async () => {
@@ -346,7 +346,7 @@ describe('PostAyudaService', () => {
 
     it('delete should throw an exception for an invalid post ayuda', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The post ayuda with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post de ayuda");
     });
 
     it('findHorariosByPostId should return the horarios of a post', async () => {
@@ -356,7 +356,7 @@ describe('PostAyudaService', () => {
 
     it('findHorariosByPostId should throw an exception for an invalid post ayuda', async () => {
         await expect(() => service.findHorariosByPostId("0"))
-            .rejects.toHaveProperty("message", "The post ayuda with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post de ayuda");
     });
 
     it('addHorarioPost should add a horario to a post', async () => {
@@ -367,7 +367,7 @@ describe('PostAyudaService', () => {
     it('addHorarioPost should throw an exception for a horario shorter than the horas of the post', async () => {
         await service.update(post.id, { ...post, horas: 4 });
         await expect(() => service.addHorarioPost(post.id, crearFranja(2)))
-            .rejects.toHaveProperty("message", "Each horario must last at least the horas of the post ayuda");
+            .rejects.toHaveProperty("message", "Cada horario debe durar al menos las horas del post de ayuda");
     });
 
     it('deleteHorarioPost should remove a horario from a post', async () => {
@@ -380,12 +380,12 @@ describe('PostAyudaService', () => {
     it('deleteHorarioPost should throw an exception when it would leave 0 horarios', async () => {
         const [unico] = await service.findHorariosByPostId(post.id);
         await expect(() => service.deleteHorarioPost(post.id, unico.id))
-            .rejects.toHaveProperty("message", "A post ayuda must keep at least 1 horario disponible");
+            .rejects.toHaveProperty("message", "Un post de ayuda debe conservar al menos 1 horario disponible");
     });
 
     it('deleteHorarioPost should throw an exception for a horario of another post', async () => {
         await expect(() => service.deleteHorarioPost(post.id, "0"))
-            .rejects.toHaveProperty("message", "The horario disponible is not associated with the post ayuda");
+            .rejects.toHaveProperty("message", "El horario disponible no pertenece al post de ayuda");
     });
 
     // --- Horario preferido (preferencia inicial del autor; el horario final se define en el acuerdo) ---
@@ -413,7 +413,7 @@ describe('PostAyudaService', () => {
 
     it('create should throw an exception with more than one preferido', async () => {
         await expect(() => service.create(datosPost(), [categoriasList[0].id], [franjaA(8, true), franjaA(14, true)]))
-            .rejects.toHaveProperty("message", "Only one horario of a post ayuda can be preferido");
+            .rejects.toHaveProperty("message", "Solo un horario del post de ayuda puede ser el preferido");
     });
 
     it('marcarHorarioPreferido should change the preferido horario', async () => {
@@ -428,12 +428,12 @@ describe('PostAyudaService', () => {
         const creado = await service.create(datosPost(), [categoriasList[0].id], [franjaA(8)]);
         const [delOtro] = await service.findHorariosByPostId(post.id);
         await expect(() => service.marcarHorarioPreferido(creado.id, delOtro.id))
-            .rejects.toHaveProperty("message", "The horario disponible is not associated with the post ayuda");
+            .rejects.toHaveProperty("message", "El horario disponible no pertenece al post de ayuda");
     });
 
     it('marcarHorarioPreferido should throw an exception for an invalid post ayuda', async () => {
         await expect(() => service.marcarHorarioPreferido("0", "0"))
-            .rejects.toHaveProperty("message", "The post ayuda with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post de ayuda");
     });
 
     it('addHorarioPost should keep the preferido unless the new horario is marked', async () => {

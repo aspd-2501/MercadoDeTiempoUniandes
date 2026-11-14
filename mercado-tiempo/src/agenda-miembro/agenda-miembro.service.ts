@@ -53,7 +53,7 @@ export class AgendaMiembroService {
         await this.findPerfil(perfilId);
 
         if (filtro && !Object.values(FiltroAcuerdos).includes(filtro))
-            throw new BusinessLogicException("The filtro must be pendientes, completados or cancelados", BusinessError.BAD_REQUEST);
+            throw new BusinessLogicException("El filtro debe ser pendientes, completados o cancelados", BusinessError.BAD_REQUEST);
 
         const participaciones = await this.participanteRepository.find({
             where: { idPerfil: perfilId },
@@ -79,9 +79,9 @@ export class AgendaMiembroService {
         await this.findPerfil(perfilId);
 
         if ((desde && isNaN(desde.getTime())) || (hasta && isNaN(hasta.getTime())))
-            throw new BusinessLogicException("The desde and hasta must be valid dates", BusinessError.BAD_REQUEST);
+            throw new BusinessLogicException("Las fechas desde y hasta deben ser válidas", BusinessError.BAD_REQUEST);
         if (desde && hasta && hasta.getTime() < desde.getTime())
-            throw new BusinessLogicException("The hasta must be after desde", BusinessError.BAD_REQUEST);
+            throw new BusinessLogicException("La fecha hasta debe ser posterior a desde", BusinessError.BAD_REQUEST);
 
         const eventos: EventoCalendario[] = [];
 
@@ -130,7 +130,7 @@ export class AgendaMiembroService {
     private async findPerfil(perfilId: string) {
         const perfil = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
         return perfil;
     }
 }

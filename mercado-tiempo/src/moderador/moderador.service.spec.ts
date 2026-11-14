@@ -66,7 +66,7 @@ describe('ModeradorService', () => {
     it('create should throw an exception without a usuario', async () => {
         const nuevoModerador: ModeradorEntity = { id: "" } as ModeradorEntity;
         await expect(() => service.create(nuevoModerador))
-            .rejects.toHaveProperty("message", "A moderador must have a usuario");
+            .rejects.toHaveProperty("message", "Un moderador debe tener un usuario");
     });
 
     it('create should throw an exception for an invalid usuario', async () => {
@@ -74,13 +74,13 @@ describe('ModeradorService', () => {
         const nuevoModerador: ModeradorEntity = { id: "", usuario: invalidUsuario } as ModeradorEntity;
 
         await expect(() => service.create(nuevoModerador))
-            .rejects.toHaveProperty("message", "The usuario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el usuario");
     });
 
     it('create should throw an exception when usuario is already a moderador', async () => {
         const nuevoModerador: ModeradorEntity = { id: "", usuario } as ModeradorEntity;
         await expect(() => service.create(nuevoModerador))
-            .rejects.toHaveProperty("message", "The usuario is already a moderador");
+            .rejects.toHaveProperty("message", "El usuario ya es moderador");
     });
 
     it('findAll should return all moderadores', async () => {
@@ -96,7 +96,7 @@ describe('ModeradorService', () => {
 
     it('findOne should throw an exception for an invalid moderador', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The moderador with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el moderador");
     });
 
     it('delete should remove a moderador', async () => {
@@ -107,6 +107,6 @@ describe('ModeradorService', () => {
 
     it('delete should throw an exception for an invalid moderador', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The moderador with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el moderador");
     });
 });

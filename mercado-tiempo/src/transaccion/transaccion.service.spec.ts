@@ -90,7 +90,7 @@ describe('TransaccionService', () => {
 
     it('findByPerfilId should throw an exception for an invalid perfil', async () => {
         await expect(() => service.findByPerfilId("0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('findByDepositoId should return the movimientos of the fondo comunitario', async () => {
@@ -101,6 +101,6 @@ describe('TransaccionService', () => {
 
     it('findByDepositoId should throw an exception for an invalid deposito', async () => {
         await expect(() => service.findByDepositoId("0"))
-            .rejects.toHaveProperty("message", "The deposito horas with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el depósito de horas");
     });
 });

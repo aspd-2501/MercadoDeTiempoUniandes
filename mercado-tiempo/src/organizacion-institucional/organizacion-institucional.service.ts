@@ -23,7 +23,7 @@ export class OrganizacionInstitucionalService {
             relations: { actividades: true }
         });
         if (!organizacion)
-            throw new BusinessLogicException("The organizacion institucional with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la organización institucional", BusinessError.NOT_FOUND);
         return organizacion;
     }
 
@@ -34,7 +34,7 @@ export class OrganizacionInstitucionalService {
     async update(id: string, organizacion: OrganizacionInstitucionalEntity): Promise<OrganizacionInstitucionalEntity> {
         const persisted: OrganizacionInstitucionalEntity | null = await this.organizacionRepository.findOne({ where: { id } });
         if (!persisted)
-            throw new BusinessLogicException("The organizacion institucional with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la organización institucional", BusinessError.NOT_FOUND);
         organizacion.id = id;
         return await this.organizacionRepository.save(organizacion);
     }
@@ -42,7 +42,7 @@ export class OrganizacionInstitucionalService {
     async delete(id: string) {
         const organizacion: OrganizacionInstitucionalEntity | null = await this.organizacionRepository.findOne({ where: { id } });
         if (!organizacion)
-            throw new BusinessLogicException("The organizacion institucional with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la organización institucional", BusinessError.NOT_FOUND);
         await this.organizacionRepository.remove(organizacion);
     }
 }

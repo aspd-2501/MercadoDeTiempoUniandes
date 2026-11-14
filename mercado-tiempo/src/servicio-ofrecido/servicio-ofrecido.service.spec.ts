@@ -107,7 +107,7 @@ describe('ServicioOfrecidoService', () => {
         } as ServicioOfrecidoEntity;
 
         await expect(() => service.create(nuevoServicio, [categoriasList[2].id]))
-            .rejects.toHaveProperty("message", "A servicio ofrecido must have a perfil");
+            .rejects.toHaveProperty("message", "Un servicio ofrecido debe tener un perfil");
     });
 
     it('create should throw an exception for an invalid perfil', async () => {
@@ -120,7 +120,7 @@ describe('ServicioOfrecidoService', () => {
         } as ServicioOfrecidoEntity;
 
         await expect(() => service.create(nuevoServicio, [categoriasList[2].id]))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('create should throw an exception with no categorias', async () => {
@@ -132,7 +132,7 @@ describe('ServicioOfrecidoService', () => {
         } as ServicioOfrecidoEntity;
 
         await expect(() => service.create(nuevoServicio, []))
-            .rejects.toHaveProperty("message", "A servicio ofrecido must have between 1 and 3 categorias");
+            .rejects.toHaveProperty("message", "Un servicio ofrecido debe tener entre 1 y 3 categorías");
     });
 
     it('create should throw an exception with more than 3 categorias', async () => {
@@ -145,7 +145,7 @@ describe('ServicioOfrecidoService', () => {
 
         const ids = categoriasList.slice(0, 4).map(c => c.id);
         await expect(() => service.create(nuevoServicio, ids))
-            .rejects.toHaveProperty("message", "A servicio ofrecido must have between 1 and 3 categorias");
+            .rejects.toHaveProperty("message", "Un servicio ofrecido debe tener entre 1 y 3 categorías");
     });
 
     it('create should throw an exception for an invalid categoria', async () => {
@@ -157,7 +157,7 @@ describe('ServicioOfrecidoService', () => {
         } as ServicioOfrecidoEntity;
 
         await expect(() => service.create(nuevoServicio, ["0"]))
-            .rejects.toHaveProperty("message", "The categoria with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la categoría");
     });
 
     it('findOne should return a servicio ofrecido by id', async () => {
@@ -168,7 +168,7 @@ describe('ServicioOfrecidoService', () => {
 
     it('findOne should throw an exception for an invalid servicio ofrecido', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The servicio ofrecido with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el servicio ofrecido");
     });
 
     it('update should modify a servicio ofrecido', async () => {
@@ -180,7 +180,7 @@ describe('ServicioOfrecidoService', () => {
     it('update should throw an exception for an invalid servicio ofrecido', async () => {
         const invalido = { ...servicio, titulo: faker.lorem.words(3) };
         await expect(() => service.update("0", invalido))
-            .rejects.toHaveProperty("message", "The servicio ofrecido with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el servicio ofrecido");
     });
 
     it('findCategoriasByServicioId should return the categorias of a servicio', async () => {
@@ -190,7 +190,7 @@ describe('ServicioOfrecidoService', () => {
 
     it('findCategoriasByServicioId should throw an exception for an invalid servicio ofrecido', async () => {
         await expect(() => service.findCategoriasByServicioId("0"))
-            .rejects.toHaveProperty("message", "The servicio ofrecido with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el servicio ofrecido");
     });
 
     it('associateCategoriasServicio should update the categorias of a servicio', async () => {
@@ -200,13 +200,13 @@ describe('ServicioOfrecidoService', () => {
 
     it('associateCategoriasServicio should throw an exception for an invalid servicio ofrecido', async () => {
         await expect(() => service.associateCategoriasServicio("0", [categoriasList[3].id]))
-            .rejects.toHaveProperty("message", "The servicio ofrecido with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el servicio ofrecido");
     });
 
     it('associateCategoriasServicio should throw an exception with more than 3 categorias', async () => {
         const ids = categoriasList.slice(0, 4).map(c => c.id);
         await expect(() => service.associateCategoriasServicio(servicio.id, ids))
-            .rejects.toHaveProperty("message", "A servicio ofrecido must have between 1 and 3 categorias");
+            .rejects.toHaveProperty("message", "Un servicio ofrecido debe tener entre 1 y 3 categorías");
     });
 
     it('delete should remove a servicio ofrecido', async () => {
@@ -217,7 +217,7 @@ describe('ServicioOfrecidoService', () => {
 
     it('delete should throw an exception for an invalid servicio ofrecido', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The servicio ofrecido with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el servicio ofrecido");
     });
 
     // --- Imagen (RF-010) y servicios del perfil (RF-008) ---
@@ -243,6 +243,6 @@ describe('ServicioOfrecidoService', () => {
 
     it('findByPerfilId should throw an exception for an invalid perfil', async () => {
         await expect(() => service.findByPerfilId("0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 });

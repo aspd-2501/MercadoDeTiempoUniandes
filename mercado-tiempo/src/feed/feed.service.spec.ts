@@ -126,7 +126,7 @@ describe('FeedService', () => {
 
     it('findFeed should throw an exception for an invalid tipo', async () => {
         await expect(() => service.findFeed({ tipos: ['EVENTO' as never] }))
-            .rejects.toHaveProperty("message", "The tipos must be POST_AYUDA, POST_COMUNITARIO or CAUSA");
+            .rejects.toHaveProperty("message", "Los tipos deben ser POST_AYUDA, POST_COMUNITARIO o CAUSA");
     });
 
     it('findFeed should hide private posts comunitarios, posts with cupo lleno and the miembro own publicaciones', async () => {
@@ -205,14 +205,14 @@ describe('FeedService', () => {
 
     it('findFeed should throw an exception for an invalid pagina or tamano', async () => {
         await expect(() => service.findFeed({ pagina: 0 }))
-            .rejects.toHaveProperty("message", "The pagina must be an integer greater than 0");
+            .rejects.toHaveProperty("message", "La página debe ser un número entero mayor que 0");
         await expect(() => service.findFeed({ tamano: 51 }))
-            .rejects.toHaveProperty("message", "The tamano must be an integer between 1 and 50");
+            .rejects.toHaveProperty("message", "El tamaño debe ser un número entero entre 1 y 50");
     });
 
     it('findFeed should throw an exception for an invalid perfil', async () => {
         await expect(() => service.findFeed({ perfilId: "0" }))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('findFeed should hide the publicaciones of inactive miembros (RF-006)', async () => {

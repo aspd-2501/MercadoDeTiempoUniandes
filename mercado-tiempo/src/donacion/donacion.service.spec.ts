@@ -118,7 +118,7 @@ describe('DonacionService', () => {
 
     it('create should throw an exception when the perfil donante does not have enough saldo', async () => {
         await expect(() => service.create(donacion(11, { perfilDonante: perfilA, perfilReceptor: perfilB })))
-            .rejects.toHaveProperty("message", "The perfil donante does not have enough saldo");
+            .rejects.toHaveProperty("message", "No tienes saldo suficiente para donar esas horas");
     });
 
     it('create should not save anything when the donacion fails', async () => {
@@ -131,44 +131,44 @@ describe('DonacionService', () => {
 
     it('create should throw an exception when the fondo does not have enough saldo', async () => {
         await expect(() => service.create(donacion(21, { depositoDonante: fondo, perfilReceptor: perfilB })))
-            .rejects.toHaveProperty("message", "The fondo comunitario does not have enough saldo");
+            .rejects.toHaveProperty("message", "El fondo comunitario no tiene saldo suficiente");
     });
 
     it('create should throw an exception for 0 horas', async () => {
         await expect(() => service.create(donacion(0, { perfilDonante: perfilA, perfilReceptor: perfilB })))
-            .rejects.toHaveProperty("message", "The horasDonadas must be a positive integer");
+            .rejects.toHaveProperty("message", "Las horas donadas deben ser un número entero mayor que 0");
     });
 
     // --- Validaciones de donante y receptor ---
 
     it('create should throw an exception when donante has neither perfil nor deposito', async () => {
         await expect(() => service.create(donacion(1, { perfilReceptor: perfilB })))
-            .rejects.toHaveProperty("message", "A donacion must have exactly one donante: a perfil or a deposito");
+            .rejects.toHaveProperty("message", "Una donación debe tener exactamente un donante: un perfil o un depósito");
     });
 
     it('create should throw an exception when donante has both perfil and deposito', async () => {
         await expect(() => service.create(donacion(1, { perfilDonante: perfilA, depositoDonante: fondo, perfilReceptor: perfilB })))
-            .rejects.toHaveProperty("message", "A donacion must have exactly one donante: a perfil or a deposito");
+            .rejects.toHaveProperty("message", "Una donación debe tener exactamente un donante: un perfil o un depósito");
     });
 
     it('create should throw an exception when receptor has neither perfil nor deposito', async () => {
         await expect(() => service.create(donacion(1, { perfilDonante: perfilA })))
-            .rejects.toHaveProperty("message", "A donacion must have exactly one receptor: a perfil or a deposito");
+            .rejects.toHaveProperty("message", "Una donación debe tener exactamente un receptor: un perfil o un depósito");
     });
 
     it('create should throw an exception for an invalid perfil donante', async () => {
         await expect(() => service.create(donacion(1, { perfilDonante: { id: "0" } as PerfilMiembroEntity, perfilReceptor: perfilB })))
-            .rejects.toHaveProperty("message", "The perfil donante with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil donante");
     });
 
     it('create should throw an exception when perfil donante and receptor are the same', async () => {
         await expect(() => service.create(donacion(1, { perfilDonante: perfilA, perfilReceptor: perfilA })))
-            .rejects.toHaveProperty("message", "The donante and receptor perfiles cannot be the same");
+            .rejects.toHaveProperty("message", "No puedes donarte horas a ti mismo");
     });
 
     it('create should throw an exception when the fondo donates to itself', async () => {
         await expect(() => service.create(donacion(1, { depositoDonante: fondo, depositoReceptor: fondo })))
-            .rejects.toHaveProperty("message", "The donante and receptor depositos cannot be the same");
+            .rejects.toHaveProperty("message", "El depósito donante y el receptor no pueden ser el mismo");
     });
 
     // --- Consultas ---
@@ -181,6 +181,6 @@ describe('DonacionService', () => {
 
     it('findOne should throw an exception for an invalid donacion', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The donacion with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la donación");
     });
 });

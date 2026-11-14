@@ -30,7 +30,7 @@ export function validarComposicion(participantes: ParticipanteReparto[]) {
     const prestadores = participantes.filter(p => p.rol === RolParticipante.PRESTADOR).length;
     const receptores = participantes.filter(p => p.rol === RolParticipante.RECEPTOR).length;
     if (prestadores > 1 && receptores > 1)
-        throw new BusinessLogicException("An acuerdo can have several PRESTADORES or several RECEPTORES, but not both", BusinessError.PRECONDITION_FAILED);
+        throw new BusinessLogicException("Un acuerdo puede tener varios prestadores o varios receptores, pero no ambos", BusinessError.PRECONDITION_FAILED);
 }
 
 export function calcularReparto(horas: number, participantes: ParticipanteReparto[]): RepartoHoras {
@@ -55,6 +55,6 @@ export function validarSaldosReceptores(horas: number, participantes: Participan
     for (const p of participantes) {
         const cuota = cuotas.get(p.idPerfil);
         if (cuota !== undefined && p.saldo < cuota)
-            throw new BusinessLogicException("A RECEPTOR does not have enough saldo to pay its share of the acuerdo", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un receptor no tiene saldo suficiente para pagar su parte del acuerdo", BusinessError.PRECONDITION_FAILED);
     }
 }

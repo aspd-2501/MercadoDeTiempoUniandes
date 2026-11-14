@@ -23,20 +23,20 @@ export class UsuarioService {
     async findOne(id: string): Promise<UsuarioEntity> {
         const usuario: UsuarioEntity | null = await this.usuarioRepository.findOne({ where: { id } });
         if (!usuario)
-            throw new BusinessLogicException("The usuario with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el usuario", BusinessError.NOT_FOUND);
         return usuario;
     }
 
     async create(usuario: UsuarioEntity): Promise<UsuarioEntity> {
         if (!usuario.idUniandes)
-            throw new BusinessLogicException("A usuario must have an idUniandes", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Debes indicar tu usuario Uniandes", BusinessError.PRECONDITION_FAILED);
 
         const existente = await this.usuarioRepository.findOne({ where: { idUniandes: usuario.idUniandes } });
         if (existente)
-            throw new BusinessLogicException("A usuario with that idUniandes already exists", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Ya existe una cuenta con ese usuario Uniandes", BusinessError.PRECONDITION_FAILED);
 
         if (!usuario.contrasenia || usuario.contrasenia.length < 6)
-            throw new BusinessLogicException("The contrasenia must have at least 6 characters", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("La contraseña debe tener al menos 6 caracteres", BusinessError.PRECONDITION_FAILED);
 
         usuario.contrasenia = await bcrypt.hash(usuario.contrasenia, SALT_ROUNDS);
 
@@ -46,11 +46,11 @@ export class UsuarioService {
     async update(id: string, usuario: UsuarioEntity): Promise<UsuarioEntity> {
         const persisted: UsuarioEntity | null = await this.usuarioRepository.findOne({ where: { id } });
         if (!persisted)
-            throw new BusinessLogicException("The usuario with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el usuario", BusinessError.NOT_FOUND);
 
         if (usuario.contrasenia && usuario.contrasenia !== persisted.contrasenia) {
             if (usuario.contrasenia.length < 6)
-                throw new BusinessLogicException("The contrasenia must have at least 6 characters", BusinessError.PRECONDITION_FAILED);
+                throw new BusinessLogicException("La contraseña debe tener al menos 6 caracteres", BusinessError.PRECONDITION_FAILED);
             usuario.contrasenia = await bcrypt.hash(usuario.contrasenia, SALT_ROUNDS);
         } else {
             usuario.contrasenia = persisted.contrasenia;
@@ -63,18 +63,18 @@ export class UsuarioService {
     async delete(id: string) {
         const usuario: UsuarioEntity | null = await this.usuarioRepository.findOne({ where: { id } });
         if (!usuario)
-            throw new BusinessLogicException("The usuario with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el usuario", BusinessError.NOT_FOUND);
         await this.usuarioRepository.remove(usuario);
     }
 
     async validarCredenciales(idUniandes: string, contrasenia: string): Promise<UsuarioEntity> {
         const usuario: UsuarioEntity | null = await this.usuarioRepository.findOne({ where: { idUniandes } });
         if (!usuario)
-            throw new BusinessLogicException("Invalid credentials", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("Usuario o contraseña incorrectos", BusinessError.NOT_FOUND);
 
         const esValida = await bcrypt.compare(contrasenia, usuario.contrasenia);
         if (!esValida)
-            throw new BusinessLogicException("Invalid credentials", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("Usuario o contraseña incorrectos", BusinessError.NOT_FOUND);
 
         return usuario;
     }

@@ -158,12 +158,12 @@ describe('AgendaMiembroService', () => {
 
     it('findAcuerdos should throw an exception for an invalid filtro', async () => {
         await expect(() => service.findAcuerdos(miembro.id, 'otros' as FiltroAcuerdos))
-            .rejects.toHaveProperty("message", "The filtro must be pendientes, completados or cancelados");
+            .rejects.toHaveProperty("message", "El filtro debe ser pendientes, completados o cancelados");
     });
 
     it('findAcuerdos should throw an exception for an invalid perfil', async () => {
         await expect(() => service.findAcuerdos("0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     // --- Calendario (RF-035) ---
@@ -218,11 +218,11 @@ describe('AgendaMiembroService', () => {
 
     it('findCalendario should throw an exception when hasta is before desde', async () => {
         await expect(() => service.findCalendario(miembro.id, fecha(16), fecha(9)))
-            .rejects.toHaveProperty("message", "The hasta must be after desde");
+            .rejects.toHaveProperty("message", "La fecha hasta debe ser posterior a desde");
     });
 
     it('findCalendario should throw an exception for an invalid date', async () => {
         await expect(() => service.findCalendario(miembro.id, new Date('no-es-fecha')))
-            .rejects.toHaveProperty("message", "The desde and hasta must be valid dates");
+            .rejects.toHaveProperty("message", "Las fechas desde y hasta deben ser válidas");
     });
 });

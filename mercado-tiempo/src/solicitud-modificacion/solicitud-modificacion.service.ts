@@ -46,7 +46,7 @@ export class SolicitudModificacionService {
             relations: { acuerdo: true, solicitante: true, aprobaciones: true }
         });
         if (!solicitud)
-            throw new BusinessLogicException("The solicitud de modificacion with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró la solicitud de modificación", BusinessError.NOT_FOUND);
         return solicitud;
     }
 
@@ -57,32 +57,32 @@ export class SolicitudModificacionService {
         const acuerdo = await this.findAcuerdo(acuerdoId);
 
         if (acuerdo.estado === EstadoAcuerdo.REALIZADO)
-            throw new BusinessLogicException("The acuerdo is realizado and cannot be modified", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El acuerdo ya se realizó y no se puede modificar", BusinessError.PRECONDITION_FAILED);
         if (acuerdo.estado === EstadoAcuerdo.CANCELADO)
-            throw new BusinessLogicException("The acuerdo is cancelado and cannot be modified", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El acuerdo está cancelado y no se puede modificar", BusinessError.PRECONDITION_FAILED);
 
         if (!solicitud.solicitante)
-            throw new BusinessLogicException("A solicitud de modificacion must have a solicitante", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Una solicitud de modificación debe tener un solicitante", BusinessError.PRECONDITION_FAILED);
         await this.validarParticipante(acuerdoId, solicitud.solicitante.id);
 
         const pendiente = await this.solicitudRepository.findOne({
             where: { acuerdo: { id: acuerdoId }, estado: EstadoSolicitudModificacion.PENDIENTE }
         });
         if (pendiente)
-            throw new BusinessLogicException("The acuerdo already has a pending solicitud de modificacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El acuerdo ya tiene una solicitud de modificación pendiente", BusinessError.PRECONDITION_FAILED);
 
         if (solicitud.tipo === TipoSolicitudModificacion.MODIFICACION) {
             if (solicitud.horas == null && !solicitud.fechaRealizacion)
-                throw new BusinessLogicException("A modificacion must change the horas or the fechaRealizacion", BusinessError.PRECONDITION_FAILED);
+                throw new BusinessLogicException("Una modificación debe cambiar las horas o la fecha de realización", BusinessError.PRECONDITION_FAILED);
             if (solicitud.horas != null && solicitud.horas <= 0)
-                throw new BusinessLogicException("The horas of a solicitud de modificacion must be positive", BusinessError.PRECONDITION_FAILED);
+                throw new BusinessLogicException("Las horas de la solicitud de modificación deben ser mayores que 0", BusinessError.PRECONDITION_FAILED);
             if (solicitud.horas != null)
                 await this.validarSaldoReceptores(acuerdoId, solicitud.horas);
         } else if (solicitud.tipo === TipoSolicitudModificacion.CANCELACION) {
             solicitud.horas = null;
             solicitud.fechaRealizacion = null as unknown as Date;
         } else {
-            throw new BusinessLogicException("The tipo must be MODIFICACION or CANCELACION", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El tipo debe ser MODIFICACION o CANCELACION", BusinessError.PRECONDITION_FAILED);
         }
 
         solicitud.acuerdo = acuerdo;
@@ -110,7 +110,7 @@ export class SolicitudModificacionService {
         await this.validarParticipante(acuerdoId, perfilId);
 
         if (solicitud.aprobaciones.some(a => a.idPerfil === perfilId))
-            throw new BusinessLogicException("The perfil already approved the solicitud de modificacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil ya aprobó la solicitud de modificación", BusinessError.PRECONDITION_FAILED);
 
         await this.aprobacionRepository.save(this.aprobacionRepository.create({ idSolicitud: id, idPerfil: perfilId }));
         await this.resolverSiTodosAprobaron(acuerdoId, id);
@@ -125,7 +125,7 @@ export class SolicitudModificacionService {
         await this.validarParticipante(acuerdoId, perfilId);
 
         if (solicitud.tipo === TipoSolicitudModificacion.CANCELACION)
-            throw new BusinessLogicException("A solicitud de cancelacion cannot be rejected; it needs the approval of all participantes", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Una solicitud de cancelación no se puede rechazar; necesita la aprobación de todos los participantes", BusinessError.PRECONDITION_FAILED);
 
         await this.cerrar(solicitud, EstadoSolicitudModificacion.RECHAZADA);
         return await this.findOne(acuerdoId, id);
@@ -137,7 +137,7 @@ export class SolicitudModificacionService {
         const solicitud = await this.findPendiente(acuerdoId, id);
 
         if (solicitud.solicitante.id !== perfilId)
-            throw new BusinessLogicException("Only the solicitante can withdraw the solicitud de modificacion", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Solo quien hizo la solicitud de modificación puede retirarla", BusinessError.PRECONDITION_FAILED);
 
         await this.cerrar(solicitud, EstadoSolicitudModificacion.RETIRADA);
         return await this.findOne(acuerdoId, id);
@@ -180,7 +180,7 @@ export class SolicitudModificacionService {
     private async findPendiente(acuerdoId: string, id: string): Promise<SolicitudModificacionEntity> {
         const solicitud = await this.findOne(acuerdoId, id);
         if (solicitud.estado !== EstadoSolicitudModificacion.PENDIENTE)
-            throw new BusinessLogicException("The solicitud de modificacion is no longer pending", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("La solicitud de modificación ya no está pendiente", BusinessError.PRECONDITION_FAILED);
         return solicitud;
     }
 
@@ -196,13 +196,13 @@ export class SolicitudModificacionService {
     private async validarParticipante(acuerdoId: string, perfilId: string) {
         const participante = await this.participanteRepository.findOne({ where: { idAcuerdo: acuerdoId, idPerfil: perfilId } });
         if (!participante)
-            throw new BusinessLogicException("The perfil with the given id is not a participant in the acuerdo", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil no es participante del acuerdo", BusinessError.PRECONDITION_FAILED);
     }
 
     private async findAcuerdo(acuerdoId: string): Promise<AcuerdoEntity> {
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({ where: { id: acuerdoId } });
         if (!acuerdo)
-            throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
         return acuerdo;
     }
 }

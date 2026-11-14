@@ -38,7 +38,7 @@ export class ReconocimientoService {
     async findOne(id: string): Promise<ReconocimientoEntity> {
         const reconocimiento: ReconocimientoEntity | null = await this.reconocimientoRepository.findOne({ where: { id } });
         if (!reconocimiento)
-            throw new BusinessLogicException("The reconocimiento with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el reconocimiento", BusinessError.NOT_FOUND);
         return reconocimiento;
     }
 
@@ -49,7 +49,7 @@ export class ReconocimientoService {
     async update(id: string, reconocimiento: ReconocimientoEntity): Promise<ReconocimientoEntity> {
         const persisted: ReconocimientoEntity | null = await this.reconocimientoRepository.findOne({ where: { id } });
         if (!persisted)
-            throw new BusinessLogicException("The reconocimiento with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el reconocimiento", BusinessError.NOT_FOUND);
         reconocimiento.id = id;
         return await this.reconocimientoRepository.save(reconocimiento);
     }
@@ -57,7 +57,7 @@ export class ReconocimientoService {
     async delete(id: string) {
         const reconocimiento: ReconocimientoEntity | null = await this.reconocimientoRepository.findOne({ where: { id } });
         if (!reconocimiento)
-            throw new BusinessLogicException("The reconocimiento with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el reconocimiento", BusinessError.NOT_FOUND);
         await this.reconocimientoRepository.remove(reconocimiento);
     }
 
@@ -71,42 +71,42 @@ export class ReconocimientoService {
     ): Promise<ReconocimientoOtorgadoEntity> {
         const reconocimiento = await this.reconocimientoRepository.findOne({ where: { id: reconocimientoId } });
         if (!reconocimiento)
-            throw new BusinessLogicException("The reconocimiento with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el reconocimiento", BusinessError.NOT_FOUND);
 
         const perfilReceptor = await this.perfilMiembroRepository.findOne({ where: { id: perfilReceptorId } });
         if (!perfilReceptor)
-            throw new BusinessLogicException("The perfil receptor with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil receptor", BusinessError.NOT_FOUND);
 
         let perfilOtorgante: PerfilMiembroEntity | null = null;
         if (perfilOtorganteId) {
             if (perfilOtorganteId === perfilReceptorId)
-                throw new BusinessLogicException("A perfil cannot otorgar a reconocimiento to itself", BusinessError.PRECONDITION_FAILED);
+                throw new BusinessLogicException("Un perfil no puede otorgarse un reconocimiento a sí mismo", BusinessError.PRECONDITION_FAILED);
 
             perfilOtorgante = await this.perfilMiembroRepository.findOne({ where: { id: perfilOtorganteId } });
             if (!perfilOtorgante)
-                throw new BusinessLogicException("The perfil otorgante with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el perfil que otorga el reconocimiento", BusinessError.NOT_FOUND);
         }
 
         let postComunitario: PostComunitarioEntity | null = null;
         if (postComunitarioId) {
             if (!perfilOtorganteId)
-                throw new BusinessLogicException("A reconocimiento tied to a post comunitario requires a perfil otorgante", BusinessError.PRECONDITION_FAILED);
+                throw new BusinessLogicException("Un reconocimiento ligado a un post comunitario necesita un perfil que lo otorgue", BusinessError.PRECONDITION_FAILED);
 
             postComunitario = await this.postComunitarioRepository.findOne({ where: { id: postComunitarioId } });
             if (!postComunitario)
-                throw new BusinessLogicException("The post comunitario with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el post comunitario", BusinessError.NOT_FOUND);
 
             const receptorEsParticipante = await this.usuarioPostRepository.findOne({
                 where: { idPostComunitario: postComunitarioId, idPerfil: perfilReceptorId }
             });
             if (!receptorEsParticipante)
-                throw new BusinessLogicException("The perfil receptor must be a participante of the post comunitario", BusinessError.PRECONDITION_FAILED);
+                throw new BusinessLogicException("Quien recibe el reconocimiento debe ser participante del post comunitario", BusinessError.PRECONDITION_FAILED);
 
             const otorganteEsParticipante = await this.usuarioPostRepository.findOne({
                 where: { idPostComunitario: postComunitarioId, idPerfil: perfilOtorganteId }
             });
             if (!otorganteEsParticipante)
-                throw new BusinessLogicException("The perfil otorgante must be a participante of the post comunitario", BusinessError.PRECONDITION_FAILED);
+                throw new BusinessLogicException("Quien otorga el reconocimiento debe ser participante del post comunitario", BusinessError.PRECONDITION_FAILED);
         }
 
         const otorgado = this.otorgadoRepository.create({
@@ -123,7 +123,7 @@ export class ReconocimientoService {
     async findOtorgamientosByPerfilReceptorId(perfilId: string): Promise<ReconocimientoOtorgadoEntity[]> {
         const perfil = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         return await this.otorgadoRepository.find({
             where: { perfilReceptor: { id: perfilId } },

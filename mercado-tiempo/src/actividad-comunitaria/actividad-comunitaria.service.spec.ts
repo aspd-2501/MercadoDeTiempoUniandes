@@ -101,19 +101,19 @@ describe('ActividadComunitariaService', () => {
 
     it('addPerfilActividad should throw an exception for an invalid perfil', async () => {
         await expect(() => service.addPerfilActividad(actividad.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('addPerfilActividad should throw an exception for an invalid actividad', async () => {
         const newPerfil = await createPerfil();
         await expect(() => service.addPerfilActividad("0", newPerfil.id))
-            .rejects.toHaveProperty("message", "The actividad comunitaria with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la actividad comunitaria");
     });
 
     it('addPerfilActividad should throw an exception for an already enrolled perfil', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.addPerfilActividad(actividad.id, perfil.id))
-            .rejects.toHaveProperty("message", "The perfil is already enrolled in the actividad");
+            .rejects.toHaveProperty("message", "El perfil ya está inscrito en la actividad");
     });
 
     it('findPerfilByActividadIdPerfilId should return a perfil by actividad', async () => {
@@ -125,19 +125,19 @@ describe('ActividadComunitariaService', () => {
 
     it('findPerfilByActividadIdPerfilId should throw an exception for an invalid perfil', async () => {
         await expect(() => service.findPerfilByActividadIdPerfilId(actividad.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('findPerfilByActividadIdPerfilId should throw an exception for an invalid actividad', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.findPerfilByActividadIdPerfilId("0", perfil.id))
-            .rejects.toHaveProperty("message", "The actividad comunitaria with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la actividad comunitaria");
     });
 
     it('findPerfilByActividadIdPerfilId should throw an exception for a perfil not associated to the actividad', async () => {
         const newPerfil = await createPerfil();
         await expect(() => service.findPerfilByActividadIdPerfilId(actividad.id, newPerfil.id))
-            .rejects.toHaveProperty("message", "The perfil with the given id is not enrolled in the actividad");
+            .rejects.toHaveProperty("message", "El perfil no está inscrito en la actividad");
     });
 
     it('findPerfilesByActividadId should return perfiles by actividad', async () => {
@@ -147,7 +147,7 @@ describe('ActividadComunitariaService', () => {
 
     it('findPerfilesByActividadId should throw an exception for an invalid actividad', async () => {
         await expect(() => service.findPerfilesByActividadId("0"))
-            .rejects.toHaveProperty("message", "The actividad comunitaria with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la actividad comunitaria");
     });
 
     it('associatePerfilesActividad should update the perfiles list for an actividad', async () => {
@@ -160,14 +160,14 @@ describe('ActividadComunitariaService', () => {
     it('associatePerfilesActividad should throw an exception for an invalid actividad', async () => {
         const newPerfil = await createPerfil();
         await expect(() => service.associatePerfilesActividad("0", [newPerfil]))
-            .rejects.toHaveProperty("message", "The actividad comunitaria with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la actividad comunitaria");
     });
 
     it('associatePerfilesActividad should throw an exception for an invalid perfil', async () => {
         const invalidPerfil = perfilesList[0];
         invalidPerfil.id = "0";
         await expect(() => service.associatePerfilesActividad(actividad.id, [invalidPerfil]))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('deletePerfilActividad should remove a perfil from an actividad', async () => {
@@ -184,18 +184,18 @@ describe('ActividadComunitariaService', () => {
 
     it('deletePerfilActividad should throw an exception for an invalid perfil', async () => {
         await expect(() => service.deletePerfilActividad(actividad.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('deletePerfilActividad should throw an exception for an invalid actividad', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.deletePerfilActividad("0", perfil.id))
-            .rejects.toHaveProperty("message", "The actividad comunitaria with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la actividad comunitaria");
     });
 
     it('deletePerfilActividad should throw an exception for a non-associated perfil', async () => {
         const newPerfil = await createPerfil();
         await expect(() => service.deletePerfilActividad(actividad.id, newPerfil.id))
-            .rejects.toHaveProperty("message", "The perfil with the given id is not enrolled in the actividad");
+            .rejects.toHaveProperty("message", "El perfil no está inscrito en la actividad");
     });
 });

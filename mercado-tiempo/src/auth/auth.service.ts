@@ -50,7 +50,7 @@ export class AuthService {
     async sesion(usuarioId: string): Promise<SesionUsuario> {
         const usuario = await this.usuarioRepository.findOne({ where: { id: usuarioId } });
         if (!usuario)
-            throw new BusinessLogicException("The usuario with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el usuario", BusinessError.NOT_FOUND);
 
         const perfil = await this.perfilMiembroRepository.findOne({ where: { usuario: { id: usuarioId } } });
         const moderador = await this.moderadorRepository.findOne({ where: { usuario: { id: usuarioId } } });

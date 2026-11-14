@@ -27,23 +27,23 @@ export class ModeradorService {
             relations: { usuario: true }
         });
         if (!moderador)
-            throw new BusinessLogicException("The moderador with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el moderador", BusinessError.NOT_FOUND);
         return moderador;
     }
 
     async create(moderador: ModeradorEntity): Promise<ModeradorEntity> {
         if (!moderador.usuario)
-            throw new BusinessLogicException("A moderador must have a usuario", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un moderador debe tener un usuario", BusinessError.PRECONDITION_FAILED);
 
         const usuario: UsuarioEntity | null = await this.usuarioRepository.findOne({
             where: { id: moderador.usuario.id },
             relations: { moderador: true }
         });
         if (!usuario)
-            throw new BusinessLogicException("The usuario with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el usuario", BusinessError.NOT_FOUND);
 
         if (usuario.moderador)
-            throw new BusinessLogicException("The usuario is already a moderador", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El usuario ya es moderador", BusinessError.PRECONDITION_FAILED);
 
         return await this.moderadorRepository.save(moderador);
     }
@@ -51,7 +51,7 @@ export class ModeradorService {
     async delete(id: string) {
         const moderador: ModeradorEntity | null = await this.moderadorRepository.findOne({ where: { id } });
         if (!moderador)
-            throw new BusinessLogicException("The moderador with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el moderador", BusinessError.NOT_FOUND);
         await this.moderadorRepository.remove(moderador);
     }
 }

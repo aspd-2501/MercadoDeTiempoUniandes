@@ -114,7 +114,7 @@ describe('PostComunitarioService', () => {
         } as PostComunitarioEntity;
 
         await expect(() => service.create(nuevoPost, [p1.id]))
-            .rejects.toHaveProperty("message", "A post comunitario must have at least 2 participantes");
+            .rejects.toHaveProperty("message", "Un post comunitario debe tener al menos 2 participantes");
     });
 
     it('create should throw an exception for an invalid perfil', async () => {
@@ -130,7 +130,7 @@ describe('PostComunitarioService', () => {
         } as PostComunitarioEntity;
 
         await expect(() => service.create(nuevoPost, [p1.id, "0"]))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('findOne should return a post by id', async () => {
@@ -141,7 +141,7 @@ describe('PostComunitarioService', () => {
 
     it('findOne should throw an exception for an invalid post', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The post comunitario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post comunitario");
     });
 
     it('update should modify a post', async () => {
@@ -153,7 +153,7 @@ describe('PostComunitarioService', () => {
     it('update should throw an exception for an invalid post', async () => {
         const invalidPost = { ...post, titulo: faker.lorem.words(3) };
         await expect(() => service.update("0", invalidPost))
-            .rejects.toHaveProperty("message", "The post comunitario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post comunitario");
     });
 
     it('addParticipantePost should add a perfil to a post', async () => {
@@ -164,19 +164,19 @@ describe('PostComunitarioService', () => {
 
     it('addParticipantePost should throw an exception for an invalid perfil', async () => {
         await expect(() => service.addParticipantePost(post.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('addParticipantePost should throw an exception for an invalid post', async () => {
         const nuevoPerfil = await createPerfil();
         await expect(() => service.addParticipantePost("0", nuevoPerfil.id))
-            .rejects.toHaveProperty("message", "The post comunitario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post comunitario");
     });
 
     it('addParticipantePost should throw an exception for an already participating perfil', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.addParticipantePost(post.id, perfil.id))
-            .rejects.toHaveProperty("message", "The perfil is already a participante in the post");
+            .rejects.toHaveProperty("message", "El perfil ya es participante del post");
     });
 
     it('findParticipantesByPostId should return perfiles by post', async () => {
@@ -186,7 +186,7 @@ describe('PostComunitarioService', () => {
 
     it('findParticipantesByPostId should throw an exception for an invalid post', async () => {
         await expect(() => service.findParticipantesByPostId("0"))
-            .rejects.toHaveProperty("message", "The post comunitario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post comunitario");
     });
 
     it('deleteParticipantePost should remove a perfil from a post', async () => {
@@ -199,25 +199,25 @@ describe('PostComunitarioService', () => {
 
     it('deleteParticipantePost should throw an exception for an invalid perfil', async () => {
         await expect(() => service.deleteParticipantePost(post.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('deleteParticipantePost should throw an exception for an invalid post', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.deleteParticipantePost("0", perfil.id))
-            .rejects.toHaveProperty("message", "The post comunitario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post comunitario");
     });
 
     it('deleteParticipantePost should throw an exception for a non-participating perfil', async () => {
         const nuevoPerfil = await createPerfil();
         await expect(() => service.deleteParticipantePost(post.id, nuevoPerfil.id))
-            .rejects.toHaveProperty("message", "The perfil with the given id is not a participante in the post");
+            .rejects.toHaveProperty("message", "El perfil no es participante del post");
     });
 
     it('deleteParticipantePost should throw an exception when it would leave fewer than 2 participantes', async () => {
         await service.deleteParticipantePost(post.id, perfilesList[0].id);
         await expect(() => service.deleteParticipantePost(post.id, perfilesList[1].id))
-            .rejects.toHaveProperty("message", "A post comunitario must keep at least 2 participantes");
+            .rejects.toHaveProperty("message", "Un post comunitario debe conservar al menos 2 participantes");
     });
 
     it('delete should remove a post', async () => {
@@ -228,6 +228,6 @@ describe('PostComunitarioService', () => {
 
     it('delete should throw an exception for an invalid post', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The post comunitario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el post comunitario");
     });
 });

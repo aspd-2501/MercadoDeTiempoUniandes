@@ -43,14 +43,14 @@ export class ImagenService {
     // Guarda la imagen con un nombre nuevo (no se usa el nombre original) y devuelve su ruta
     async guardar(archivo: ArchivoSubido | undefined): Promise<ImagenGuardada> {
         if (!archivo || !archivo.buffer || archivo.size === 0)
-            throw new BusinessLogicException("An image file must be sent in the field 'archivo'", BusinessError.BAD_REQUEST);
+            throw new BusinessLogicException("Debes enviar una imagen en el campo 'archivo'", BusinessError.BAD_REQUEST);
 
         const extension = EXTENSIONES[archivo.mimetype];
         if (!extension || !this.contenidoEsImagen(archivo.buffer, archivo.mimetype))
-            throw new BusinessLogicException("The file must be a JPG, PNG, WEBP or GIF image", BusinessError.BAD_REQUEST);
+            throw new BusinessLogicException("El archivo debe ser una imagen JPG, PNG, WEBP o GIF", BusinessError.BAD_REQUEST);
 
         if (archivo.size > TAMANIO_MAXIMO_IMAGEN)
-            throw new BusinessLogicException("The image must not be larger than 5 MB", BusinessError.BAD_REQUEST);
+            throw new BusinessLogicException("La imagen no puede pesar más de 5 MB", BusinessError.BAD_REQUEST);
 
         const nombre = `${randomUUID()}.${extension}`;
         await fs.mkdir(this.carpeta(), { recursive: true });

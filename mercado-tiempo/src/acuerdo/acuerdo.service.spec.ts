@@ -117,19 +117,19 @@ describe('AcuerdoService', () => {
 
     it('addParticipanteAcuerdo should throw an exception for an invalid perfil', async () => {
         await expect(() => service.addParticipanteAcuerdo(acuerdo.id, "0", RolParticipante.PRESTADOR))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('addParticipanteAcuerdo should throw an exception for an invalid acuerdo', async () => {
         const newPerfil = await createPerfil();
         await expect(() => service.addParticipanteAcuerdo("0", newPerfil.id, RolParticipante.PRESTADOR))
-            .rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el acuerdo");
     });
 
     it('addParticipanteAcuerdo should throw an exception for an already enrolled perfil', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.addParticipanteAcuerdo(acuerdo.id, perfil.id, RolParticipante.PRESTADOR))
-            .rejects.toHaveProperty("message", "The perfil is already a participant in the acuerdo");
+            .rejects.toHaveProperty("message", "El perfil ya es participante del acuerdo");
     });
 
     it('findParticipanteByAcuerdoIdPerfilId should return a participante by acuerdo', async () => {
@@ -142,19 +142,19 @@ describe('AcuerdoService', () => {
 
     it('findParticipanteByAcuerdoIdPerfilId should throw an exception for an invalid perfil', async () => {
         await expect(() => service.findParticipanteByAcuerdoIdPerfilId(acuerdo.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('findParticipanteByAcuerdoIdPerfilId should throw an exception for an invalid acuerdo', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.findParticipanteByAcuerdoIdPerfilId("0", perfil.id))
-            .rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el acuerdo");
     });
 
     it('findParticipanteByAcuerdoIdPerfilId should throw an exception for a perfil not associated to the acuerdo', async () => {
         const newPerfil = await createPerfil();
         await expect(() => service.findParticipanteByAcuerdoIdPerfilId(acuerdo.id, newPerfil.id))
-            .rejects.toHaveProperty("message", "The perfil with the given id is not a participant in the acuerdo");
+            .rejects.toHaveProperty("message", "El perfil no es participante del acuerdo");
     });
 
     it('findParticipantesByAcuerdoId should return participantes by acuerdo', async () => {
@@ -164,7 +164,7 @@ describe('AcuerdoService', () => {
 
     it('findParticipantesByAcuerdoId should throw an exception for an invalid acuerdo', async () => {
         await expect(() => service.findParticipantesByAcuerdoId("0"))
-            .rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el acuerdo");
     });
 
     it('associateParticipantesAcuerdo should update the participantes list for an acuerdo', async () => {
@@ -180,13 +180,13 @@ describe('AcuerdoService', () => {
         const newPerfil = await createPerfil();
         await expect(() => service.associateParticipantesAcuerdo("0", [
             { perfilId: newPerfil.id, rol: RolParticipante.PRESTADOR }
-        ])).rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
+        ])).rejects.toHaveProperty("message", "No se encontró el acuerdo");
     });
 
     it('associateParticipantesAcuerdo should throw an exception for an invalid perfil', async () => {
         await expect(() => service.associateParticipantesAcuerdo(acuerdo.id, [
             { perfilId: "0", rol: RolParticipante.PRESTADOR }
-        ])).rejects.toHaveProperty("message", "The perfil with the given id was not found");
+        ])).rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('deleteParticipanteAcuerdo should remove a participante from an acuerdo', async () => {
@@ -200,19 +200,19 @@ describe('AcuerdoService', () => {
 
     it('deleteParticipanteAcuerdo should throw an exception for an invalid perfil', async () => {
         await expect(() => service.deleteParticipanteAcuerdo(acuerdo.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('deleteParticipanteAcuerdo should throw an exception for an invalid acuerdo', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.deleteParticipanteAcuerdo("0", perfil.id))
-            .rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el acuerdo");
     });
 
     it('deleteParticipanteAcuerdo should throw an exception for a non-associated perfil', async () => {
         const newPerfil = await createPerfil();
         await expect(() => service.deleteParticipanteAcuerdo(acuerdo.id, newPerfil.id))
-            .rejects.toHaveProperty("message", "The perfil with the given id is not a participant in the acuerdo");
+            .rejects.toHaveProperty("message", "El perfil no es participante del acuerdo");
     });
 
     // --- Confirmación de prestación y transferencia de horas ---
@@ -321,7 +321,7 @@ describe('AcuerdoService', () => {
         await service.addParticipanteAcuerdo(acuerdo.id, otroReceptor.id, RolParticipante.RECEPTOR);
         const otroPrestador = await createPerfil();
         await expect(() => service.addParticipanteAcuerdo(acuerdo.id, otroPrestador.id, RolParticipante.PRESTADOR))
-            .rejects.toHaveProperty("message", "An acuerdo can have several PRESTADORES or several RECEPTORES, but not both");
+            .rejects.toHaveProperty("message", "Un acuerdo puede tener varios prestadores o varios receptores, pero no ambos");
     });
 
     it('associateParticipantesAcuerdo should throw an exception for several PRESTADORES and several RECEPTORES', async () => {
@@ -333,58 +333,58 @@ describe('AcuerdoService', () => {
             { perfilId: nuevos[1].id, rol: RolParticipante.RECEPTOR },
         ];
         await expect(() => service.associateParticipantesAcuerdo(acuerdo.id, participantes))
-            .rejects.toHaveProperty("message", "An acuerdo can have several PRESTADORES or several RECEPTORES, but not both");
+            .rejects.toHaveProperty("message", "Un acuerdo puede tener varios prestadores o varios receptores, pero no ambos");
     });
 
     it('addParticipanteAcuerdo should throw an exception for a PRESTADOR when the RECEPTOR cannot pay the extra share', async () => {
         await perfilRepository.update(perfilesList[1].id, { saldo: acuerdo.horas });
         const otroPrestador = await createPerfil();
         await expect(() => service.addParticipanteAcuerdo(acuerdo.id, otroPrestador.id, RolParticipante.PRESTADOR))
-            .rejects.toHaveProperty("message", "A RECEPTOR does not have enough saldo to pay its share of the acuerdo");
+            .rejects.toHaveProperty("message", "Un receptor no tiene saldo suficiente para pagar su parte del acuerdo");
     });
 
     it('confirmarPrestacion should throw an exception for an invalid acuerdo', async () => {
         await expect(() => service.confirmarPrestacion("0", perfilesList[0].id))
-            .rejects.toHaveProperty("message", "The acuerdo with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el acuerdo");
     });
 
     it('confirmarPrestacion should throw an exception when the acuerdo is not acordado', async () => {
         await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
-            .rejects.toHaveProperty("message", "The acuerdo must be acordado to confirm the prestacion");
+            .rejects.toHaveProperty("message", "El acuerdo debe estar acordado para confirmar la prestación");
     });
 
     it('confirmarPrestacion should throw an exception before the fechaRealizacion', async () => {
         await acuerdoRepository.update(acuerdo.id, { estado: EstadoAcuerdo.ACORDADO, fechaRealizacion: faker.date.future() });
         await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
-            .rejects.toHaveProperty("message", "The prestacion cannot be confirmed before the fechaRealizacion");
+            .rejects.toHaveProperty("message", "La prestación no se puede confirmar antes de la fecha de realización");
     });
 
     it('confirmarPrestacion should throw an exception for a perfil that is not a participant', async () => {
         await prepararParaConfirmar();
         const ajeno = await createPerfil();
         await expect(() => service.confirmarPrestacion(acuerdo.id, ajeno.id))
-            .rejects.toHaveProperty("message", "The perfil with the given id is not a participant in the acuerdo");
+            .rejects.toHaveProperty("message", "El perfil no es participante del acuerdo");
     });
 
     it('confirmarPrestacion should throw an exception when the perfil already confirmed', async () => {
         await prepararParaConfirmar();
         await service.confirmarPrestacion(acuerdo.id, perfilesList[0].id);
         await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
-            .rejects.toHaveProperty("message", "The perfil already confirmed the prestacion");
+            .rejects.toHaveProperty("message", "El perfil ya confirmó la prestación");
     });
 
     it('confirmarPrestacion should throw an exception without a RECEPTOR', async () => {
         await service.deleteParticipanteAcuerdo(acuerdo.id, perfilesList[1].id);
         await prepararParaConfirmar();
         await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
-            .rejects.toHaveProperty("message", "An acuerdo must have at least one PRESTADOR and one RECEPTOR to be realizado");
+            .rejects.toHaveProperty("message", "Un acuerdo debe tener al menos un prestador y un receptor para quedar realizado");
     });
 
     it('confirmarPrestacion should throw an exception for a realizado acuerdo', async () => {
         await prepararParaConfirmar();
         await confirmarTodos();
         await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
-            .rejects.toHaveProperty("message", "The acuerdo is realizado and cannot be modified");
+            .rejects.toHaveProperty("message", "El acuerdo ya se realizó y no se puede modificar");
     });
 
     // --- Saldo de los receptores (RF-043) ---
@@ -393,7 +393,7 @@ describe('AcuerdoService', () => {
         const sinSaldo = await createPerfil();
         await perfilRepository.update(sinSaldo.id, { saldo: acuerdo.horas - 1 });
         await expect(() => service.addParticipanteAcuerdo(acuerdo.id, sinSaldo.id, RolParticipante.RECEPTOR))
-            .rejects.toHaveProperty("message", "A RECEPTOR does not have enough saldo to pay its share of the acuerdo");
+            .rejects.toHaveProperty("message", "Un receptor no tiene saldo suficiente para pagar su parte del acuerdo");
     });
 
     it('addParticipanteAcuerdo should let a PRESTADOR without saldo join', async () => {
@@ -407,7 +407,7 @@ describe('AcuerdoService', () => {
         await perfilRepository.update(perfilesList[1].id, { saldo: acuerdo.horas });
         const cambios = { ...acuerdo, horas: acuerdo.horas + 1, estado: undefined } as unknown as AcuerdoEntity;
         await expect(() => service.update(acuerdo.id, cambios))
-            .rejects.toHaveProperty("message", "A RECEPTOR does not have enough saldo to pay its share of the acuerdo");
+            .rejects.toHaveProperty("message", "Un receptor no tiene saldo suficiente para pagar su parte del acuerdo");
     });
 
     // --- Estado 4: cancelado ---
@@ -419,14 +419,14 @@ describe('AcuerdoService', () => {
     it('confirmarPrestacion should throw an exception for a cancelado acuerdo', async () => {
         await cancelarDirectamente();
         await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
-            .rejects.toHaveProperty("message", "The acuerdo is cancelado and cannot be modified");
+            .rejects.toHaveProperty("message", "El acuerdo está cancelado y no se puede modificar");
     });
 
     it('addParticipanteAcuerdo should throw an exception for a cancelado acuerdo', async () => {
         await cancelarDirectamente();
         const newPerfil = await createPerfil();
         await expect(() => service.addParticipanteAcuerdo(acuerdo.id, newPerfil.id, RolParticipante.RECEPTOR))
-            .rejects.toHaveProperty("message", "The acuerdo is cancelado and cannot be modified");
+            .rejects.toHaveProperty("message", "El acuerdo está cancelado y no se puede modificar");
     });
 
     it('addParticipanteAcuerdo should throw an exception for a realizado acuerdo', async () => {
@@ -434,19 +434,19 @@ describe('AcuerdoService', () => {
         await confirmarTodos();
         const newPerfil = await createPerfil();
         await expect(() => service.addParticipanteAcuerdo(acuerdo.id, newPerfil.id, RolParticipante.RECEPTOR))
-            .rejects.toHaveProperty("message", "The acuerdo is realizado and cannot be modified");
+            .rejects.toHaveProperty("message", "El acuerdo ya se realizó y no se puede modificar");
     });
 
     it('update should throw an exception when trying to set estado cancelado', async () => {
         const cambios = { ...acuerdo, estado: EstadoAcuerdo.CANCELADO } as AcuerdoEntity;
         await expect(() => service.update(acuerdo.id, cambios))
-            .rejects.toHaveProperty("message", "An acuerdo can only be cancelado through a solicitud de cancelacion");
+            .rejects.toHaveProperty("message", "Un acuerdo solo se puede cancelar con una solicitud de cancelación");
     });
 
     it('update should throw an exception for a cancelado acuerdo', async () => {
         await cancelarDirectamente();
         const cambios = { ...acuerdo, horas: 5, estado: undefined } as unknown as AcuerdoEntity;
         await expect(() => service.update(acuerdo.id, cambios))
-            .rejects.toHaveProperty("message", "The acuerdo is cancelado and cannot be modified");
+            .rejects.toHaveProperty("message", "El acuerdo está cancelado y no se puede modificar");
     });
 });

@@ -88,7 +88,7 @@ describe('ChatService', () => {
 
     it('findOne should throw an exception for an invalid chat', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The chat with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el chat");
     });
 
     it('create should return a new chat with at least 2 participantes', async () => {
@@ -101,14 +101,14 @@ describe('ChatService', () => {
     it('create should throw an exception with fewer than 2 participantes', async () => {
         const p1 = await createPerfil();
         await expect(() => service.create([p1]))
-            .rejects.toHaveProperty("message", "A chat must have at least 2 participantes");
+            .rejects.toHaveProperty("message", "Un chat debe tener al menos 2 participantes");
     });
 
     it('create should throw an exception for an invalid perfil', async () => {
         const p1 = await createPerfil();
         const invalidPerfil: PerfilMiembroEntity = { ...p1, id: "0" } as PerfilMiembroEntity;
         await expect(() => service.create([p1, invalidPerfil]))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('delete should remove a chat', async () => {
@@ -119,7 +119,7 @@ describe('ChatService', () => {
 
     it('delete should throw an exception for an invalid chat', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The chat with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el chat");
     });
 
     it('addPerfilChat should add a perfil to a chat', async () => {
@@ -130,19 +130,19 @@ describe('ChatService', () => {
 
     it('addPerfilChat should throw an exception for an invalid perfil', async () => {
         await expect(() => service.addPerfilChat(chat.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('addPerfilChat should throw an exception for an invalid chat', async () => {
         const newPerfil = await createPerfil();
         await expect(() => service.addPerfilChat("0", newPerfil.id))
-            .rejects.toHaveProperty("message", "The chat with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el chat");
     });
 
     it('addPerfilChat should throw an exception for an already participating perfil', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.addPerfilChat(chat.id, perfil.id))
-            .rejects.toHaveProperty("message", "The perfil is already a participant in the chat");
+            .rejects.toHaveProperty("message", "El perfil ya es participante del chat");
     });
 
     it('findPerfilesByChatId should return perfiles by chat', async () => {
@@ -152,7 +152,7 @@ describe('ChatService', () => {
 
     it('findPerfilesByChatId should throw an exception for an invalid chat', async () => {
         await expect(() => service.findPerfilesByChatId("0"))
-            .rejects.toHaveProperty("message", "The chat with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el chat");
     });
 
     it('deletePerfilChat should remove a perfil from a chat', async () => {
@@ -165,24 +165,24 @@ describe('ChatService', () => {
 
     it('deletePerfilChat should throw an exception for an invalid perfil', async () => {
         await expect(() => service.deletePerfilChat(chat.id, "0"))
-            .rejects.toHaveProperty("message", "The perfil with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el perfil");
     });
 
     it('deletePerfilChat should throw an exception for an invalid chat', async () => {
         const perfil = perfilesList[0];
         await expect(() => service.deletePerfilChat("0", perfil.id))
-            .rejects.toHaveProperty("message", "The chat with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el chat");
     });
 
     it('deletePerfilChat should throw an exception for a non-participating perfil', async () => {
         const newPerfil = await createPerfil();
         await expect(() => service.deletePerfilChat(chat.id, newPerfil.id))
-            .rejects.toHaveProperty("message", "The perfil with the given id is not a participant in the chat");
+            .rejects.toHaveProperty("message", "El perfil no es participante del chat");
     });
 
     it('deletePerfilChat should throw an exception when it would leave fewer than 2 participantes', async () => {
         await service.deletePerfilChat(chat.id, perfilesList[0].id);
         await expect(() => service.deletePerfilChat(chat.id, perfilesList[1].id))
-            .rejects.toHaveProperty("message", "A chat must keep at least 2 participantes");
+            .rejects.toHaveProperty("message", "Un chat debe conservar al menos 2 participantes");
     });
 });

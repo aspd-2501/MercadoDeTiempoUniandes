@@ -45,19 +45,19 @@ export class HorarioDisponibleService {
             relations: { acuerdo: true, solicitud: true, postAyuda: true, actividad: true, perfil: true }
         });
         if (!horario)
-            throw new BusinessLogicException("The horario disponible with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el horario disponible", BusinessError.NOT_FOUND);
         return horario;
     }
 
     async create(horario: HorarioDisponibleEntity): Promise<HorarioDisponibleEntity> {
         if (!horario.perfil)
-            throw new BusinessLogicException("A horario disponible must have a perfil", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un horario disponible debe tener un perfil", BusinessError.PRECONDITION_FAILED);
         const perfil = await this.perfilMiembroRepository.findOne({ where: { id: horario.perfil.id } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         if (horario.fechaFin <= horario.fechaInicio)
-            throw new BusinessLogicException("fechaFin must be after fechaInicio", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("La fecha de fin debe ser posterior a la de inicio", BusinessError.PRECONDITION_FAILED);
 
         await this.validarOrigen(horario);
 
@@ -67,7 +67,7 @@ export class HorarioDisponibleService {
     async delete(id: string) {
         const horario: HorarioDisponibleEntity | null = await this.horarioRepository.findOne({ where: { id } });
         if (!horario)
-            throw new BusinessLogicException("The horario disponible with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el horario disponible", BusinessError.NOT_FOUND);
         await this.horarioRepository.remove(horario);
     }
 
@@ -83,7 +83,7 @@ export class HorarioDisponibleService {
 
         if (origenes.length !== 1)
             throw new BusinessLogicException(
-                "A horario disponible must have exactly one origen: an acuerdo, a solicitud, a postAyuda or an actividad",
+                "Un horario disponible debe tener exactamente un origen: un acuerdo, una solicitud, un post de ayuda o una actividad",
                 BusinessError.PRECONDITION_FAILED
             );
 
@@ -92,19 +92,19 @@ export class HorarioDisponibleService {
         if (nombre === 'acuerdo') {
             const acuerdo = await this.acuerdoRepository.findOne({ where: { id: valor.id } });
             if (!acuerdo)
-                throw new BusinessLogicException("The acuerdo with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
         } else if (nombre === 'solicitud') {
             const solicitud = await this.solicitudRepository.findOne({ where: { id: valor.id } });
             if (!solicitud)
-                throw new BusinessLogicException("The solicitud with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró la solicitud", BusinessError.NOT_FOUND);
         } else if (nombre === 'postAyuda') {
             const post = await this.postAyudaRepository.findOne({ where: { id: valor.id } });
             if (!post)
-                throw new BusinessLogicException("The post ayuda with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
         } else {
             const actividad = await this.actividadRepository.findOne({ where: { id: valor.id } });
             if (!actividad)
-                throw new BusinessLogicException("The actividad comunitaria with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró la actividad comunitaria", BusinessError.NOT_FOUND);
         }
     }
 }

@@ -55,7 +55,7 @@ describe('CategoriaService', () => {
 
     it('findOne should throw an exception for an invalid categoria', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The categoria with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la categoría");
     });
 
     it('create should return a new categoria', async () => {
@@ -80,7 +80,7 @@ describe('CategoriaService', () => {
         let categoria: CategoriaEntity = categoriasList[0];
         categoria = { ...categoria, nombre: faker.commerce.department() };
         await expect(() => service.update("0", categoria))
-            .rejects.toHaveProperty("message", "The categoria with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la categoría");
     });
 
     it('delete should remove a categoria', async () => {
@@ -93,6 +93,6 @@ describe('CategoriaService', () => {
 
     it('delete should throw an exception for an invalid categoria', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The categoria with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la categoría");
     });
 });

@@ -57,7 +57,7 @@ describe('UsuarioService', () => {
 
     it('findOne should throw an exception for an invalid usuario', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The usuario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el usuario");
     });
 
     it('create should save a usuario with a hashed contrasenia', async () => {
@@ -82,7 +82,7 @@ describe('UsuarioService', () => {
         } as UsuarioEntity;
 
         await expect(() => service.create(usuario))
-            .rejects.toHaveProperty("message", "A usuario must have an idUniandes");
+            .rejects.toHaveProperty("message", "Debes indicar tu usuario Uniandes");
     });
 
     it('create should throw an exception for a duplicate idUniandes', async () => {
@@ -93,7 +93,7 @@ describe('UsuarioService', () => {
         } as UsuarioEntity;
 
         await expect(() => service.create(usuario))
-            .rejects.toHaveProperty("message", "A usuario with that idUniandes already exists");
+            .rejects.toHaveProperty("message", "Ya existe una cuenta con ese usuario Uniandes");
     });
 
     it('create should throw an exception for a short contrasenia', async () => {
@@ -104,7 +104,7 @@ describe('UsuarioService', () => {
         } as UsuarioEntity;
 
         await expect(() => service.create(usuario))
-            .rejects.toHaveProperty("message", "The contrasenia must have at least 6 characters");
+            .rejects.toHaveProperty("message", "La contraseña debe tener al menos 6 caracteres");
     });
 
     it('update should modify a usuario without rehashing an unchanged contrasenia', async () => {
@@ -131,13 +131,13 @@ describe('UsuarioService', () => {
         usuario.contrasenia = "123";
 
         await expect(() => service.update(usuario.id, usuario))
-            .rejects.toHaveProperty("message", "The contrasenia must have at least 6 characters");
+            .rejects.toHaveProperty("message", "La contraseña debe tener al menos 6 caracteres");
     });
 
     it('update should throw an exception for an invalid usuario', async () => {
         const usuario = { ...usuariosList[0], idUniandes: faker.string.alphanumeric(10) };
         await expect(() => service.update("0", usuario))
-            .rejects.toHaveProperty("message", "The usuario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el usuario");
     });
 
     it('validarCredenciales should return the usuario for valid credentials', async () => {
@@ -148,13 +148,13 @@ describe('UsuarioService', () => {
 
     it('validarCredenciales should throw an exception for an invalid idUniandes', async () => {
         await expect(() => service.validarCredenciales("no-existe", "password123"))
-            .rejects.toHaveProperty("message", "Invalid credentials");
+            .rejects.toHaveProperty("message", "Usuario o contraseña incorrectos");
     });
 
     it('validarCredenciales should throw an exception for an invalid contrasenia', async () => {
         const usuario = usuariosList[0];
         await expect(() => service.validarCredenciales(usuario.idUniandes, "wrongPassword"))
-            .rejects.toHaveProperty("message", "Invalid credentials");
+            .rejects.toHaveProperty("message", "Usuario o contraseña incorrectos");
     });
 
     it('delete should remove a usuario', async () => {
@@ -166,6 +166,6 @@ describe('UsuarioService', () => {
 
     it('delete should throw an exception for an invalid usuario', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The usuario with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró el usuario");
     });
 });

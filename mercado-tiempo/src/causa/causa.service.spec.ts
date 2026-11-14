@@ -90,7 +90,7 @@ describe('CausaService', () => {
 
     it('findOne should throw an exception for an invalid causa', async () => {
         await expect(() => service.findOne("0"))
-            .rejects.toHaveProperty("message", "The causa with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la causa");
     });
 
     it('create should return a new causa with the same perfil as creador and receptor', async () => {
@@ -148,7 +148,7 @@ describe('CausaService', () => {
         let causa: CausaEntity = causasList[0];
         causa = { ...causa, nombre: faker.company.name() };
         await expect(() => service.update("0", causa))
-            .rejects.toHaveProperty("message", "The causa with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la causa");
     });
 
     it('delete should remove a causa', async () => {
@@ -161,6 +161,6 @@ describe('CausaService', () => {
 
     it('delete should throw an exception for an invalid causa', async () => {
         await expect(() => service.delete("0"))
-            .rejects.toHaveProperty("message", "The causa with the given id was not found");
+            .rejects.toHaveProperty("message", "No se encontró la causa");
     });
 });

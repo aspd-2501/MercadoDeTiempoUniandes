@@ -33,18 +33,18 @@ export class ChatService {
             relations: { participantes: true, mensajes: true }
         });
         if (!chat)
-            throw new BusinessLogicException("The chat with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el chat", BusinessError.NOT_FOUND);
         return chat;
     }
 
     async create(perfiles: PerfilMiembroEntity[]): Promise<ChatEntity> {
         if (!perfiles || perfiles.length < 2)
-            throw new BusinessLogicException("A chat must have at least 2 participantes", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un chat debe tener al menos 2 participantes", BusinessError.PRECONDITION_FAILED);
 
         for (const p of perfiles) {
             const perfil = await this.perfilMiembroRepository.findOne({ where: { id: p.id } });
             if (!perfil)
-                throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+                throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
         }
 
         const chat = await this.chatRepository.save({});
@@ -64,7 +64,7 @@ export class ChatService {
     async delete(id: string) {
         const chat: ChatEntity | null = await this.chatRepository.findOne({ where: { id } });
         if (!chat)
-            throw new BusinessLogicException("The chat with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el chat", BusinessError.NOT_FOUND);
         await this.chatRepository.remove(chat);
     }
 
@@ -73,18 +73,18 @@ export class ChatService {
     async addPerfilChat(chatId: string, perfilId: string): Promise<ChatEntity> {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         const chat: ChatEntity | null = await this.chatRepository.findOne({
             where: { id: chatId },
             relations: { participantes: true }
         });
         if (!chat)
-            throw new BusinessLogicException("The chat with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el chat", BusinessError.NOT_FOUND);
 
         const yaParticipa = chat.participantes.some(p => p.idPerfil === perfilId);
         if (yaParticipa)
-            throw new BusinessLogicException("The perfil is already a participant in the chat", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil ya es participante del chat", BusinessError.PRECONDITION_FAILED);
 
         const participante = this.participanteRepository.create({ idChat: chatId, idPerfil: perfilId });
         await this.participanteRepository.save(participante);
@@ -102,7 +102,7 @@ export class ChatService {
             relations: { participantes: { perfil: true } }
         });
         if (!chat)
-            throw new BusinessLogicException("The chat with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el chat", BusinessError.NOT_FOUND);
 
         return chat.participantes.map(p => p.perfil);
     }
@@ -110,21 +110,21 @@ export class ChatService {
     async deletePerfilChat(chatId: string, perfilId: string) {
         const perfil: PerfilMiembroEntity | null = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
         if (!perfil)
-            throw new BusinessLogicException("The perfil with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
 
         const chat: ChatEntity | null = await this.chatRepository.findOne({
             where: { id: chatId },
             relations: { participantes: true }
         });
         if (!chat)
-            throw new BusinessLogicException("The chat with the given id was not found", BusinessError.NOT_FOUND);
+            throw new BusinessLogicException("No se encontró el chat", BusinessError.NOT_FOUND);
 
         const participante = chat.participantes.find(p => p.idPerfil === perfilId);
         if (!participante)
-            throw new BusinessLogicException("The perfil with the given id is not a participant in the chat", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("El perfil no es participante del chat", BusinessError.PRECONDITION_FAILED);
 
         if (chat.participantes.length <= 2)
-            throw new BusinessLogicException("A chat must keep at least 2 participantes", BusinessError.PRECONDITION_FAILED);
+            throw new BusinessLogicException("Un chat debe conservar al menos 2 participantes", BusinessError.PRECONDITION_FAILED);
 
         await this.participanteRepository.delete({ idChat: chatId, idPerfil: perfilId });
     }
