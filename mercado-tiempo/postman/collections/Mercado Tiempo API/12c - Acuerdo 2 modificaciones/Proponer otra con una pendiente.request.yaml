@@ -15,6 +15,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: already has a pending", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("already has a pending"); });
+      pm.test("Mensaje: ya tiene una solicitud de modificación pendiente", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("ya tiene una solicitud de modificación pendiente"); });
     language: text/javascript
 order: 13000

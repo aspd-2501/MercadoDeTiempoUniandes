@@ -16,6 +16,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: fechaFin must be after fechaInicio", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("fechaFin must be after fechaInicio"); });
+      pm.test("Mensaje: fecha de fin debe ser posterior", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("fecha de fin debe ser posterior"); });
     language: text/javascript
 order: 5000

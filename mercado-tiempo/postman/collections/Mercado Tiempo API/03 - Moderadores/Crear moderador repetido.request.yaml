@@ -13,6 +13,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: already a moderador", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("already a moderador"); });
+      pm.test("Mensaje: ya es moderador", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("ya es moderador"); });
     language: text/javascript
 order: 2000

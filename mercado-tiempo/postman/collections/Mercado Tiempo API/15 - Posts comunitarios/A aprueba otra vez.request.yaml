@@ -5,6 +5,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: already approved", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("already approved"); });
+      pm.test("Mensaje: ya aprobó", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("ya aprobó"); });
     language: text/javascript
 order: 9000

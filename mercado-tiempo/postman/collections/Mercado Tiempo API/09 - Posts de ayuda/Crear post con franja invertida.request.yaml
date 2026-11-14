@@ -30,6 +30,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: fechaFin of a horario must be after", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("fechaFin of a horario must be after"); });
+      pm.test("Mensaje: debe terminar después de empezar", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("debe terminar después de empezar"); });
     language: text/javascript
 order: 4000

@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo1}}/solicitudes-modificacion"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tipo": "MODIFICACION",
+      "solicitanteId": "{{perfilA}}",
+      "horas": 3
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: ya se realizó", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("ya se realizó"); });
+    language: text/javascript
+order: 30000

@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/reconocimientos/{{recId}}/otorgar"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "perfilReceptorId": "{{perfilA}}",
+      "perfilOtorganteId": "{{perfilA}}",
+      "postComunitarioId": "{{postComId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: a sí mismo", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("a sí mismo"); });
+    language: text/javascript
+order: 8000

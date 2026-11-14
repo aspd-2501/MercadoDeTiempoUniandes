@@ -17,6 +17,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: either a postAyuda or a solicitud", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("either a postAyuda or a solicitud"); });
+      pm.test("Mensaje: de un post de ayuda o de una solicitud", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("de un post de ayuda o de una solicitud"); });
     language: text/javascript
 order: 1000

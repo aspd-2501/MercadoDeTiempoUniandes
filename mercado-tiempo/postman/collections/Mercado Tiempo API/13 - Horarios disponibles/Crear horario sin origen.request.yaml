@@ -15,6 +15,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: exactly one origen", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("exactly one origen"); });
+      pm.test("Mensaje: exactamente un origen", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("exactamente un origen"); });
     language: text/javascript
 order: 3000

@@ -19,6 +19,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: already has a perfil", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("already has a perfil"); });
+      pm.test("Mensaje: ya tiene un perfil", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("ya tiene un perfil"); });
     language: text/javascript
 order: 6000

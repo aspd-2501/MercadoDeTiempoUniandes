@@ -5,6 +5,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 404", () => pm.response.to.have.status(404));
-      pm.test("Mensaje: does not have a perfil miembro", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("does not have a perfil miembro"); });
+      pm.test("Mensaje: todavía no tiene un perfil de miembro", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("todavía no tiene un perfil de miembro"); });
     language: text/javascript
 order: 11400

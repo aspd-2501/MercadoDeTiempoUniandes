@@ -1,8 +1,0 @@
-$kind: http-request
-url: "{{baseUrl}}/perfiles-organizacion/{{orgId}}/miembros/{{perfilA}}"
-method: DELETE
-scripts:
-  - type: afterResponse
-    code: pm.test("Código 204 o 412 (si A es el último miembro)", () => pm.expect(pm.response.code).to.be.oneOf([204, 412]));
-    language: text/javascript
-order: 2000

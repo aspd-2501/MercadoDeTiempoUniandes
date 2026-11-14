@@ -1,0 +1,35 @@
+$kind: http-request
+url: "{{baseUrl}}/posts-ayuda"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Tutoría de Cálculo Integral {{runId}}",
+      "descripcion": "Repaso para el parcial",
+      "horas": 2,
+      "imagen": "https://picsum.photos/400",
+      "ofrece": true,
+      "cupo": 3,
+      "cupoLleno": false,
+      "fechaCreacion": "{{ahora}}",
+      "perfilAutorId": "{{perfilA}}",
+      "categoriaIds": [
+        "{{cat1}}"
+      ],
+      "horarios": [
+        {
+          "fechaInicio": "{{pasadoInicio}}",
+          "fechaFin": "{{pasadoCorto}}"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: al menos las horas", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("al menos las horas"); });
+    language: text/javascript
+order: 3000

@@ -13,6 +13,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 403", () => pm.response.to.have.status(403));
-      pm.test("Mensaje: only a moderador", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("Only a moderador"); });
+      pm.test("Mensaje: Solo un moderador", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("Solo un moderador"); });
     language: text/javascript
 order: 9100

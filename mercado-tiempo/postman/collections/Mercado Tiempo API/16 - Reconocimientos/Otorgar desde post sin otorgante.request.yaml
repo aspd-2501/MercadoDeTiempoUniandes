@@ -14,6 +14,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: requires a perfil otorgante", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("requires a perfil otorgante"); });
+      pm.test("Mensaje: necesita un perfil que lo otorgue", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("necesita un perfil que lo otorgue"); });
     language: text/javascript
 order: 9000

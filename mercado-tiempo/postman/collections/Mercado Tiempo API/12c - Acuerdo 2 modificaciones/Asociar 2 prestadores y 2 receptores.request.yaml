@@ -30,6 +30,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: but not both", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("but not both"); });
+      pm.test("Mensaje: pero no", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("pero no"); });
     language: text/javascript
 order: 2000

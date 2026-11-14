@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/actividades/{{actividadId}}/perfiles/{{perfilD}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: no está inscrito", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("no está inscrito"); });
+    language: text/javascript
+order: 17000

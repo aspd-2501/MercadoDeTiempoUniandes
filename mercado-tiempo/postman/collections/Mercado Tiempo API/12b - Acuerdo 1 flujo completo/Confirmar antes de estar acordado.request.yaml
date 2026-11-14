@@ -5,6 +5,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: must be acordado", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("must be acordado"); });
+      pm.test("Mensaje: debe estar acordado", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("debe estar acordado"); });
     language: text/javascript
 order: 11000

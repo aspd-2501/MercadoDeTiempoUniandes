@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/solicitudes-ayuda"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Fotos para la feria {{runId}}",
+      "descripcion": "Necesito fotos del stand",
+      "fechaCreacion": "{{ahora}}",
+      "horas": 1,
+      "perfilAutorId": "{{perfilE}}",
+      "prestadorId": "{{orgId}}",
+      "servicioOfrecidoId": "{{servicioId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: no puede ser el prestador de su propia", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("no puede ser el prestador de su propia"); });
+    language: text/javascript
+order: 2000

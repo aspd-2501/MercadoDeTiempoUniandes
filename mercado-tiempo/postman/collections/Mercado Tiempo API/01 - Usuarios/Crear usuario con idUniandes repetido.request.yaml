@@ -14,6 +14,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: already exists", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("already exists"); });
+      pm.test("Mensaje: Ya existe una cuenta", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("Ya existe una cuenta"); });
     language: text/javascript
 order: 6000

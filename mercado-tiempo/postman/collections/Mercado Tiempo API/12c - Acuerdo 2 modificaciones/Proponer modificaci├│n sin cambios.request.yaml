@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo2}}/solicitudes-modificacion"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tipo": "MODIFICACION",
+      "solicitanteId": "{{perfilA}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: debe cambiar las horas o la fecha de realización", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("debe cambiar las horas o la fecha de realización"); });
+    language: text/javascript
+order: 20000

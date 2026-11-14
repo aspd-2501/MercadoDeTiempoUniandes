@@ -16,6 +16,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: realizado and cannot be modified", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("realizado and cannot be modified"); });
+      pm.test("Mensaje: ya se realizó y no se puede modificar", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("ya se realizó y no se puede modificar"); });
     language: text/javascript
 order: 28000

@@ -5,6 +5,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: not associated", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("not associated with the post ayuda"); });
+      pm.test("Mensaje: no pertenece al post de ayuda", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("no pertenece al post de ayuda"); });
     language: text/javascript
 order: 14200

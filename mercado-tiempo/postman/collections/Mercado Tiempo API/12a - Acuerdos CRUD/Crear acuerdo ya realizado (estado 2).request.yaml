@@ -17,6 +17,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: only when all participantes confirm", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("only when all participantes confirm"); });
+      pm.test("Mensaje: solo cuando todos los participantes confirman", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("solo cuando todos los participantes confirman"); });
     language: text/javascript
 order: 3000

@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/horarios-disponibles"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fechaInicio": "{{futuroInicio}}",
+      "fechaFin": "{{futuroFin}}",
+      "perfilId": "{{perfilB}}",
+      "solicitudId": "{{solicitudId}}",
+      "postAyudaId": "{{postId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: exactamente un origen", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("exactamente un origen"); });
+    language: text/javascript
+order: 4000

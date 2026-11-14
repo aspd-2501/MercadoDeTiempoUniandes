@@ -15,6 +15,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: not a participant in the chat", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("not a participant in the chat"); });
+      pm.test("Mensaje: no es participante del chat", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("no es participante del chat"); });
     language: text/javascript
 order: 14000

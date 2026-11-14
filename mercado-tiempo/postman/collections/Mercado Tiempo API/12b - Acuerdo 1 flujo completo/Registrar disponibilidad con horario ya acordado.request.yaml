@@ -13,6 +13,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: already has a horario acordado", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("already has a horario acordado"); });
+      pm.test("Mensaje: ya tiene un horario acordado", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("ya tiene un horario acordado"); });
     language: text/javascript
 order: 17000

@@ -17,6 +17,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: not have enough saldo", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("not have enough saldo"); });
+      pm.test("Mensaje: saldo suficiente", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("saldo suficiente"); });
     language: text/javascript
 order: 4000

@@ -30,6 +30,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: horas of a post ayuda must be positive", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("horas of a post ayuda must be positive"); });
+      pm.test("Mensaje: horas del post de ayuda deben ser mayores que 0", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("horas del post de ayuda deben ser mayores que 0"); });
     language: text/javascript
 order: 2000

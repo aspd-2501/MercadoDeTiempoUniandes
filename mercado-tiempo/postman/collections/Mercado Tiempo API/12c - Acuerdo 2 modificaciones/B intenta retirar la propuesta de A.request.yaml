@@ -13,6 +13,6 @@ scripts:
   - type: afterResponse
     code: |-
       pm.test("Código 412", () => pm.response.to.have.status(412));
-      pm.test("Mensaje: Only the solicitante", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("Only the solicitante"); });
+      pm.test("Mensaje: Solo quien hizo la solicitud", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("Solo quien hizo la solicitud"); });
     language: text/javascript
 order: 26000
