@@ -6,20 +6,19 @@ import ServicioCard from '../componentes/servicios/ServicioCard';
 import PostAyuda from '../componentes/posts/PostAyuda';
 
 import type { PerfilMiembroAPI } from '../api/perfilesMiembro.api';
-import { MIEMBROS_DEMO } from '../mocks/miembros.mocks';
 
 //Llamados al API
 import { buscarMiembros } from '../api/perfilesMiembro.api';
-import { buscarServicios, type ServicioOfrecidoAPI } from '../api/serviciosOfrecidos.api';
+import { buscarServicios, type ResultadoServicioAPI } from '../api/serviciosOfrecidos.api';
 import { buscarPostsAyuda, type PostAyudaAPI } from '../api/postsAyuda.api';
 
 /**
  * VISTA: Explorar miembros, solicitudes, servicios y actividades.
  *
  * - Reutiliza MiembroCard, PostAyuda y ServicioCard.
- * - Miembros: lectura real de GET /perfiles-miembro, con los campos exactos del backend.
- * - Solicitudes y Servicios: se mantienen temporalmente los mocks anteriores.
- * - La sesión sigue siendo mock; no se infiere qué perfil UUID está conectado.
+ * - Miembros: consulta real de GET /buscar/miembros.
+ * - Solicitudes: GET /buscar/posts-ayuda?tipo=solicitud.
+ * - Servicios: GET /buscar/servicios (ofrecimientos y servicios de organizaciones).
  * - Las acciones de navegación se reciben como propiedades desde App.tsx.
  * - La pestaña Actividades queda preparada hasta definir su modelo y sus datos.
  *
@@ -63,7 +62,6 @@ export default function Explorar({
   // 01.1 BÚSQUEDA Y PESTAÑAS
   const [busqueda, setBusqueda] = useState('');
   const [pestanaActiva, setPestanaActiva] = useState<PestanaExplorar>('Miembros');
-  const termino = busqueda.trim().toLocaleLowerCase();
 
   // 01.2 PERFILES: GET /api/v1/perfiles-miembro
   const [perfiles, setPerfiles] = useState<PerfilMiembroAPI[]>([]);
@@ -110,7 +108,7 @@ export default function Explorar({
   }, [busqueda, pestanaActiva, numeroConsulta]);
 
   // 01.3 SERVICIOS: GET /api/v1/buscar/servicios
-  const [servicios, setServicios] = useState<ServicioOfrecidoAPI[]>([]);
+  const [servicios, setServicios] = useState<ResultadoServicioAPI[]>([]);
   const [cargandoServicios, setCargandoServicios] = useState(false);
   const [errorServicios, setErrorServicios] = useState<string | null>(null);
   const [reintentoServicios, setReintentoServicios] = useState(0);
@@ -365,6 +363,7 @@ export default function Explorar({
                   key={servicio.id}
                   servicio={servicio}
                   onVerPerfil={onVerPerfil}
+                  onVerDetallePost={onVerDetallePost}
                 />
               ))
             )}

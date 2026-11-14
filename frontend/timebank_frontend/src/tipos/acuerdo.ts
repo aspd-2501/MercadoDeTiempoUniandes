@@ -29,6 +29,8 @@ export interface PropuestaCambioAcuerdo {
   duracionHoras: number;
   motivo?: string;
   estado: 'pendiente' | 'aceptada' | 'rechazada';
+  tipo?: 'MODIFICACION' | 'CANCELACION';
+  aprobacionesIds?: string[];
 }
 
 export interface DatosPropuestaCambio {

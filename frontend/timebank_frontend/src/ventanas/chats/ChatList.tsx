@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Clock3, Search, X } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -104,19 +104,12 @@ export const CHATS_DEMO: ChatResumen[] = [
   },
 ];
 
-const ESTILOS_ESTADO_ACUERDO: Record<EstadoAcuerdoChat, string> = {
-  accepted: 'bg-[#E8F5F6] text-[#3C9DA0]',
-  completed: 'bg-green-50 text-green-700',
-  pending: 'bg-[#FFF9C4] text-[#F57F17]',
-  cancelled: 'bg-[#F0F0F0] text-[#9E9E9E]',
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 // 01. VENTANA: LISTA DE CHATS
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ChatList({
-  chats = CHATS_DEMO,
+  chats = [],
   onAbrirChat,
 }: ChatsProps) {
   // 01.1 MIEMBRO AUTENTICADO (FUENTE GLOBAL)
@@ -128,7 +121,7 @@ export default function ChatList({
 
   const chatsVisibles = chats.filter((chat) => {
     // Evita incluir un chat consigo mismo en los datos simulados.
-    const esOtroMiembro = chat.interlocutor.id !== miembro.id;
+    const esOtroMiembro = chat.interlocutor.id !== miembro?.id;
     const coincideConBusqueda = chat.interlocutor.name
       .toLocaleLowerCase('es')
       .includes(busqueda.trim().toLocaleLowerCase('es'));
@@ -191,12 +184,12 @@ export default function ChatList({
           /* 03.1 ESTADO SIN RESULTADOS */
           <div className="px-5 py-16 text-center" data-section="chats-vacios">
             <p className="font-semibold text-[#0D0D0D]">
-              {busqueda.trim() ? 'No encontramos conversaciones.' : 'Todavía no tienes chats.'}
+              {chats.length > 0 && busqueda.trim() ? 'No encontramos conversaciones.' : 'Lista de chats pendiente de integración.'}
             </p>
             <p className="mt-1 text-sm text-[#9E9E9E]">
-              {busqueda.trim()
+              {chats.length > 0 && busqueda.trim()
                 ? 'Prueba buscando otro nombre.'
-                : 'Tus conversaciones aparecerán aquí.'}
+                : 'El backend aún no tiene una consulta de conversaciones por miembro. Puedes abrir un chat existente desde el detalle de su acuerdo.'}
             </p>
           </div>
         ) : (
@@ -227,7 +220,7 @@ function FilaChat({
   ultimo: boolean;
   onAbrir: () => void;
 }) {
-  const { interlocutor, agreement } = chat;
+  const { interlocutor } = chat;
 
   return (
     <button

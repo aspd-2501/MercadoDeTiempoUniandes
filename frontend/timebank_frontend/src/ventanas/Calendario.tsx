@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useMiembroSesion } from '../contextos/MiembroSesionContext';
+import { obtenerCalendarioMiembro, type EventoAgendaAPI } from '../api/agenda.api';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import {
@@ -9,7 +11,6 @@ import {
   type EventoCalendario,
 } from '../componentes/calendario/CalendarioFranjasHoras';
 import type { AcuerdoCalendario } from '../tipos/acuerdoCalendario';
-import { ACUERDOS_CALENDARIO_DEMO } from '../mocks/acuerdosCalendario.mocks';
 
 /**
  * VISTA: calendario personal del miembro autenticado.
@@ -29,6 +30,7 @@ export interface CalendarioProps {
   acuerdos?: AcuerdoCalendario[];
   /** Conectar cuando esté implementada la ruta de detalle de acuerdos. */
   onVerAcuerdo?: (acuerdoId: string) => void;
+  onVerActividad?: (actividadId: string) => void;
 }
 
 // ─────────────────────── 01. FORMATO VISUAL DE FECHAS ───────────────────────
@@ -53,28 +55,65 @@ function formatearFecha(fechaISO: string, corta = false): string {
 
 // ─────────────────────── 02. COMPONENTE PRINCIPAL ───────────────────────
 export default function Calendario({
-  acuerdos = ACUERDOS_CALENDARIO_DEMO,
+  acuerdos,
   onVerAcuerdo,
+  onVerActividad,
 }: CalendarioProps) {
+  const { perfil } = useMiembroSesion();
+  const [datosApi, setDatosApi] = useState<EventoAgendaAPI[]>([]);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
   // 02.1 ESTADO DE PRESENTACIÓN: día y semana que el miembro está consultando.
   const [fechaSeleccionada, setFechaSeleccionada] = useState(() => fechaLocalISO(new Date()));
   const [semanaReferencia, setSemanaReferencia] = useState(() => fechaLocalISO(new Date()));
   const fechasSemana = obtenerSemana(semanaReferencia);
 
+  useEffect(() => {
+    if (acuerdos !== undefined || !perfil?.id) return;
+    const semana = obtenerSemana(semanaReferencia);
+    const primero = interpretarFecha(semana[0]); primero.setHours(0, 0, 0, 0);
+    const ultimo = interpretarFecha(semana[6]); ultimo.setHours(23, 59, 59, 999);
+    let vigente = true;
+    setCargando(true);
+    setError(null);
+    void obtenerCalendarioMiembro(perfil.id, primero.toISOString(), ultimo.toISOString())
+      .then(res => { if (vigente) setDatosApi(res); })
+      .catch(e => { if (vigente) setError(e instanceof Error ? e.message : 'No fue posible cargar tu calendario.'); })
+      .finally(() => { if (vigente) setCargando(false); });
+    return () => { vigente = false; };
+  }, [perfil?.id, acuerdos, semanaReferencia, revision]);
+
+  const eventosCalendario = useMemo(() => acuerdos !== undefined
+    ? acuerdos.map(a => ({ id: a.id, tipo: 'ACUERDO' as const, titulo: a.servicio,
+      inicio: `${a.fecha}T${a.horaInicio}:00`, fin: `${a.fecha}T${a.horaFin}:00`,
+      participantes: [a.participantes] }))
+    : datosApi, [acuerdos, datosApi]);
+
   // 02.2 TRANSFORMACIÓN PARA EL COMPONENTE VISUAL.
   // Los acuerdos llegan confirmados por la API (o el mock temporal).
   const eventos: EventoCalendario[] = useMemo(
-    () => acuerdos.map((acuerdo) => ({
-      id: acuerdo.id,
-      date: acuerdo.fecha,
-      startTime: acuerdo.horaInicio,
-      endTime: acuerdo.horaFin,
-      title: acuerdo.servicio,
-      subtitle: acuerdo.participantes,
-      kind: 'event' as const,
-      onClick: onVerAcuerdo ? () => onVerAcuerdo(acuerdo.id) : undefined,
-    })),
-    [acuerdos, onVerAcuerdo],
+    () => eventosCalendario.map((evento) => {
+      const inicio = new Date(evento.inicio);
+      const fin = new Date(evento.fin);
+      const fecha = fechaLocalISO(inicio);
+      const hora = (date: Date) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+      return {
+        id: evento.id,
+        date: fecha,
+        startTime: hora(inicio),
+        endTime: hora(fin),
+        title: evento.titulo,
+        subtitle: evento.tipo === 'ACTIVIDAD' ? 'Actividad comunitaria' : evento.participantes.join(', '),
+        kind: 'event' as const,
+        onClick: evento.tipo === 'ACUERDO' && onVerAcuerdo
+          ? () => onVerAcuerdo(evento.id)
+          : evento.tipo === 'ACTIVIDAD' && onVerActividad
+            ? () => onVerActividad(evento.id)
+            : undefined,
+      };
+    }),
+    [eventosCalendario, onVerAcuerdo, onVerActividad],
   );
 
   // 02.3 SOLO PARA MOSTRAR SI HAY EVENTOS EN LA SEMANA VISIBLE.
@@ -108,7 +147,7 @@ export default function Calendario({
             <h1 className="text-xl font-bold text-[#0D0D0D]" style={{ fontFamily: 'Outfit, sans-serif' }}>
               Calendario
             </h1>
-            <p className="mt-0.5 text-xs text-[#737373]">Tus próximos acuerdos confirmados</p>
+            <p className="mt-0.5 text-xs text-[#737373]">Tus acuerdos y actividades comunitarias programadas</p>
           </div>
 
           <div className="flex shrink-0 items-center gap-2" aria-label="Navegación del calendario">
@@ -145,20 +184,24 @@ export default function Calendario({
           Semana del {formatearFecha(fechasSemana[0], true)} al {formatearFecha(fechasSemana[6], true)}
         </h2>
 
-        {eventos.length === 0 ? (
+        {cargando && acuerdos === undefined ? (
+          <p role="status" className="py-8 text-center text-sm text-[#737373]">Cargando calendario…</p>
+        ) : error && acuerdos === undefined ? (
+          <div role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}<button type="button" onClick={() => setRevision(n => n + 1)} className="ml-3 underline">Reintentar</button></div>
+        ) : eventos.length === 0 ? (
           /* 04.1 LA API (O EL MOCK) NO DEVOLVIÓ ACUERDOS PROGRAMADOS */
           <section className="rounded-2xl border border-[#E8E8E8] bg-white px-4 py-16 text-center" role="status">
             <CalendarDays size={36} className="mx-auto mb-3 text-[#C8C8C8]" aria-hidden="true" />
-            <p className="text-sm font-medium text-[#737373]">No tienes actividades programadas.</p>
+            <p className="text-sm font-medium text-[#737373]">No tienes eventos programados para esta semana.</p>
             <p className="mx-auto mt-1 max-w-xs text-xs text-[#9E9E9E]">
-              Cuando se confirme la fecha y hora de un acuerdo, aparecerá aquí.
+              Los acuerdos confirmados y las actividades en las que participes aparecerán aquí.
             </p>
           </section>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {!hayEventosEstaSemana && (
               <p className="mb-3 shrink-0 text-xs text-[#737373]" role="status">
-                No tienes acuerdos programados para esta semana. Puedes consultar otras semanas con las flechas.
+                No tienes eventos programados para esta semana. Puedes consultar otras semanas con las flechas.
               </p>
             )}
 

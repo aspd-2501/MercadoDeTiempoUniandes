@@ -1,12 +1,15 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
+import { obtenerCategoriasRegistro, type CategoriaAPI } from '../../api/identidad.api';
+import { crearServicioOfrecido } from '../../api/serviciosOfrecidos.api';
 import { ArrowLeft, Camera, Star } from 'lucide-react';
 
 /**
  * VISTA: Formulario para añadir un servicio al Banco de Tiempo.
  *
  * Componente independiente de ServiciosMiembro. Los datos se mantienen en
- * estado local hasta guardar; onGuardar comunica el resultado al componente
- * que lo esté mostrando. No hay backend ni persistencia real.
+ * estado local hasta guardar; POST /servicios-ofrecidos confirma la creación.
+ * onGuardar comunica el resultado al componente que lo esté mostrando.
  *
  * Secciones:
  *   00. Tipo de datos y categorías
@@ -20,25 +23,13 @@ export interface NuevoServicio {
   category: string;
   description: string;
   isVisible: boolean;
-  estimatedHours: number;
+  estimatedHours?: number;
 }
 
 interface AniadirServicioProps {
   onGuardar?: (servicio: NuevoServicio) => void;
   onCerrar?: () => void;
 }
-
-const CATEGORIAS = [
-  'Tecnología',
-  'Idiomas',
-  'Académico',
-  'Diseño',
-  'Música',
-  'Arte',
-  'Bienestar',
-  'Deportes',
-  'Otros',
-];
 
 const ANIMACION_BOTON =
   'cursor-pointer transition-[transform,background-color,border-color,color,box-shadow] duration-200 ease-out motion-safe:active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C9DA0] focus-visible:ring-offset-2 motion-reduce:transition-none';
@@ -71,31 +62,48 @@ export default function AñadirServicio({ onGuardar, onCerrar }: AniadirServicio
   const [titulo, setTitulo] = useState('');
   const [categoria, setCategoria] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [horas, setHoras] = useState('1');
+  const { perfil } = useMiembroSesion();
+  const [categorias, setCategorias] = useState<CategoriaAPI[]>([]);
+  const [categoriaId, setCategoriaId] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let vigente = true;
+    void obtenerCategoriasRegistro().then(res => { if (vigente) setCategorias(res); })
+      .catch(e => { if (vigente) setError(e instanceof Error ? e.message : 'No se pudieron cargar las categorías.'); });
+    return () => { vigente = false; };
+  }, []);
   const [visible, setVisible] = useState(true);
   const [guardado, setGuardado] = useState(false);
 
-  const formularioValido = Boolean(titulo.trim() && categoria && descripcion.trim());
+  const formularioValido = Boolean(titulo.trim() && categoriaId && descripcion.trim());
 
-  // Solo simula el guardado; el dato se agrega al estado local del listado.
-  function handleGuardar(evento: FormEvent<HTMLFormElement>) {
+  // Solo confirma éxito después de recibir respuesta satisfactoria del backend.
+  async function handleGuardar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
-    if (!formularioValido || guardado) return;
+    if (!formularioValido || guardado || guardando || !perfil || !categoriaId) return;
 
     const nuevoServicio: NuevoServicio = {
       title: titulo.trim(),
       category: categoria,
       description: descripcion.trim(),
       isVisible: visible,
-      estimatedHours: Number(horas),
     };
 
-    setGuardado(true);
-    // Solo demuestra el flujo visual; quien monta la vista decide qué hacer.
-    window.setTimeout(() => onGuardar?.(nuevoServicio), 1500);
+    setGuardando(true); setError(null);
+    try {
+      await crearServicioOfrecido({
+        titulo: nuevoServicio.title, descripcion: nuevoServicio.description,
+        visible: nuevoServicio.isVisible, perfilId: perfil.id, categoriaIds: [categoriaId],
+      });
+      onGuardar?.(nuevoServicio);
+      setGuardado(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No fue posible crear el servicio.');
+    } finally { setGuardando(false); }
   }
 
-  // 02. MENSAJE DE ÉXITO (solamente visual; no registra nada en el servidor).
+  // 02. MENSAJE DE ÉXITO: el servidor confirmó la creación del servicio.
   if (guardado) {
     return (
       <main
@@ -112,7 +120,7 @@ export default function AñadirServicio({ onGuardar, onCerrar }: AniadirServicio
           ¡Servicio guardado!
         </h1>
         <p className="mt-2 text-sm text-[#737373]">
-          Ya aparece en tu perfil y en Explorar.
+          Quedó registrado en tu catálogo personal.
         </p>
       </main>
     );
@@ -143,7 +151,7 @@ export default function AñadirServicio({ onGuardar, onCerrar }: AniadirServicio
           <button
             type="submit"
             form="formulario-nuevo-servicio"
-            disabled={!formularioValido}
+            disabled={!formularioValido || guardando}
             className={`${ANIMACION_BOTON} rounded-xl px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:active:scale-100 ${
               formularioValido
                 ? 'bg-[#3C9DA0] text-white hover:bg-[#2D8B8E]'
@@ -187,12 +195,12 @@ export default function AñadirServicio({ onGuardar, onCerrar }: AniadirServicio
               Categoría *
             </legend>
             <div className="flex flex-wrap gap-2">
-              {CATEGORIAS.map((opcion) => (
+              {categorias.map((opcion) => (
                 <ChipCategoria
-                  key={opcion}
-                  label={opcion}
-                  selected={categoria === opcion}
-                  onSelect={() => setCategoria(opcion)}
+                  key={opcion.id}
+                  label={opcion.nombre}
+                  selected={categoriaId === opcion.id}
+                  onSelect={() => { setCategoriaId(opcion.id); setCategoria(opcion.nombre); }}
                 />
               ))}
             </div>
@@ -214,28 +222,6 @@ export default function AñadirServicio({ onGuardar, onCerrar }: AniadirServicio
               rows={4}
               className="w-full resize-none rounded-xl border border-[#E8E8E8] px-4 py-3 text-sm outline-none transition-colors focus:border-[#3C9DA0]"
             />
-          </div>
-
-          {/* 01.2.4 DURACIÓN */}
-          <div data-section="duracion-servicio">
-            <label
-              htmlFor="servicio-duracion"
-              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-[#737373]"
-            >
-              Duración estimada
-            </label>
-            <select
-              id="servicio-duracion"
-              value={horas}
-              onChange={(evento) => setHoras(evento.target.value)}
-              className="w-full rounded-xl border border-[#E8E8E8] bg-white px-4 py-3 text-sm outline-none transition-colors focus:border-[#3C9DA0]"
-            >
-              {['0.5', '1', '1.5', '2', '3'].map((valor) => (
-                <option key={valor} value={valor}>
-                  {valor} hora{Number(valor) !== 1 ? 's' : ''}
-                </option>
-              ))}
-            </select>
           </div>
 
           {/* 01.2.5 IMÁGENES: botón solamente visual por ahora */}
@@ -282,10 +268,11 @@ export default function AñadirServicio({ onGuardar, onCerrar }: AniadirServicio
             </button>
           </div>
 
+          {error && <p role="alert" className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
           {/* 01.3 BOTÓN INFERIOR GUARDAR SERVICIO */}
           <button
             type="submit"
-            disabled={!formularioValido}
+            disabled={!formularioValido || guardando}
             className={`${ANIMACION_BOTON} w-full rounded-2xl py-4 text-base font-bold disabled:cursor-not-allowed disabled:active:scale-100 ${
               formularioValido
                 ? 'bg-[#3C9DA0] text-white hover:bg-[#2D8B8E]'

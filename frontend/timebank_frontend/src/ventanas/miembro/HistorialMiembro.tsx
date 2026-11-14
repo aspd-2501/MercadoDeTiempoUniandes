@@ -1,5 +1,6 @@
+import { useEffect, useState } from 'react';
+import { obtenerMovimientos, type MovimientoAPI } from '../../api/perfilResumen.api';
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
-import type { Miembro } from '../../tipos/miembro';
 import {
   ArrowLeft,
   Award,
@@ -15,7 +16,7 @@ import type { LucideIcon } from 'lucide-react';
  * VISTA: Historial de horas de un miembro del Banco de Tiempo.
  *
  * Migración visual del mockup de Figma a React + TypeScript.
- * Los datos son de demostración: NO hay navegación, llamadas a API ni acciones.
+ * Los movimientos del miembro autenticado se obtienen del backend.
  *
  * Organización:
  * 01. Encabezado y saldo
@@ -45,75 +46,23 @@ interface HistorialMiembroProps {
   onDonarHoras: () => void;
 }
 
-// ────────────────────────── DATOS DE PRUEBA ──────────────────────────
-// El saldo de ejemplo coincide con el usado en MiembroProfile.tsx.
-const DEMO_BALANCE = 8;
-
-const DEMO_TRANSACTIONS: MovimientoHistorial[] = [
-  {
-    id: 'tx-1',
-    type: 'earned',
-    amount: 3,
-    description: 'Tutoría de cálculo diferencial',
-    createdAt: '11 oct 2026',
-  },
-  {
-    id: 'tx-2',
-    type: 'spent',
-    amount: -2,
-    description: 'Clase de guitarra',
-    createdAt: '10 oct 2026',
-  },
-  {
-    id: 'tx-3',
-    type: 'community',
-    amount: 2,
-    description: 'Actividad de apoyo a la comunidad',
-    createdAt: '8 oct 2026',
-  },
-  {
-    id: 'tx-4',
-    type: 'donated',
-    amount: -1,
-    description: 'Donación de horas',
-    createdAt: '6 oct 2026',
-  },
-  {
-    id: 'tx-5',
-    type: 'received-donation',
-    amount: 1,
-    description: 'Horas recibidas por donación',
-    createdAt: '4 oct 2026',
-  },
-  {
-    id: 'tx-6',
-    type: 'earned',
-    amount: 4,
-    description: 'Asesoría de programación',
-    createdAt: '1 oct 2026',
-  },
-  {
-    id: 'tx-7',
-    type: 'spent',
-    amount: -1,
-    description: 'Asesoría de inglés',
-    createdAt: '29 sep 2026',
-  },
-  {
-    id: 'tx-8',
-    type: 'donated',
-    amount: -1,
-    description: 'Donación para actividades solidarias',
-    createdAt: '27 sep 2026',
-  },
-  {
-    id: 'tx-9',
-    type: 'earned',
-    amount: 3,
-    description: 'Apoyo en taller de matemáticas',
-    createdAt: '24 sep 2026',
-  },
-];
+// Adaptación de tipos de transacción: signo y orden provienen del backend.
+function mapearMovimiento(m: MovimientoAPI): MovimientoHistorial {
+  const tipos: Record<MovimientoAPI['tipo'], TipoMovimiento> = {
+    SERVICIO_RECIBIDO: 'spent', SERVICIO_PRESTADO: 'earned', APORTE_FONDO: 'community',
+    DONACION_ENVIADA: 'donated', DONACION_RECIBIDA: 'received-donation',
+  };
+  const etiquetas: Record<MovimientoAPI['tipo'], string> = {
+    SERVICIO_RECIBIDO: 'Servicio recibido', SERVICIO_PRESTADO: 'Servicio prestado',
+    APORTE_FONDO: 'Aporte al fondo comunitario', DONACION_ENVIADA: 'Donación enviada',
+    DONACION_RECIBIDA: 'Donación recibida',
+  };
+  return {
+    id: m.id, type: tipos[m.tipo], amount: m.horas,
+    description: etiquetas[m.tipo],
+    createdAt: new Intl.DateTimeFormat('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(m.fecha)),
+  };
+}
 
 // ────────────────────── ESTILOS DE LOS MOVIMIENTOS ──────────────────────
 // Centralizamos los íconos y colores para evitar condicionales largos en el JSX.
@@ -150,20 +99,35 @@ const ESTILOS_MOVIMIENTO: Record<
 
 // ───────────────────────── COMPONENTE PRINCIPAL ─────────────────────────
 export default function HistorialMiembro({
-  transactions = DEMO_TRANSACTIONS,
+  transactions,
   onDonarHoras
 }: HistorialMiembroProps) {
   // 00. MIEMBRO AUTENTICADO
-  const { miembro } = useMiembroSesion();
-  const balance = miembro.balance;
+  const { perfil } = useMiembroSesion();
+  const balance = perfil?.saldo ?? 0;
+  const [transaccionesApi, setTransaccionesApi] = useState<MovimientoHistorial[]>([]);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    if (transactions !== undefined || !perfil?.id) return;
+    let vigente = true;
+    setCargando(true); setError(null);
+    void obtenerMovimientos(perfil.id)
+      .then(res => { if (vigente) setTransaccionesApi(res.map(mapearMovimiento)); })
+      .catch(e => { if (vigente) setError(e instanceof Error ? e.message : 'Error consultando tus movimientos.'); })
+      .finally(() => { if (vigente) setCargando(false); });
+    return () => { vigente = false; };
+  }, [perfil?.id, transactions, revision]);
+  const movimientos = transactions ?? transaccionesApi;
 
-  // Cifras de demostración calculadas a partir de los movimientos mostrados.
-  const totalEarned = transactions
-    .filter((tx) => ['earned', 'community', 'received-donation'].includes(tx.type))
+  // Totales calculados a partir de los movimientos del backend (o props explícitas).
+  const totalEarned = movimientos
+    .filter((tx) => ['earned', 'received-donation'].includes(tx.type))
     .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const totalSpent = transactions
-    .filter((tx) => ['spent', 'donated'].includes(tx.type))
+  const totalSpent = movimientos
+    .filter((tx) => ['spent', 'donated', 'community'].includes(tx.type))
     .reduce((sum, tx) => sum + Math.abs(tx.amount), 0);
 
   return (
@@ -298,7 +262,10 @@ export default function HistorialMiembro({
 
           {/* 04.2 Registros del historial */}
           <ul data-section="lista-movimientos" className="list-none p-0 m-0">
-            {transactions.map((tx, index) => {
+            {cargando && <li className="p-4 text-sm text-[#737373]" role="status">Cargando movimientos…</li>}
+            {error && <li className="p-4 text-sm text-red-600" role="alert">{error} <button type="button" onClick={() => setRevision(v => v + 1)} className="underline">Reintentar</button></li>}
+            {!cargando && !error && movimientos.length === 0 && <li className="p-4 text-sm text-[#737373]">Aún no tienes movimientos de horas.</li>}
+            {movimientos.map((tx, index) => {
               const isPositive = tx.amount > 0;
               const { Icono, fondo, color } = ESTILOS_MOVIMIENTO[tx.type];
 
@@ -307,7 +274,7 @@ export default function HistorialMiembro({
                   key={tx.id}
                   data-section="movimiento"
                   className={`flex items-center gap-3 px-4 py-3.5 ${
-                    index < transactions.length - 1
+                    index < movimientos.length - 1
                       ? 'border-b border-[#F0F0F0]'
                       : ''
                   }`}

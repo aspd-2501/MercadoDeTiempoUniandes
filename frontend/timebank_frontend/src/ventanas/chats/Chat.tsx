@@ -1,19 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, CheckCircle2, Clock3, Paperclip, Send } from 'lucide-react';
+import { ArrowLeft, Clock3, Paperclip, Send, UsersRound } from 'lucide-react';
 
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
-import { CHATS_DEMO } from './ChatList';
-import type { ChatResumen, InterlocutorChat, EstadoAcuerdoChat } from './ChatList';
+import { obtenerParticipantesChat, obtenerMensajesChat, enviarMensajeChat, type MensajeAPI, type ParticipanteChatAPI } from '../../api/chats.api';
+import { obtenerAcuerdo, obtenerParticipantesAcuerdo, EstadoAcuerdoAPI } from '../../api/acuerdos.api';
 
 /**
- * VENTANA: conversación individual del Banco de Tiempo.
+ * VENTANA: chat exclusivo de un acuerdo de servicio.
  *
  * Basada en ConversationView de Figma y adaptada a React Router.
- * - /chats/:chatId identifica la conversación.
+ * - /acuerdos/:acuerdoId/chat identifica el acuerdo, no un chat personal.
  * - El miembro autenticado proviene del contexto global.
- * - Los mensajes se envían solo al estado local (sin API ni persistencia).
- * - Las acciones de acuerdos y perfil se conectarán mediante callbacks.
+ * - El chat se obtiene exclusivamente a través de GET /acuerdos/:id.
+ * - Enviar un mensaje usa POST /mensajes y luego refresca la conversación.
+ * - Solo los participantes del acuerdo y su chat pueden usar esta vista.
  *
  * Ubicación: src/ventanas/chat/Chat.tsx
  */
@@ -23,6 +24,22 @@ import type { ChatResumen, InterlocutorChat, EstadoAcuerdoChat } from './ChatLis
 // ─────────────────────────────────────────────────────────────────────────────
 
 type TipoMensajeChat = 'text' | 'system' | 'agreement-proposal';
+type EstadoAcuerdoChat = 'accepted' | 'completed' | 'pending' | 'cancelled';
+
+/** Solo información propia del acuerdo: no existe un interlocutor privado. */
+interface ChatAcuerdoVisual {
+  id: string;
+  acuerdoId: string;
+  tituloAcuerdo: string;
+  estadoAcuerdo: EstadoAcuerdoChat;
+}
+
+interface MiembroAvatar {
+  name: string;
+  avatar?: string;
+  avatarColor: string;
+}
+
 
 interface MensajeChat {
   id: string;
@@ -36,47 +53,14 @@ interface ChatProps {
   /** Opcionales: se conectarán cuando existan las rutas de perfil y acuerdos. */
   onAbrirPerfil?: (miembroId: string) => void;
   onVerAcuerdo?: (acuerdoId: string) => void;
-  onCrearAcuerdo?: (chatId: string) => void;
 }
 
-// 00.1 MENSAJES DE PRUEBA POR CONVERSACIÓN
-// Usan el ID del miembro del contexto: no se duplica CURRENT_USER_ID.
-function crearMensajesDemo(chatId: string, miId: string, otroId: string): MensajeChat[] {
-  switch (chatId) {
-    case 'chat-demo-1':
-      return [
-        { id: 'm1', senderId: otroId, text: '¡Hola! ¿Me podrías ayudar a repasar cálculo?', type: 'text', createdAt: '10:30' },
-        { id: 'm2', senderId: miId, text: '¡Claro! Mañana en la tarde tengo tiempo.', type: 'text', createdAt: '10:34' },
-        { id: 'm3', senderId: miId, text: 'Tutoría de cálculo · 2 horas', type: 'agreement-proposal', createdAt: '10:40' },
-        { id: 'm4', senderId: 'sistema', text: 'El acuerdo fue aceptado.', type: 'system', createdAt: '10:42' },
-        { id: 'm5', senderId: otroId, text: '¡Perfecto! Nos vemos mañana para la tutoría.', type: 'text', createdAt: '10:45' },
-      ];
-
-    case 'chat-demo-2':
-      return [
-        { id: 'm1', senderId: otroId, text: '¿Te parece bien revisar las diapositivas hoy?', type: 'text', createdAt: 'Ayer · 14:10' },
-        { id: 'm2', senderId: miId, text: '¡Sí! Ya tengo listas las observaciones.', type: 'text', createdAt: 'Ayer · 14:18' },
-        { id: 'm3', senderId: 'sistema', text: 'El intercambio se marcó como completado.', type: 'system', createdAt: 'Ayer · 15:00' },
-        { id: 'm4', senderId: otroId, text: 'Gracias por ayudarme con la presentación.', type: 'text', createdAt: 'Ayer · 15:05' },
-      ];
-
-    case 'chat-demo-3':
-      return [
-        { id: 'm1', senderId: miId, text: '¡Hola, Laura! Vi que ofreces práctica de inglés.', type: 'text', createdAt: 'Lun · 09:15' },
-        { id: 'm2', senderId: otroId, text: '¡Hola! Sí, podemos organizar una sesión.', type: 'text', createdAt: 'Lun · 09:20' },
-        { id: 'm3', senderId: otroId, text: 'Hola, ¿todavía tienes tiempo para practicar inglés?', type: 'text', createdAt: 'Lun · 09:25' },
-      ];
-
-    case 'chat-demo-4':
-      return [
-        { id: 'm1', senderId: otroId, text: 'Hola, ¿podemos revisar el archivo de Excel esta semana?', type: 'text', createdAt: 'Dom · 11:00' },
-        { id: 'm2', senderId: miId, text: 'Por supuesto. Te confirmo el horario en cuanto pueda.', type: 'text', createdAt: 'Dom · 11:08' },
-        { id: 'm3', senderId: otroId, text: 'Quedo pendiente de la confirmación.', type: 'text', createdAt: 'Dom · 11:12' },
-      ];
-
-    default:
-      return [];
-  }
+/** Los mensajes del chat son reales; nunca se agregan mensajes locales sin respuesta del servidor. */
+function adaptarMensaje(m: MensajeAPI): MensajeChat {
+  return {
+    id: m.id, senderId: m.emisor.id, text: m.contenido, type: 'text',
+    createdAt: new Intl.DateTimeFormat('es-CO', { hour: '2-digit', minute: '2-digit' }).format(new Date(m.fecha)),
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -84,35 +68,98 @@ function crearMensajesDemo(chatId: string, miId: string, otroId: string): Mensaj
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function Chat(props: ChatProps) {
-  const { chatId } = useParams<{ chatId: string }>();
+  const { acuerdoId } = useParams<{ acuerdoId: string }>();
   const navigate = useNavigate();
-  const { miembro } = useMiembroSesion();
+  const { perfil } = useMiembroSesion();
+  const perfilId = perfil?.id;
+  const [chat, setChat] = useState<ChatAcuerdoVisual | null>(null);
+  const [participantes, setParticipantes] = useState<ParticipanteChatAPI[]>([]);
+  const [mensajesIniciales, setMensajesIniciales] = useState<MensajeChat[]>([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [revision, setRevision] = useState(0);
 
-  // Compartimos los resúmenes de ChatList; así coinciden sus IDs y acuerdos.
-  const chat = CHATS_DEMO.find((conversacion) => conversacion.id === chatId);
+  useEffect(() => {
+    if (!acuerdoId || !perfilId) {
+      setCargando(false);
+      setError('No se pudo identificar el acuerdo o el perfil de tu sesión.');
+      return;
+    }
+    let vigente = true;
+    setCargando(true);
+    setError(null);
+    setChat(null);
+    setParticipantes([]);
+    void (async () => {
+      try {
+        // Solo se accede al chat desde su acuerdo; no se aceptan IDs de chat en la URL.
+        const [acuerdo, integrantesAcuerdo] = await Promise.all([
+          obtenerAcuerdo(acuerdoId),
+          obtenerParticipantesAcuerdo(acuerdoId),
+        ]);
+        if (!integrantesAcuerdo.some(p => p.idPerfil === perfilId)) {
+          throw new Error('No participas en este acuerdo de servicio.');
+        }
+        const chatId = acuerdo.chat?.id;
+        if (!chatId) throw new Error('Este acuerdo todavía no tiene un chat asociado.');
 
-  if (!chat || chat.interlocutor.id === miembro.id) {
+        const integrantesChat = await obtenerParticipantesChat(chatId);
+        // Protección de interfaz; las comprobaciones de autorización reales pertenecen al backend.
+        const idsAcuerdo = new Set(integrantesAcuerdo.map(p => p.idPerfil));
+        const idsChat = new Set(integrantesChat.map(p => p.id));
+        if (!idsChat.has(perfilId) || integrantesChat.some(p => !idsAcuerdo.has(p.id)) ||
+            integrantesAcuerdo.some(p => !idsChat.has(p.idPerfil))) {
+          throw new Error('Los participantes del chat no corresponden al acuerdo. Es necesario sincronizarlos en el backend.');
+        }
+
+        const mensajes = await obtenerMensajesChat(chatId);
+        if (!vigente) return;
+        const titulo = acuerdo.postAyuda?.titulo ?? acuerdo.solicitud?.titulo ?? 'Acuerdo de servicio';
+        const estado: EstadoAcuerdoChat =
+          acuerdo.estado === EstadoAcuerdoAPI.REALIZADO ? 'completed' :
+          acuerdo.estado === EstadoAcuerdoAPI.CANCELADO ? 'cancelled' :
+          acuerdo.estado === EstadoAcuerdoAPI.ACORDADO || acuerdo.estado === EstadoAcuerdoAPI.EN_MODIFICACION ? 'accepted' : 'pending';
+        setChat({
+          id: chatId,
+          acuerdoId: acuerdo.id,
+          tituloAcuerdo: titulo,
+          estadoAcuerdo: estado,
+        });
+        setParticipantes(integrantesChat);
+        setMensajesIniciales(mensajes.map(adaptarMensaje));
+      } catch (e) {
+        if (vigente) setError(e instanceof Error ? e.message : 'No se pudo cargar el chat del acuerdo.');
+      } finally {
+        if (vigente) setCargando(false);
+      }
+    })();
+    return () => { vigente = false; };
+  }, [acuerdoId, perfilId, revision]);
+
+  if (cargando || error || !chat || !perfilId) {
     return (
-      <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-white px-4 text-center" data-section="chat-no-encontrado">
-        <p className="text-sm font-semibold text-[#0D0D0D]">No encontramos esta conversación.</p>
-        <button
-          type="button"
-          onClick={() => navigate('/chats')}
-          className="cursor-pointer rounded-xl bg-[#3C9DA0] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#2D8B8E] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0]"
-        >
-          Volver a Chats
-        </button>
+      <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-white px-4 text-center">
+        <p role={error ? 'alert' : 'status'} className="text-sm text-[#737373]">
+          {cargando ? 'Cargando conversación…' : error ?? 'Conversación no encontrada.'}
+        </p>
+        {error && <button type="button" className="text-sm font-semibold text-[#3C9DA0]" onClick={() => setRevision(v => v + 1)}>Reintentar</button>}
+        <button type="button" onClick={() => navigate(acuerdoId ? `/acuerdos/${acuerdoId}` : '/actividad')} className="rounded-xl bg-[#3C9DA0] px-4 py-2 text-sm font-semibold text-white">Volver al acuerdo</button>
       </main>
     );
   }
 
-  // La key reinicia únicamente la conversación cuando cambia el parámetro de ruta.
   return (
     <Conversacion
       key={chat.id}
       chat={chat}
-      miId={miembro.id}
-      onVolver={() => navigate('/chats')}
+      miId={perfilId}
+      participantes={participantes}
+      mensajesIniciales={mensajesIniciales}
+      onEnviarMensaje={async (contenido) => {
+        await enviarMensajeChat(chat.id, perfilId, contenido);
+        return (await obtenerMensajesChat(chat.id)).map(adaptarMensaje);
+      }}
+      onVolver={() => navigate(`/acuerdos/${acuerdoId}`)}
       {...props}
     />
   );
@@ -123,28 +170,32 @@ export default function Chat(props: ChatProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface ConversacionProps extends ChatProps {
-  chat: ChatResumen;
+  chat: ChatAcuerdoVisual;
+  participantes: ParticipanteChatAPI[];
   miId: string;
   onVolver: () => void;
+  mensajesIniciales: MensajeChat[];
+  onEnviarMensaje: (contenido: string) => Promise<MensajeChat[]>;
 }
 
 function Conversacion({
   chat,
+  participantes,
   miId,
   onVolver,
+  mensajesIniciales,
+  onEnviarMensaje,
   onAbrirPerfil,
   onVerAcuerdo,
-  onCrearAcuerdo,
 }: ConversacionProps) {
-  const { interlocutor, agreement } = chat;
+  const { tituloAcuerdo, acuerdoId, estadoAcuerdo } = chat;
 
-  // 02.1 ESTADO LOCAL DE LOS MENSAJES Y DEL CAMPO DE ESCRITURA
-  const [mensajes, setMensajes] = useState<MensajeChat[]>(() =>
-    crearMensajesDemo(chat.id, miId, interlocutor.id),
-  );
+  // 02.1 Estado visual; los mensajes provienen del backend.
+  const [mensajes, setMensajes] = useState<MensajeChat[]>(mensajesIniciales);
   const [texto, setTexto] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const contenedorMensajesRef = useRef<HTMLDivElement>(null);
-  const secuenciaRef = useRef(0);
 
   // 02.2 MANTENER A LA VISTA EL ÚLTIMO MENSAJE, SIN MOVER TODA LA PÁGINA
   useEffect(() => {
@@ -154,29 +205,26 @@ function Conversacion({
     }
   }, [mensajes]);
 
-  // 02.3 ENVIAR UN MENSAJE SOLO EN ESTA SESIÓN DE REACT
-  function enviarMensaje() {
+  // 02.3 Solo mostrar el mensaje tras confirmar el POST y refrescar la consulta.
+  async function enviarMensaje() {
     const contenido = texto.trim();
-    if (!contenido) return;
-
-    secuenciaRef.current += 1;
-    const nuevoMensaje: MensajeChat = {
-      id: `mensaje-local-${Date.now()}-${secuenciaRef.current}`,
-      senderId: miId,
-      text: contenido,
-      type: 'text',
-      createdAt: 'Ahora',
-    };
-
-    setMensajes((anteriores) => [...anteriores, nuevoMensaje]);
-    setTexto('');
+    if (!contenido || enviando) return;
+    setEnviando(true); setErrorEnvio(null);
+    try {
+      setMensajes(await onEnviarMensaje(contenido));
+      setTexto('');
+    } catch (e) {
+      setErrorEnvio(e instanceof Error ? e.message : 'No se pudo enviar el mensaje.');
+    } finally {
+      setEnviando(false);
+    }
   }
 
-  const puedeAccionarAcuerdo = agreement ? Boolean(onVerAcuerdo) : Boolean(onCrearAcuerdo);
+  const puedeAccionarAcuerdo = Boolean(onVerAcuerdo);
 
   return (
     <section
-      data-section="ventana-chat-individual"
+      data-section="chat-del-acuerdo"
       className="flex h-[calc(100dvh-6rem)] min-h-0 min-w-0 flex-col overflow-hidden bg-white lg:h-dvh"
     >
       {/* 03. ENCABEZADO DE LA CONVERSACIÓN */}
@@ -185,49 +233,41 @@ function Conversacion({
         className="z-20 shrink-0 border-b border-[#E8E8E8] bg-white px-4 pt-12 pb-3 lg:pt-4"
       >
         <div className="mx-auto flex w-full max-w-2xl min-w-0 items-center gap-3">
-          {/* 03.1 VOLVER A LA LISTA */}
+          {/* 03.1 REGRESAR AL ACUERDO */}
           <button
             type="button"
             onClick={onVolver}
-            aria-label="Volver a Chats"
+            aria-label="Volver al acuerdo"
             className="shrink-0 cursor-pointer rounded-full p-1 text-[#0D0D0D] transition-colors hover:bg-[#F6F6F6] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0]"
           >
             <ArrowLeft size={22} aria-hidden="true" />
           </button>
 
-          {/* 03.2 DATOS DEL INTERLOCUTOR */}
-          <button
-            type="button"
-            disabled={!onAbrirPerfil}
-            onClick={() => onAbrirPerfil?.(interlocutor.id)}
-            title={onAbrirPerfil ? 'Ver perfil' : 'Enlace al perfil pendiente de implementar'}
-            className={`flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0] ${onAbrirPerfil ? 'cursor-pointer hover:bg-[#F6F6F6] active:scale-[0.99]' : 'cursor-default'}`}
-          >
-            <AvatarChat interlocutor={interlocutor} tamaño="sm" mostrarEstado />
+          {/* 03.2 IDENTIDAD DEL ACUERDO Y SUS PARTICIPANTES */}
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#3C9DA0] text-white">
+              <UsersRound size={20} aria-hidden="true" />
+            </span>
             <span className="min-w-0">
-              <span className="flex min-w-0 items-center gap-1">
-                <span className="truncate text-sm font-semibold text-[#0D0D0D]">{interlocutor.name}</span>
-                <CheckCircle2 size={13} strokeWidth={2.5} className="shrink-0 text-[#3C9DA0]" aria-hidden="true" />
+              <span className="block truncate text-sm font-semibold text-[#0D0D0D]">
+                {tituloAcuerdo}
               </span>
               <span className="block text-xs text-[#9E9E9E]">
-                {interlocutor.isAvailable ? 'En línea' : 'Desconectado'}
+                Chat del acuerdo · {participantes.length} participantes
               </span>
             </span>
-          </button>
+          </div>
 
-          {/* 03.3 ACCESO AL ACUERDO O A SU CREACIÓN */}
+          {/* 03.3 ACCESO AL ACUERDO */}
           <button
             type="button"
             disabled={!puedeAccionarAcuerdo}
-            onClick={() => {
-              if (agreement) onVerAcuerdo?.(agreement.id);
-              else onCrearAcuerdo?.(chat.id);
-            }}
-            title={puedeAccionarAcuerdo ? undefined : 'Funcionalidad de acuerdos pendiente de implementar'}
-            className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0] ${puedeAccionarAcuerdo ? 'cursor-pointer active:scale-95' : 'cursor-default'} ${agreement ? 'bg-[#E8F5F6] text-[#3C9DA0]' : 'bg-[#3C9DA0] text-white'}`}
+            onClick={() => onVerAcuerdo?.(acuerdoId)}
+            title={puedeAccionarAcuerdo ? undefined : 'No se pudo identificar el acuerdo'}
+            className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0] ${puedeAccionarAcuerdo ? 'cursor-pointer active:scale-95' : 'cursor-default'} bg-[#E8F5F6] text-[#3C9DA0]`}
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
-            {agreement ? 'Ver acuerdo' : 'Crear acuerdo'}
+            Ver acuerdo
           </button>
         </div>
       </header>
@@ -236,13 +276,14 @@ function Conversacion({
       <div
         ref={contenedorMensajesRef}
         role="log"
-        aria-label={`Mensajes con ${interlocutor.name}`}
+        aria-label={`Mensajes del acuerdo ${tituloAcuerdo}`}
         data-section="mensajes-chat"
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4"
       >
         <div className="mx-auto w-full max-w-2xl space-y-3">
           {mensajes.map((mensaje) => {
             const esPropio = mensaje.senderId === miId;
+            const emisor = participantes.find(p => p.id === mensaje.senderId);
 
             // 04.1 NOTIFICACIÓN DEL SISTEMA
             if (mensaje.type === 'system') {
@@ -261,16 +302,16 @@ function Conversacion({
                 <div key={mensaje.id} className="flex justify-center" data-section="mensaje-propuesta-acuerdo">
                   <button
                     type="button"
-                    disabled={!agreement || !onVerAcuerdo}
-                    onClick={() => agreement && onVerAcuerdo?.(agreement.id)}
-                    className={`w-full max-w-xs rounded-2xl border border-[#3C9DA0] bg-[#E8F5F6] p-4 text-left ${agreement && onVerAcuerdo ? 'cursor-pointer transition-colors hover:bg-[#D7EEEF] active:scale-[0.99]' : 'cursor-default'}`}
+                    disabled={!onVerAcuerdo}
+                    onClick={() => onVerAcuerdo?.(acuerdoId)}
+                    className={`w-full max-w-xs rounded-2xl border border-[#3C9DA0] bg-[#E8F5F6] p-4 text-left ${onVerAcuerdo ? 'cursor-pointer transition-colors hover:bg-[#D7EEEF] active:scale-[0.99]' : 'cursor-default'}`}
                   >
                     <span className="mb-2 flex items-center gap-2 text-xs font-bold text-[#3C9DA0]">
                       <Clock3 size={16} aria-hidden="true" />
                       <span style={{ fontFamily: 'Outfit, sans-serif' }}>ACUERDO PROPUESTO</span>
                     </span>
                     <span className="block text-sm font-medium text-[#0D0D0D]">{mensaje.text}</span>
-                    {agreement && <EstadoAcuerdo estado={agreement.status} />}
+                    <EstadoAcuerdo estado={estadoAcuerdo} />
                   </button>
                 </div>
               );
@@ -285,10 +326,24 @@ function Conversacion({
               >
                 {!esPropio && (
                   <div className="mt-auto shrink-0">
-                    <AvatarChat interlocutor={interlocutor} tamaño="xs" />
+                    <AvatarChat interlocutor={{
+                      name: emisor?.nombre ?? 'Participante',
+                      avatar: emisor?.imagen ?? undefined,
+                      avatarColor: '#3C9DA0',
+                    }} tamaño="xs" />
                   </div>
                 )}
                 <div className="max-w-[78%] min-w-0 sm:max-w-[72%]">
+                  {!esPropio && (
+                    <button
+                      type="button"
+                      disabled={!onAbrirPerfil}
+                      onClick={() => onAbrirPerfil?.(mensaje.senderId)}
+                      className="mb-1 text-xs font-semibold text-[#737373] disabled:cursor-default"
+                    >
+                      {emisor?.nombre ?? 'Participante'}
+                    </button>
+                  )}
                   <p
                     className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${esPropio ? 'rounded-br-md bg-[#3C9DA0] text-white' : 'rounded-bl-md bg-[#F6F6F6] text-[#0D0D0D]'}`}
                   >
@@ -309,7 +364,7 @@ function Conversacion({
         data-section="redactar-mensaje"
         onSubmit={(evento) => {
           evento.preventDefault();
-          enviarMensaje();
+          void enviarMensaje();
         }}
         className="shrink-0 border-t border-[#E8E8E8] bg-white px-4 py-3"
       >
@@ -325,6 +380,7 @@ function Conversacion({
             <Paperclip size={18} aria-hidden="true" />
           </button>
 
+          {errorEnvio && <span role="alert" className="max-w-[150px] text-xs text-red-600">{errorEnvio}</span>}
           {/* 05.2 TEXTO DEL MENSAJE */}
           <div className="flex min-w-0 flex-1 items-end rounded-2xl bg-[#F6F6F6] px-4 py-2.5 focus-within:ring-2 focus-within:ring-[#3C9DA0]/30">
             <textarea
@@ -334,7 +390,7 @@ function Conversacion({
               onKeyDown={(evento) => {
                 if (evento.key === 'Enter' && !evento.shiftKey && !evento.nativeEvent.isComposing) {
                   evento.preventDefault();
-                  enviarMensaje();
+                  void enviarMensaje();
                 }
               }}
               placeholder="Escribe un mensaje…"
@@ -346,7 +402,7 @@ function Conversacion({
           {/* 05.3 ENVIAR: DESHABILITADO PARA MENSAJES VACÍOS */}
           <button
             type="submit"
-            disabled={!texto.trim()}
+            disabled={!texto.trim() || enviando}
             aria-label="Enviar mensaje"
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#3C9DA0] ${texto.trim() ? 'cursor-pointer bg-[#3C9DA0] text-white hover:bg-[#2D8B8E] active:scale-95' : 'cursor-not-allowed bg-[#F0F0F0] text-[#C0C0C0]'}`}
           >
@@ -365,11 +421,9 @@ function Conversacion({
 function AvatarChat({
   interlocutor,
   tamaño,
-  mostrarEstado = false,
 }: {
-  interlocutor: InterlocutorChat;
+  interlocutor: MiembroAvatar;
   tamaño: 'sm' | 'xs';
-  mostrarEstado?: boolean;
 }) {
   const iniciales = interlocutor.name
     .trim()
@@ -382,7 +436,7 @@ function AvatarChat({
   const clasesTamaño = tamaño === 'sm' ? 'h-9 w-9 text-xs' : 'h-7 w-7 text-[10px]';
 
   return (
-    <span className={`relative block shrink-0 ${clasesTamaño}`} data-section="avatar-interlocutor">
+    <span className={`relative block shrink-0 ${clasesTamaño}`} data-section="avatar-participante">
       <span
         className={`flex h-full w-full items-center justify-center overflow-hidden rounded-full font-bold text-white ${clasesTamaño}`}
         style={{ backgroundColor: interlocutor.avatarColor }}
@@ -393,12 +447,6 @@ function AvatarChat({
           iniciales
         )}
       </span>
-      {mostrarEstado && (
-        <span
-          aria-label={interlocutor.isAvailable ? 'Disponible' : 'No disponible'}
-          className={`absolute right-0 bottom-0 h-3 w-3 rounded-full border-2 border-white ${interlocutor.isAvailable ? 'bg-green-500' : 'bg-[#C0C0C0]'}`}
-        />
-      )}
     </span>
   );
 }

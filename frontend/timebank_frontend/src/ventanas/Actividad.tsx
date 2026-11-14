@@ -1,152 +1,121 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Activity as IconoActividad, ArrowLeft } from 'lucide-react';
-
 import AcuerdoCard from '../componentes/acuerdos/AcuerdoCard';
 import { useMiembroSesion } from '../contextos/MiembroSesionContext';
-import { ACUERDOS_PARA_DETALLE_DEMO } from '../mocks/acuerdosPost.mocks';
-import type { AcuerdoServicio } from '../tipos/acuerdo';
+import {
+  obtenerAcuerdosMiembro,
+  type AcuerdoAPI,
+  type FiltroAcuerdosAPI,
+} from '../api/acuerdos.api';
 
 /**
- * VISTA: Actividad personal del Banco de Tiempo.
- *
- * - Usa el mismo conjunto de acuerdos que AcuerdoDetail.
- * - No aprueba participantes: un miembro se incorpora al pulsar participar.
- * - Las pestañas solamente clasifican datos para presentarlos.
- * - El backend será responsable de entregar únicamente los acuerdos
- *   autorizados del miembro, con sus estados ya establecidos.
- *
- * Ubicación: src/ventanas/Actividad.tsx
+ * Vista EXISTENTE: Actividad personal del Banco de Tiempo.
+ * Consulta acuerdos del perfil autenticado con MiembroSesionContext, no de los mocks.
+ * La navegación a AcuerdoDetail se habilitará cuando esa vista consuma acuerdos reales.
+ * La selección por estado y pertenencia al perfil ocurre en NestJS.
  */
-
-// ──────────────────── 00. PESTAÑAS Y PROPIEDADES ────────────────────
-type PestanaActividad = 'Pendientes' | 'Completados' | 'Solicitudes' | 'Expirados';
-const PESTANAS: PestanaActividad[] = ['Pendientes', 'Completados', 'Solicitudes', 'Expirados'];
-
 export interface ActividadProps {
-  /** Colección proporcionada por API o mock; no se modifica en la vista. */
-  acuerdos?: Record<string, AcuerdoServicio>;
   onVolver?: () => void;
+  onExplorar?: () => void;
   onVerAcuerdo?: (acuerdoId: string) => void;
-  onIrChat?: (chatId: string) => void;
-  onExplorar?: () => void;
+  onIrChat?: (acuerdoId: string) => void;
 }
 
-function EstadoVacio({
-  pestana,
-  onExplorar,
-}: {
-  pestana: PestanaActividad;
-  onExplorar?: () => void;
-}) {
-  const mensajes: Record<PestanaActividad, string> = {
-    Pendientes: 'Aún no tienes acuerdos en curso.',
-    Completados: 'Aún no has completado ningún intercambio.',
-    Solicitudes: 'No hay solicitudes para mostrar.',
-    Expirados: 'No tienes acuerdos expirados.',
-  };
+const PESTANAS: { etiqueta: string; filtro: FiltroAcuerdosAPI }[] = [
+  { etiqueta: 'Pendientes', filtro: 'pendientes' },
+  { etiqueta: 'Completados', filtro: 'completados' },
+  { etiqueta: 'Cancelados', filtro: 'cancelados' },
+];
 
-  return (
-    <div className="py-16 text-center" role="status">
-      <IconoActividad size={46} strokeWidth={1.5} className="mx-auto mb-3 text-[#E8E8E8]" aria-hidden="true" />
-      <p className="text-sm font-medium text-[#737373]">{mensajes[pestana]}</p>
-      {pestana === 'Solicitudes' && (
-        <p className="mx-auto mt-2 max-w-xs text-xs text-[#9E9E9E]">
-          La visualización de solicitudes directas se conectará cuando tengamos sus datos.
-        </p>
-      )}
-      {pestana === 'Pendientes' && onExplorar && (
-        <button
-          type="button"
-          onClick={onExplorar}
-          className="mt-4 rounded-xl bg-[#3C9DA0] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#2D8B8E]"
-        >
-          Explorar la comunidad
-        </button>
-      )}
-    </div>
-  );
-}
+const MENSAJES_VACIOS: Record<FiltroAcuerdosAPI, string> = {
+  pendientes: 'Aún no tienes acuerdos pendientes.',
+  completados: 'Aún no has completado ningún intercambio.',
+  cancelados: 'No tienes acuerdos cancelados.',
+};
 
-// ──────────────────── 01. VENTANA PRINCIPAL ────────────────────
 export default function Actividad({
-  acuerdos = ACUERDOS_PARA_DETALLE_DEMO,
   onVolver,
+  onExplorar,
   onVerAcuerdo,
   onIrChat,
-  onExplorar,
 }: ActividadProps) {
-  const { miembro } = useMiembroSesion();
-  const [pestanaActiva, setPestanaActiva] = useState<PestanaActividad>('Pendientes');
+  // El contexto almacena el perfil real asociado al JWT; nunca usamos IDs de prueba.
+  const { perfil } = useMiembroSesion();
+  const perfilId = perfil?.id;
+  const [filtroActivo, setFiltroActivo] = useState<FiltroAcuerdosAPI>('pendientes');
+  const [acuerdos, setAcuerdos] = useState<AcuerdoAPI[]>([]);
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [reintento, setReintento] = useState(0);
 
-  // 01.1 PRESENTAR LOS ACUERDOS DEL MIEMBRO AUTENTICADO EN EL MOCK.
-  // La API futura deberá hacer este control en el servidor.
-  const acuerdosPropios = Object.values(acuerdos).filter((acuerdo) =>
-    acuerdo.proveedorId === miembro.id ||
-    acuerdo.solicitanteId === miembro.id ||
-    (acuerdo.otrosParticipantesIds ?? []).includes(miembro.id)
-  );
+  useEffect(() => {
+    if (!perfilId) {
+      setAcuerdos([]);
+      setCargando(false);
+      setError(null);
+      return;
+    }
 
-  // 01.2 DISTRIBUCIÓN VISUAL POR PESTAÑAS.
-  // 'Pendientes' incluye acuerdos aún por definir y acuerdos aceptados
-  // que siguen activos, con o sin propuesta de modificación pendiente.
-  const acuerdosPendientes = acuerdosPropios.filter(
-    (acuerdo) => acuerdo.estado === 'pending' || acuerdo.estado === 'accepted',
-  );
-  const acuerdosCompletados = acuerdosPropios.filter(
-    (acuerdo) => acuerdo.estado === 'completed',
-  );
-  const acuerdosExpirados = acuerdosPropios.filter(
-    (acuerdo) => acuerdo.estado === 'expired',
-  );
+    let vigente = true;
+    setCargando(true);
+    setError(null);
+    setAcuerdos([]);
 
-  const acuerdosPorPestana: Record<PestanaActividad, AcuerdoServicio[]> = {
-    Pendientes: acuerdosPendientes,
-    Completados: acuerdosCompletados,
-    Solicitudes: [], // No inventamos un modelo de solicitudes directas.
-    Expirados: acuerdosExpirados,
-  };
-  const elementos = acuerdosPorPestana[pestanaActiva];
+    void obtenerAcuerdosMiembro(perfilId, filtroActivo)
+      .then((respuesta) => {
+        if (vigente) setAcuerdos(respuesta);
+      })
+      .catch((excepcion: unknown) => {
+        if (!vigente) return;
+        setError(
+          excepcion instanceof Error
+            ? excepcion.message
+            : 'No se pudieron consultar los acuerdos.',
+        );
+      })
+      .finally(() => {
+        if (vigente) setCargando(false);
+      });
+
+    return () => { vigente = false; };
+  }, [perfilId, filtroActivo, reintento]);
 
   return (
     <div className="min-h-screen min-w-0 bg-white" data-section="actividad">
-      {/* 02. ENCABEZADO Y PESTAÑAS */}
-      <header className="sticky top-0 z-30 border-b border-[#E8E8E8] bg-white px-4 pb-0 pt-3 lg:pt-6" data-section="encabezado-actividad">
+      {/* 01. ENCABEZADO: conservamos la disposición de la ventana existente */}
+      <header
+        data-section="encabezado-actividad"
+        className="sticky top-0 z-30 border-b border-[#E8E8E8] bg-white px-4 pb-0 pt-3 lg:pt-6"
+      >
         <div className="mx-auto max-w-2xl min-w-0">
           <div className="mb-3 flex items-center gap-3">
             {onVolver && (
-              <button
-                type="button"
-                onClick={onVolver}
-                aria-label="Volver"
-                className="rounded-full p-1 text-[#0D0D0D] hover:bg-[#F6F6F6] lg:hidden"
-              >
+              <button type="button" onClick={onVolver} aria-label="Volver"
+                className="rounded-full p-1 text-[#0D0D0D] hover:bg-[#F6F6F6] lg:hidden">
                 <ArrowLeft size={22} aria-hidden="true" />
               </button>
             )}
-            <h1 className="text-2xl font-bold text-[#0D0D0D]" style={{ fontFamily: 'Outfit, sans-serif' }}>
-              Actividad
-            </h1>
+            <h1 className="text-2xl font-bold text-[#0D0D0D]"
+              style={{ fontFamily: 'Outfit, sans-serif' }}>Actividad</h1>
           </div>
-          <nav aria-label="Categorías de actividad" className="flex min-w-0 gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-            {PESTANAS.map((pestana) => {
-              const activa = pestanaActiva === pestana;
+          <nav aria-label="Categorías de actividad" className="flex min-w-0 gap-1 overflow-x-auto"
+            style={{ scrollbarWidth: 'none' }}>
+            {PESTANAS.map(({ etiqueta, filtro }) => {
+              const activa = filtroActivo === filtro;
               return (
                 <button
-                  key={pestana}
+                  key={filtro}
                   type="button"
-                  onClick={() => setPestanaActiva(pestana)}
-                  aria-current={activa ? 'page' : undefined}
+                  onClick={() => setFiltroActivo(filtro)}
+                  aria-pressed={activa}
                   className={`relative shrink-0 rounded-t-xl px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C9DA0] ${
                     activa ? 'text-[#3C9DA0]' : 'text-[#9E9E9E] hover:text-[#737373]'
                   }`}
                 >
-                  {pestana}
-                  {pestana === 'Pendientes' && acuerdosPendientes.length > 0 && (
-                    <span className="ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#3C9DA0] px-1 text-[10px] font-bold text-white">
-                      {acuerdosPendientes.length}
-                    </span>
+                  {etiqueta}
+                  {activa && (
+                    <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-t-full bg-[#3C9DA0]" />
                   )}
-                  {activa && <span className="absolute bottom-0 left-2 right-2 h-0.5 rounded-t-full bg-[#3C9DA0]" />}
                 </button>
               );
             })}
@@ -154,16 +123,40 @@ export default function Actividad({
         </div>
       </header>
 
-      {/* 03. ACUERDOS DE LA PESTAÑA SELECCIONADA */}
-      <main className="mx-auto max-w-2xl space-y-3 px-4 py-4" data-section="lista-actividad">
-        {elementos.length === 0 ? (
-          <EstadoVacio pestana={pestanaActiva} onExplorar={onExplorar} />
+      {/* 02. ACUERDOS: vienen exactamente del filtro del backend */}
+      <main data-section="lista-actividad" className="mx-auto max-w-2xl space-y-3 px-4 py-4">
+        {!perfilId ? (
+          <div role="status" className="py-16 text-center text-sm text-[#737373]">
+            No pudimos identificar el perfil de tu sesión. Vuelve a iniciar sesión.
+          </div>
+        ) : cargando ? (
+          <p role="status" className="py-16 text-center text-sm text-[#737373]">Cargando acuerdos…</p>
+        ) : error ? (
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-center">
+            <p className="text-sm text-red-700">{error}</p>
+            <button type="button" onClick={() => setReintento((v) => v + 1)}
+              className="mt-3 rounded-xl bg-[#3C9DA0] px-4 py-2 text-sm font-semibold text-white">
+              Reintentar
+            </button>
+          </div>
+        ) : acuerdos.length === 0 ? (
+          <div role="status" className="py-16 text-center">
+            <IconoActividad size={46} strokeWidth={1.5}
+              className="mx-auto mb-3 text-[#E8E8E8]" aria-hidden="true" />
+            <p className="text-sm font-medium text-[#737373]">{MENSAJES_VACIOS[filtroActivo]}</p>
+            {filtroActivo === 'pendientes' && onExplorar && (
+              <button type="button" onClick={onExplorar}
+                className="mt-4 rounded-xl bg-[#3C9DA0] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#2D8B8E]">
+                Explorar la comunidad
+              </button>
+            )}
+          </div>
         ) : (
-          elementos.map((acuerdo) => (
+          acuerdos.map((acuerdo) => (
             <AcuerdoCard
               key={acuerdo.id}
               acuerdo={acuerdo}
-              miembroActualId={miembro.id}
+              miembroActualId={perfilId}
               onVerAcuerdo={onVerAcuerdo}
               onIrChat={onIrChat}
             />
