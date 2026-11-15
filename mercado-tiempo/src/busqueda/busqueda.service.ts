@@ -52,13 +52,18 @@ export class BusquedaService {
     // Miembros por nombre (RF-024) o por los servicios que ofrecen (RF-023),
     // también por descripción y afiliación. Solo cuentan los servicios visibles
     // y no aparecen los miembros inactivos (RF-006).
-    async buscarMiembros(consulta?: string, excluirPerfilId?: string): Promise<PerfilMiembroEntity[]> {
+    // usuarioSesionId: usuario con la sesión abierta; su propio perfil no aparece en los resultados
+    async buscarMiembros(consulta?: string, excluirPerfilId?: string, usuarioSesionId?: string): Promise<PerfilMiembroEntity[]> {
+        const propio = usuarioSesionId
+            ? await this.perfilMiembroRepository.findOne({ where: { usuario: { id: usuarioSesionId } } })
+            : null;
+
         const perfiles = await this.perfilMiembroRepository.find({
             relations: { serviciosOfrecidos: { categorias: { categoria: true } } }
         });
 
         return perfiles
-            .filter(p => p.id !== excluirPerfilId && p.estadoActividad)
+            .filter(p => p.id !== excluirPerfilId && p.id !== propio?.id && p.estadoActividad)
             .map(p => {
                 p.serviciosOfrecidos = (p.serviciosOfrecidos ?? []).filter(s => s.visible);
                 return p;

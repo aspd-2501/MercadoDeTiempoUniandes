@@ -104,6 +104,21 @@ describe('BusquedaService', () => {
         expect(result.map(p => p.nombre)).toEqual(['Tomás Bedoya']);
     });
 
+    it('buscarMiembros should not return the miembro with the sesión abierta', async () => {
+        const conSofia = (await service.buscarMiembros('')).map(p => p.nombre);
+        expect(conSofia).toContain('Sofía Padilla');
+
+        const usuarioSofia = (await perfilRepository.findOne({ where: { id: sofia.id }, relations: { usuario: true } }))!.usuario;
+        const result = (await service.buscarMiembros('', undefined, usuarioSofia.id)).map(p => p.nombre);
+        expect(result).not.toContain('Sofía Padilla');
+        expect(result.length).toBe(conSofia.length - 1);
+    });
+
+    it('buscarMiembros should work with a usuario that has no perfil yet', async () => {
+        const nuevo = await usuarioRepository.save({ idUniandes: 'sin.perfil', contrasenia: 'clave123' });
+        expect((await service.buscarMiembros('', undefined, nuevo.id)).length).toBe((await service.buscarMiembros('')).length);
+    });
+
     it('buscarMiembros should find miembros by the servicios they offer', async () => {
         const result = await service.buscarMiembros('calculo');
         expect(result.map(p => p.nombre)).toEqual(['Ana Martínez']);
