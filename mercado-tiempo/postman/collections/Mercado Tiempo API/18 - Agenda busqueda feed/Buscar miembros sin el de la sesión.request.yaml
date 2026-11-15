@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/buscar/miembros"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("A (sesión abierta) no aparece", () => { const r = pm.response.json(); pm.expect(r.some(p => p.id === pm.collectionVariables.get("perfilA"))).to.be.false; });
+      pm.test("B sí aparece", () => { const r = pm.response.json(); pm.expect(r.some(p => p.id === pm.collectionVariables.get("perfilB"))).to.be.true; });
+    language: text/javascript
+order: 17800
