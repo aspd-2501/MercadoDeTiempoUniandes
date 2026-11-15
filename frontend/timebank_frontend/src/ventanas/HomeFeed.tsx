@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, Bell, Clock3, Heart, Inbox, Plus } from 'lucide-react';
 import PostAyuda from '../componentes/posts/PostAyuda';
-import { obtenerPostAyuda, type PostAyudaAPI } from '../api/postsAyuda.api';
+import type { PostAyudaAPI } from '../api/postsAyuda.api';
 import { useMiembroSesion } from '../contextos/MiembroSesionContext';
 
 //Llamados al API
@@ -48,21 +48,13 @@ interface EntradaFeed {
 }
 
 /**
- * El feed devuelve solo el resumen común. Para reutilizar PostAyuda y mostrar
- * horas/cupo reales (que no vienen en /feed), consultamos el detalle por UUID.
- * Si una consulta individual falla, conservamos el resumen original del feed.
+ * El feed ya trae el post de ayuda completo (horas, cupo, franjas) en `postAyuda`,
+ * así que no hace falta pedir cada post por separado.
  */
-async function completarEntradas(publicaciones: PublicacionFeedAPI[]): Promise<EntradaFeed[]> {
-  return Promise.all(publicaciones.map(async (publicacion) => {
-    if (publicacion.tipo !== 'POST_AYUDA') {
-      return { publicacion, detalleAyuda: null };
-    }
-    try {
-      const detalleAyuda = await obtenerPostAyuda(publicacion.id);
-      return { publicacion, detalleAyuda };
-    } catch {
-      return { publicacion, detalleAyuda: null };
-    }
+function completarEntradas(publicaciones: PublicacionFeedAPI[]): EntradaFeed[] {
+  return publicaciones.map((publicacion) => ({
+    publicacion,
+    detalleAyuda: publicacion.tipo === 'POST_AYUDA' ? publicacion.postAyuda ?? null : null,
   }));
 }
 
@@ -103,7 +95,8 @@ export default function HomeFeed({
 
   // 01.2 DATOS Y ESTADOS DEL FEED REAL
   const [entradas, setEntradas] = useState<EntradaFeed[]>([]);
-  const [pagina, setPagina] = useState(1);
+  // Cursor de la última tanda cargada: el backend devuelve desde la publicación siguiente.
+  const [cursor, setCursor] = useState<string | null>(null);
   const [hayMas, setHayMas] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [cargandoMas, setCargandoMas] = useState(false);
@@ -124,7 +117,7 @@ export default function HomeFeed({
     setError(null);
     setErrorMas(null);
     setEntradas([]);
-    setPagina(1);
+    setCursor(null);
     setHayMas(false);
     setCargandoMas(false);
 
@@ -132,13 +125,12 @@ export default function HomeFeed({
       try {
         const respuesta = await obtenerFeed({
           perfilId,
-          pagina: 1,
           tamano: 10,
         });
-        const completas = await completarEntradas(respuesta.publicaciones);
+        const completas = completarEntradas(respuesta.publicaciones);
         if (version !== versionConsulta.current) return;
         setEntradas(completas);
-        setPagina(respuesta.pagina);
+        setCursor(respuesta.siguienteCursor);
         setHayMas(respuesta.hayMas);
       } catch (excepcion: unknown) {
         if (version !== versionConsulta.current) return;
@@ -151,7 +143,7 @@ export default function HomeFeed({
 
   // 01.5 PÁGINAS POSTERIORES: se cargan en segundo plano al acercarnos al final.
   const cargarMas = useCallback(async () => {
-    if (cargando || cargandoMas || cargaMasEnCursoRef.current || !hayMas) return;
+    if (cargando || cargandoMas || cargaMasEnCursoRef.current || !hayMas || !cursor) return;
     cargaMasEnCursoRef.current = true;
     const version = versionConsulta.current;
     setCargandoMas(true);
@@ -159,14 +151,14 @@ export default function HomeFeed({
     try {
       const respuesta = await obtenerFeed({
         perfilId,
-        pagina: pagina + 1,
         tamano: 10,
+        despues: cursor,
       });
-      const completas = await completarEntradas(respuesta.publicaciones);
+      const completas = completarEntradas(respuesta.publicaciones);
       // Si se inició otra consulta del feed, ignorar resultados anteriores.
       if (version !== versionConsulta.current) return;
       setEntradas((anteriores) => [...anteriores, ...completas]);
-      setPagina(respuesta.pagina);
+      setCursor(respuesta.siguienteCursor);
       setHayMas(respuesta.hayMas);
     } catch (excepcion: unknown) {
       if (version !== versionConsulta.current) return;
@@ -177,7 +169,7 @@ export default function HomeFeed({
         setCargandoMas(false);
       }
     }
-  }, [cargando, cargandoMas, hayMas, pagina, perfilId]);
+  }, [cargando, cargandoMas, hayMas, cursor, perfilId]);
 
   // 01.6 SCROLL INFINITO: observa el documento, no crea un scroll interno.
   useEffect(() => {

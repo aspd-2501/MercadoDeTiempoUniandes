@@ -1,4 +1,5 @@
 import { clienteApi } from './clienteApi';
+import type { PostAyudaAPI } from './postsAyuda.api';
 
 /** Contrato literal de PublicacionFeed, PaginaFeed y FiltrosFeed (NestJS). */
 export type TipoPublicacionFeed = 'POST_AYUDA' | 'POST_COMUNITARIO' | 'CAUSA';
@@ -21,6 +22,8 @@ export interface PublicacionFeedAPI {
   categorias: string[];
   relevante: boolean;
   ofrece?: boolean;
+  /** Solo en POST_AYUDA: el post completo (horas, cupo, categorías y franjas). */
+  postAyuda?: PostAyudaAPI;
 }
 
 export interface PaginaFeedAPI {
@@ -28,6 +31,8 @@ export interface PaginaFeedAPI {
   pagina: number;
   tamano: number;
   hayMas: boolean;
+  /** Se envía como `despues` para pedir la siguiente tanda; null cuando no hay más. */
+  siguienteCursor: string | null;
 }
 
 export interface FiltrosFeedAPI {
@@ -36,9 +41,11 @@ export interface FiltrosFeedAPI {
   q?: string;
   pagina?: number;
   tamano?: number;
+  /** Cursor de la última tanda cargada (siguienteCursor). Si llega, se ignora `pagina`. */
+  despues?: string;
 }
 
-/** GET /feed?perfilId=...&categoria=...&q=...&pagina=1&tamano=10 */
+/** GET /feed?perfilId=...&categoria=...&q=...&tamano=10&despues=<siguienteCursor> */
 export function obtenerFeed(filtros: FiltrosFeedAPI = {}): Promise<PaginaFeedAPI> {
   const query = new URLSearchParams();
   if (filtros.perfilId) query.set('perfilId', filtros.perfilId);
@@ -48,6 +55,7 @@ export function obtenerFeed(filtros: FiltrosFeedAPI = {}): Promise<PaginaFeedAPI
   if (filtros.q?.trim()) query.set('q', filtros.q.trim());
   if (filtros.pagina !== undefined) query.set('pagina', String(filtros.pagina));
   if (filtros.tamano !== undefined) query.set('tamano', String(filtros.tamano));
+  if (filtros.despues) query.set('despues', filtros.despues);
   const parametros = query.toString();
   return clienteApi<PaginaFeedAPI>(`/feed${parametros ? `?${parametros}` : ''}`);
 }

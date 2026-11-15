@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{baseUrl}}/feed?perfilId={{perfilB}}&tamano=1&despues={{feedCursor}}"
+method: GET
+queryParams:
+  perfilId: "{{perfilB}}"
+  tamano: "1"
+  despues: "{{feedCursor}}"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("No repite la publicación anterior", () => { const r = pm.response.json(); pm.expect(r.publicaciones.some(p => p.id === pm.collectionVariables.get("feedPrimerId"))).to.be.false; });
+    language: text/javascript
+order: 17910

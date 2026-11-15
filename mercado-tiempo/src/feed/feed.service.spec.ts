@@ -223,4 +223,57 @@ describe('FeedService', () => {
 
         expect(await titulos()).toEqual(['De un miembro activo']);
     });
+
+    // --- Scroll infinito con cursor ---
+
+    it('findFeed should walk the whole feed with siguienteCursor, without repeating publicaciones', async () => {
+        await crearPostAyuda('Relevante viejo', 1, academico);
+        for (let dia = 2; dia <= 8; dia++) await crearPostAyuda(`Post ${dia}`, dia, musica);
+
+        const vistos: string[] = [];
+        let despues: string | undefined;
+        let vueltas = 0;
+        do {
+            const pagina = await service.findFeed({ perfilId: lector.id, tamano: 3, despues });
+            vistos.push(...pagina.publicaciones.map(p => p.titulo));
+            expect(pagina.siguienteCursor === null).toBe(!pagina.hayMas);
+            despues = pagina.siguienteCursor ?? undefined;
+            vueltas++;
+        } while (despues && vueltas < 10);
+
+        expect(vueltas).toBe(3);
+        expect(vistos).toEqual(['Relevante viejo', 'Post 8', 'Post 7', 'Post 6', 'Post 5', 'Post 4', 'Post 3', 'Post 2']);
+    });
+
+    it('findFeed should not repeat publicaciones when new ones are published while scrolling', async () => {
+        for (let dia = 1; dia <= 6; dia++) await crearPostAyuda(`Post ${dia}`, dia, musica);
+
+        const primera = await service.findFeed({ perfilId: lector.id, tamano: 3 });
+        expect(primera.publicaciones.map(p => p.titulo)).toEqual(['Post 6', 'Post 5', 'Post 4']);
+
+        await crearPostAyuda('Recién publicado', 20, musica);
+
+        const conCursor = await service.findFeed({ perfilId: lector.id, tamano: 3, despues: primera.siguienteCursor! });
+        expect(conCursor.publicaciones.map(p => p.titulo)).toEqual(['Post 3', 'Post 2', 'Post 1']);
+        expect(conCursor.hayMas).toBe(false);
+        expect(conCursor.siguienteCursor).toBeNull();
+
+        // Con pagina=2 se repetiría "Post 4"
+        expect(await titulos({ tamano: 3, pagina: 2 })).toEqual(['Post 4', 'Post 3', 'Post 2']);
+    });
+
+    it('findFeed should throw an exception for an invalid cursor', async () => {
+        await expect(() => service.findFeed({ despues: 'no-es-un-cursor' }))
+            .rejects.toHaveProperty('message', 'El cursor del feed no es válido');
+    });
+
+    it('findFeed should include the complete post de ayuda, with horas, cupo and franjas', async () => {
+        await crearPostAyuda('Clases de guitarra', 3, musica, { horas: 4, cupo: 2 });
+        const [publicacion] = (await service.findFeed({ perfilId: lector.id })).publicaciones;
+        expect(publicacion.postAyuda?.horas).toBe(4);
+        expect(publicacion.postAyuda?.cupo).toBe(2);
+        expect(publicacion.postAyuda?.perfilAutor.id).toBe(autor.id);
+        expect(Array.isArray(publicacion.postAyuda?.horariosDisponibles)).toBe(true);
+        expect(publicacion.postAyuda?.categorias[0].categoria.nombre).toBe('Música');
+    });
 });

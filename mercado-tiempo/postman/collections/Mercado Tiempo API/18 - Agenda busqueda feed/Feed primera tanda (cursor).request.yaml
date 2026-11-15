@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/feed?perfilId={{perfilB}}&tamano=1"
+method: GET
+queryParams:
+  perfilId: "{{perfilB}}"
+  tamano: "1"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("Trae 1 publicación y el cursor", () => { const r = pm.response.json(); pm.expect(r.publicaciones.length).to.eql(1); if (r.hayMas) pm.expect(r.siguienteCursor).to.be.a("string"); else pm.expect(r.siguienteCursor).to.eql(null); });
+      pm.test("Los posts de ayuda traen el post completo", () => { const r = pm.response.json(); r.publicaciones.filter(p => p.tipo === "POST_AYUDA").forEach(p => { pm.expect(p.postAyuda.horas).to.be.a("number"); pm.expect(p.postAyuda.horariosDisponibles).to.be.an("array"); }); });
+      { const r = pm.response.json(); pm.collectionVariables.set("feedCursor", r.siguienteCursor || ""); pm.collectionVariables.set("feedPrimerId", r.publicaciones[0] ? r.publicaciones[0].id : ""); }
+    language: text/javascript
+order: 17900

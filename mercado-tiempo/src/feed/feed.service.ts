@@ -29,6 +29,8 @@ export interface PublicacionFeed {
     categorias: string[];
     relevante: boolean;        // coincide con los intereses o los servicios del miembro (RF-021)
     ofrece?: boolean;          // solo posts de ayuda: true = ofrecimiento, false = solicitud
+    postAyuda?: PostAyudaEntity; // solo posts de ayuda: el post completo (horas, cupo, categorías, franjas),
+                                 // para mostrarlo sin pedir cada post por separado
 }
 
 export interface PaginaFeed {
@@ -36,13 +38,15 @@ export interface PaginaFeed {
     pagina: number;
     tamano: number;
     hayMas: boolean;           // para el feed infinito (RF-020)
+    siguienteCursor: string | null; // se envía como `despues` para pedir lo que sigue; null si no hay más
 }
 
 export interface FiltrosFeed {
     perfilId?: string;         // miembro que mira el feed: personaliza y oculta sus propias publicaciones
     categoria?: string;        // nombre de la categoría, por ejemplo "Académico"
     q?: string;                // palabras clave
-    pagina?: number;           // empieza en 1
+    pagina?: number;           // empieza en 1 (se ignora si llega `despues`)
+    despues?: string;          // cursor de la última publicación ya cargada (siguienteCursor de la página anterior)
     tamano?: number;           // entre 1 y 50, por defecto 10
     tipos?: TipoPublicacion[]; // qué incluir; por defecto posts de ayuda y posts comunitarios (sin causas)
 }
@@ -93,17 +97,27 @@ export class FeedService {
             .filter(p => !filtros.categoria || p.categorias.some(c => normalizar(c) === normalizar(filtros.categoria)))
             .filter(p => coincide(filtros.q, [p.titulo, p.descripcion, ...p.categorias, p.autor?.nombre]))
             .map(p => ({ ...p, relevante: p.categorias.some(c => categoriasDeInteres.has(normalizar(c))) }))
-            .sort((a, b) =>
-                Number(b.relevante) - Number(a.relevante) ||
-                new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
-            );
+            .sort(compararPublicaciones);
 
-        const inicio = (pagina - 1) * tamano;
+        // Con cursor, la página empieza justo después de la última publicación que el miembro ya vio.
+        // Así, si se publican cosas nuevas mientras baja por el feed, no se repiten ni se saltan publicaciones.
+        let inicio: number;
+        if (filtros.despues !== undefined) {
+            const cursor = leerCursor(filtros.despues);
+            inicio = publicaciones.findIndex(p => compararPublicaciones(p, cursor) > 0);
+            if (inicio === -1) inicio = publicaciones.length;
+        } else {
+            inicio = (pagina - 1) * tamano;
+        }
+
+        const lote = publicaciones.slice(inicio, inicio + tamano);
+        const hayMas = inicio + tamano < publicaciones.length;
         return {
-            publicaciones: publicaciones.slice(inicio, inicio + tamano),
-            pagina,
+            publicaciones: lote,
+            pagina: filtros.despues !== undefined ? Math.floor(inicio / tamano) + 1 : pagina,
             tamano,
-            hayMas: inicio + tamano < publicaciones.length,
+            hayMas,
+            siguienteCursor: hayMas && lote.length > 0 ? crearCursor(lote[lote.length - 1]) : null,
         };
     }
 
@@ -132,7 +146,7 @@ export class FeedService {
     private async postsAyuda(): Promise<PublicacionFeed[]> {
         const posts = await this.postAyudaRepository.find({
             where: { cupoLleno: false },
-            relations: { perfilAutor: true, categorias: { categoria: true } }
+            relations: { perfilAutor: true, categorias: { categoria: true }, horariosDisponibles: true }
         });
         return posts.map(p => ({
             tipo: 'POST_AYUDA' as const,
@@ -145,6 +159,7 @@ export class FeedService {
             categorias: (p.categorias ?? []).map(c => c.categoria?.nombre).filter((n): n is string => !!n),
             relevante: false,
             ofrece: p.ofrece,
+            postAyuda: { ...p, horariosDisponibles: [...(p.horariosDisponibles ?? [])].sort((a, b) => new Date(a.fechaInicio).getTime() - new Date(b.fechaInicio).getTime()) },
         }));
     }
 
@@ -180,4 +195,30 @@ export class FeedService {
             relevante: false,
         }));
     }
+}
+
+// --- Orden del feed y cursor ---
+// Orden: primero las relevantes, luego las más nuevas; el tipo y el id desempatan para que el orden sea siempre el mismo.
+interface PosicionFeed { relevante: boolean; fecha: Date | string | number; tipo: string; id: string }
+
+function compararPublicaciones(a: PosicionFeed, b: PosicionFeed): number {
+    return Number(b.relevante) - Number(a.relevante)
+        || new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+        || a.tipo.localeCompare(b.tipo)
+        || a.id.localeCompare(b.id);
+}
+
+// El cursor es la posición de una publicación en ese orden, en base64url (el frontend lo trata como texto opaco)
+function crearCursor(p: PublicacionFeed): string {
+    const posicion = { r: p.relevante ? 1 : 0, f: new Date(p.fecha).getTime(), t: p.tipo, id: p.id };
+    return Buffer.from(JSON.stringify(posicion)).toString('base64url');
+}
+
+function leerCursor(cursor: string): PosicionFeed {
+    try {
+        const { r, f, t, id } = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+        if ((r === 0 || r === 1) && Number.isFinite(f) && typeof t === 'string' && typeof id === 'string')
+            return { relevante: r === 1, fecha: f, tipo: t, id };
+    } catch { /* cursor inválido */ }
+    throw new BusinessLogicException("El cursor del feed no es válido", BusinessError.BAD_REQUEST);
 }

@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/feed?despues=no-es-un-cursor"
+method: GET
+queryParams:
+  despues: "no-es-un-cursor"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 400", () => pm.response.to.have.status(400));
+      pm.test("Mensaje: El cursor del feed no es válido", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("El cursor del feed no es válido"); });
+    language: text/javascript
+order: 17920
