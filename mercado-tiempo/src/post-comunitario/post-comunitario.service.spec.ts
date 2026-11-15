@@ -230,4 +230,25 @@ describe('PostComunitarioService', () => {
         await expect(() => service.delete("0"))
             .rejects.toHaveProperty("message", "No se encontró el post comunitario");
     });
+
+    // --- Posts comunitarios de un perfil ---
+
+    it('findByCreador should return the posts created by the perfil, newest first', async () => {
+        const otro = await postComunitarioRepository.save({
+            titulo: 'Más nuevo', descripcion: 'd', fechaCreacion: new Date(Date.now() + 60000), imagen: 'i', likes: 0, creador: perfilesList[0],
+        });
+        await postComunitarioRepository.save({ titulo: 'De otro', descripcion: 'd', fechaCreacion: new Date(), imagen: 'i', likes: 0, creador: perfilesList[1] });
+
+        const result = await service.findByCreador(perfilesList[0].id);
+        expect(result.map(p => p.id)).toEqual([otro.id, post.id]);
+        expect(result[0].creador.id).toBe(perfilesList[0].id);
+    });
+
+    it('findByCreador should return an empty list for a perfil without posts', async () => {
+        expect(await service.findByCreador(perfilesList[2].id)).toEqual([]);
+    });
+
+    it('findByCreador should throw an exception for an invalid perfil', async () => {
+        await expect(() => service.findByCreador("0")).rejects.toHaveProperty("message", "No se encontró el perfil de miembro");
+    });
 });

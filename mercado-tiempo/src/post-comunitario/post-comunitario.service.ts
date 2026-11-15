@@ -27,6 +27,19 @@ export class PostComunitarioService {
 
     // --- CRUD de PostComunitario ---
 
+    // Posts comunitarios que creó un perfil, los más nuevos primero (incluye los que aún no son públicos)
+    async findByCreador(perfilId: string): Promise<PostComunitarioEntity[]> {
+        const perfil = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
+        if (!perfil)
+            throw new BusinessLogicException("No se encontró el perfil de miembro", BusinessError.NOT_FOUND);
+
+        return await this.postComunitarioRepository.find({
+            where: { creador: { id: perfilId } },
+            relations: { participantes: true, creador: true, acuerdo: true },
+            order: { fechaCreacion: 'DESC' },
+        });
+    }
+
     async findAll(): Promise<PostComunitarioEntity[]> {
         return await this.postComunitarioRepository.find({ relations: { participantes: true, creador: true, acuerdo: true } });
     }

@@ -46,6 +46,23 @@ export class PostAyudaService {
         });
     }
 
+    // Posts de ayuda que publicó un perfil (para "Mis posts" o el perfil de otro miembro), los más nuevos primero.
+    // ofrece: true = solo los que ofrecen ayuda, false = solo los que la piden, undefined = todos.
+    // Incluye los que tienen el cupo lleno.
+    async findByPerfilAutor(perfilId: string, ofrece?: boolean): Promise<PostAyudaEntity[]> {
+        const perfil = await this.perfilMiembroRepository.findOne({ where: { id: perfilId } });
+        if (!perfil)
+            throw new BusinessLogicException("No se encontró el perfil de miembro", BusinessError.NOT_FOUND);
+
+        const posts = await this.postAyudaRepository.find({
+            where: { perfilAutor: { id: perfilId }, ...(ofrece === undefined ? {} : { ofrece }) },
+            relations: { perfilAutor: true, categorias: { categoria: true }, horariosDisponibles: true },
+            order: { fechaCreacion: 'DESC' },
+        });
+        posts.forEach(p => p.horariosDisponibles.sort((a, b) => inicioMs(a) - inicioMs(b)));
+        return posts;
+    }
+
     async findOne(id: string): Promise<PostAyudaEntity> {
         const post: PostAyudaEntity | null = await this.postAyudaRepository.findOne({
             where: { id },

@@ -452,4 +452,42 @@ describe('PostAyudaService', () => {
         await service.deleteHorarioPost(creado.id, preferido.id);
         expect(preferidas(await service.findHorariosByPostId(creado.id))).toEqual([10]);
     });
+
+    // --- Posts de ayuda de un perfil ("Mis posts") ---
+
+    const postDe = async (autor: PerfilMiembroEntity, titulo: string, ofrece: boolean, dia: number, cupoLleno = false) => {
+        const nuevo = await postAyudaRepository.save({
+            titulo, descripcion: 'd', imagen: 'i', ofrece, cupo: 1, cupoLleno, horas: 2,
+            fechaCreacion: new Date(Date.UTC(2026, 10, dia)), perfilAutor: autor,
+        });
+        await horarioRepository.save({ fechaInicio: new Date(Date.UTC(2026, 11, dia, 10)), fechaFin: new Date(Date.UTC(2026, 11, dia, 14)), postAyuda: nuevo, perfil: autor });
+        await horarioRepository.save({ fechaInicio: new Date(Date.UTC(2026, 11, dia, 8)), fechaFin: new Date(Date.UTC(2026, 11, dia, 10)), postAyuda: nuevo, perfil: autor });
+        return nuevo;
+    };
+
+    it('findByPerfilAutor should return only the posts of the perfil, newest first, with categorias and horarios', async () => {
+        const autor = await perfilRepository.save({ ...perfil, id: undefined, usuario: undefined, nombre: 'Autora' } as any);
+        await postDe(autor, 'Viejo', true, 1);
+        await postDe(autor, 'Nuevo', false, 9, true);
+        await postAyudaRepository.save({ titulo: 'De otro', descripcion: 'd', imagen: 'i', ofrece: true, cupo: 1, cupoLleno: false, horas: 2, fechaCreacion: new Date(), perfilAutor: perfil });
+
+        const result = await service.findByPerfilAutor(autor.id);
+        expect(result.map(p => p.titulo)).toEqual(['Nuevo', 'Viejo']);
+        expect(result[0].cupoLleno).toBe(true);
+        expect(result[0].perfilAutor.id).toBe(autor.id);
+        expect(result[0].horariosDisponibles.map(h => new Date(h.fechaInicio).getUTCHours())).toEqual([8, 10]);
+        expect(Array.isArray(result[0].categorias)).toBe(true);
+    });
+
+    it('findByPerfilAutor should filter by ofrece', async () => {
+        const autor = await perfilRepository.save({ ...perfil, id: undefined, usuario: undefined, nombre: 'Autora' } as any);
+        await postDe(autor, 'Ofrezco', true, 1);
+        await postDe(autor, 'Necesito', false, 2);
+        expect((await service.findByPerfilAutor(autor.id, true)).map(p => p.titulo)).toEqual(['Ofrezco']);
+        expect((await service.findByPerfilAutor(autor.id, false)).map(p => p.titulo)).toEqual(['Necesito']);
+    });
+
+    it('findByPerfilAutor should throw an exception for an invalid perfil', async () => {
+        await expect(() => service.findByPerfilAutor("0")).rejects.toHaveProperty("message", "No se encontró el perfil de miembro");
+    });
 });
