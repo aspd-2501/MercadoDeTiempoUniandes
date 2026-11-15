@@ -7,6 +7,7 @@ import { AcuerdoEntity } from './acuerdo.entity';
 import { AcuerdoDto } from './acuerdo.dto';
 import { AgregarParticipanteDto } from './agregar-participante.dto';
 import { AsociarParticipantesDto } from './asociar-participantes.dto';
+import { IniciarAcuerdoDto } from './iniciar-acuerdo.dto';
 
 @Controller('acuerdos')
 @UseInterceptors(BusinessErrorsInterceptor)
@@ -16,6 +17,20 @@ export class AcuerdoController {
     @Get()
     async findAll() {
         return await this.acuerdoService.findAll();
+    }
+
+    // POST /acuerdos/iniciar
+    // Crea el acuerdo con sus dos primeros participantes y su chat en una sola operación (todo o nada).
+    // Debe ir antes de las rutas con :acuerdoId.
+    @Post('iniciar')
+    async iniciar(@Body() dto: IniciarAcuerdoDto) {
+        return await this.acuerdoService.iniciar({
+            postAyudaId: dto.postAyudaId,
+            solicitudId: dto.solicitudId,
+            perfilId: dto.perfilId,
+            fechaRealizacion: new Date(dto.fechaRealizacion),
+            horas: dto.horas,
+        });
     }
 
     @Get(':acuerdoId')

@@ -13,7 +13,18 @@ import { ChatEntity } from '../chat/chat.entity';
 import { TransaccionEntity } from '../transaccion/transaccion.entity';
 import { TipoTransaccion } from '../transaccion/tipo-transaccion.enum';
 import { DepositoHorasEntity } from '../deposito-horas/deposito-horas.entity';
+import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
+import { SolicitudAyudaEntity } from '../solicitud-ayuda/solicitud-ayuda.entity';
+import { ChatParticipanteEntity } from '../chat/chat-participante.entity';
 import { calcularReparto, ParticipanteReparto, validarSaldosReceptores } from './reparto-horas';
+
+export interface DatosInicioAcuerdo {
+    postAyudaId?: string;
+    solicitudId?: string;
+    perfilId?: string;          // quien se une al post
+    fechaRealizacion: Date;
+    horas?: number;             // por defecto, las del post o la solicitud
+}
 
 @Injectable()
 export class AcuerdoService {
@@ -64,6 +75,88 @@ export class AcuerdoService {
 
         acuerdo.estado = acuerdo.estado ?? EstadoAcuerdo.EN_CREACION;
         return await this.acuerdoRepository.save(acuerdo);
+    }
+
+    // --- Iniciar un acuerdo en una sola operación (todo o nada) ---
+    // Crea el acuerdo, agrega sus dos primeros participantes con su rol y crea su chat con ambos.
+    // Todo ocurre en una transacción: si algo falla, no queda nada creado.
+    //  - Desde un post: el autor y quien se une. Si el post ofrece ayuda, el autor es PRESTADOR y quien se une
+    //    RECEPTOR; si el post pide ayuda, al revés.
+    //  - Desde una solicitud: la organización prestadora es PRESTADOR y el autor de la solicitud RECEPTOR.
+    async iniciar(datos: DatosInicioAcuerdo): Promise<AcuerdoEntity> {
+        if (!!datos.postAyudaId === !!datos.solicitudId)
+            throw new BusinessLogicException("Un acuerdo debe venir de un post de ayuda o de una solicitud, pero no de ambos", BusinessError.PRECONDITION_FAILED);
+
+        const acuerdoId = await this.acuerdoRepository.manager.transaction(async manager => {
+            let horas: number;
+            let prestador: PerfilMiembroEntity;
+            let receptor: PerfilMiembroEntity;
+            const origen: Partial<AcuerdoEntity> = {};
+
+            if (datos.postAyudaId) {
+                const post = await manager.findOne(PostAyudaEntity, { where: { id: datos.postAyudaId }, relations: { perfilAutor: true } });
+                if (!post)
+                    throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
+                if (post.cupoLleno)
+                    throw new BusinessLogicException("El post de ayuda ya no tiene cupos", BusinessError.PRECONDITION_FAILED);
+                if (!datos.perfilId)
+                    throw new BusinessLogicException("Debes indicar el perfil que se une al post", BusinessError.BAD_REQUEST);
+
+                const miembro = await manager.findOne(PerfilMiembroEntity, { where: { id: datos.perfilId } });
+                if (!miembro)
+                    throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
+                if (miembro.id === post.perfilAutor.id)
+                    throw new BusinessLogicException("No puedes unirte a tu propio post", BusinessError.PRECONDITION_FAILED);
+
+                [prestador, receptor] = post.ofrece ? [post.perfilAutor, miembro] : [miembro, post.perfilAutor];
+                horas = datos.horas ?? post.horas;
+                origen.postAyuda = { id: post.id } as PostAyudaEntity;
+            } else {
+                const solicitud = await manager.findOne(SolicitudAyudaEntity, {
+                    where: { id: datos.solicitudId },
+                    relations: { perfilAutor: true, prestador: { perfil: true }, acuerdo: true }
+                });
+                if (!solicitud)
+                    throw new BusinessLogicException("No se encontró la solicitud", BusinessError.NOT_FOUND);
+                if (solicitud.acuerdo)
+                    throw new BusinessLogicException("La solicitud ya tiene un acuerdo", BusinessError.PRECONDITION_FAILED);
+
+                prestador = solicitud.prestador.perfil;
+                receptor = solicitud.perfilAutor;
+                horas = datos.horas ?? solicitud.horas;
+                origen.solicitud = { id: solicitud.id } as SolicitudAyudaEntity;
+            }
+
+            // El receptor debe poder pagar el acuerdo
+            validarSaldosReceptores(horas, [
+                { idPerfil: prestador.id, rol: RolParticipante.PRESTADOR, saldo: prestador.saldo },
+                { idPerfil: receptor.id, rol: RolParticipante.RECEPTOR, saldo: receptor.saldo },
+            ]);
+
+            const chat = await manager.save(ChatEntity, manager.create(ChatEntity, {}));
+            await manager.save(ChatParticipanteEntity, [
+                manager.create(ChatParticipanteEntity, { idChat: chat.id, idPerfil: prestador.id }),
+                manager.create(ChatParticipanteEntity, { idChat: chat.id, idPerfil: receptor.id }),
+            ]);
+
+            const acuerdo = await manager.save(AcuerdoEntity, manager.create(AcuerdoEntity, {
+                ...origen,
+                horas,
+                fechaCreacion: new Date(),
+                fechaRealizacion: datos.fechaRealizacion,
+                estado: EstadoAcuerdo.EN_CREACION,
+                chat,
+            }));
+
+            await manager.save(ParticipanteAcuerdoEntity, [
+                manager.create(ParticipanteAcuerdoEntity, { idAcuerdo: acuerdo.id, idPerfil: prestador.id, rol: RolParticipante.PRESTADOR }),
+                manager.create(ParticipanteAcuerdoEntity, { idAcuerdo: acuerdo.id, idPerfil: receptor.id, rol: RolParticipante.RECEPTOR }),
+            ]);
+
+            return acuerdo.id;
+        });
+
+        return await this.findOne(acuerdoId);
     }
 
     async update(id: string, acuerdo: AcuerdoEntity): Promise<AcuerdoEntity> {
