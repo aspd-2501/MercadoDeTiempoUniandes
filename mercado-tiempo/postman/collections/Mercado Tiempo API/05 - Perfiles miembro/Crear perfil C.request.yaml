@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/perfiles-miembro"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Carla Estudiante {{runId}}",
+      "edad": 21,
+      "afiliacionUniandes": "Estudiante",
+      "imagen": "https://picsum.photos/200",
+      "descripcion": "Perfil de prueba C",
+      "estadoActividad": true,
+      "usuarioId": "{{usuarioC}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("Tiene id UUID", () => { const r = pm.response.json(); pm.expect(r.id).to.match(/^[0-9a-f-]{36}$/); });
+      pm.test("Empieza con 3 horas", () => { const r = pm.response.json(); pm.expect(r.saldo).to.eql(3); });
+      { const r = pm.response.json(); pm.collectionVariables.set("perfilC", r.id); }
+    language: text/javascript
+order: 3000

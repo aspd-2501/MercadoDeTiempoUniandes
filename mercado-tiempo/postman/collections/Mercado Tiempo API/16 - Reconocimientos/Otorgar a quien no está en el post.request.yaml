@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/reconocimientos/{{recId}}/otorgar"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "perfilReceptorId": "{{perfilD}}",
+      "perfilOtorganteId": "{{perfilB}}",
+      "postComunitarioId": "{{postComId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: Quien recibe el reconocimiento debe ser participante", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("Quien recibe el reconocimiento debe ser participante"); });
+    language: text/javascript
+order: 10000

@@ -1,0 +1,35 @@
+$kind: http-request
+url: "{{baseUrl}}/posts-ayuda"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Temporal {{runId}}",
+      "descripcion": "Repaso para el parcial",
+      "horas": 2,
+      "imagen": "https://picsum.photos/400",
+      "ofrece": false,
+      "cupo": 3,
+      "cupoLleno": false,
+      "fechaCreacion": "{{ahora}}",
+      "perfilAutorId": "{{perfilA}}",
+      "categoriaIds": [
+        "{{cat1}}"
+      ],
+      "horarios": [
+        {
+          "fechaInicio": "{{pasadoInicio}}",
+          "fechaFin": "{{pasadoFin}}"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      { const r = pm.response.json(); pm.collectionVariables.set("postTmp", r.id); }
+    language: text/javascript
+order: 19000

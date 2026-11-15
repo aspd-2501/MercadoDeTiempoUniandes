@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/iniciar"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "postAyudaId": "{{postId}}",
+      "fechaRealizacion": "{{futuroInicio}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 400", () => pm.response.to.have.status(400));
+      pm.test("Mensaje: Debes indicar el perfil", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("Debes indicar el perfil"); });
+    language: text/javascript
+order: 13300

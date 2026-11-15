@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{baseUrl}}/reconocimientos/{{recId}}/otorgar"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "perfilReceptorId": "{{perfilA}}"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Código 201", () => pm.response.to.have.status(201));
+    language: text/javascript
+order: 11000

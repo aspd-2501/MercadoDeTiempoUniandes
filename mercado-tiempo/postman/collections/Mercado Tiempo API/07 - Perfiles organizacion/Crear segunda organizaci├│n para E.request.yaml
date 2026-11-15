@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/perfiles-organizacion"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "perfilId": "{{perfilE}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: ya tiene un perfil de organización", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("ya tiene un perfil de organización"); });
+    language: text/javascript
+order: 2000

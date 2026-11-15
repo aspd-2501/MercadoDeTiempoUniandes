@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo2}}/solicitudes-modificacion/{{cancel1}}/aprobar"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "perfilId": "{{perfilA}}"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Código 201", () => pm.response.to.have.status(201));
+    language: text/javascript
+order: 33000

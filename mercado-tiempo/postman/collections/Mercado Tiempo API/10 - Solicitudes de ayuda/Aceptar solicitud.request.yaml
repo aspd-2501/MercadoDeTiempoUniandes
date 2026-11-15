@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/solicitudes-ayuda/{{solicitudId}}/aceptar"
+method: POST
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("aceptada", () => { const r = pm.response.json(); pm.expect(r.aceptada).to.eql(true); });
+    language: text/javascript
+order: 11000

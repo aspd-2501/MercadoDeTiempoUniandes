@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{baseUrl}}/actividades"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Temporal {{runId}}",
+      "descripcion": "Siembra en los cerros orientales",
+      "imagen": "https://picsum.photos/450",
+      "cupo": 20,
+      "cupoLleno": false,
+      "fechaCreacion": "{{ahora}}",
+      "organizacionId": "{{orgInstId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      { const r = pm.response.json(); pm.collectionVariables.set("actividadTmp", r.id); }
+    language: text/javascript
+order: 22000

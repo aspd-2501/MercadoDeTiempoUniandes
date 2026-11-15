@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo1}}/disponibilidad"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("resultado pendiente", () => { const r = pm.response.json(); pm.expect(r.resultado.estado).to.eql("pendiente"); });
+      pm.test("A usa las franjas de su post", () => { const r = pm.response.json(); const a = r.participantes.find(p => p.perfilId === pm.collectionVariables.get("perfilA")); pm.expect(a.envioDisponibilidad).to.eql(true); });
+    language: text/javascript
+order: 12000

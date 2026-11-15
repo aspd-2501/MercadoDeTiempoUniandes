@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{baseUrl}}/servicios-ofrecidos"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "titulo": "Servicio oculto {{runId}}",
+      "descripcion": "Cubro eventos estudiantiles",
+      "imagen": "https://picsum.photos/300",
+      "visible": false,
+      "perfilId": "{{perfilE}}",
+      "categoriaIds": [
+        "{{cat3}}"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("no visible", () => { const r = pm.response.json(); pm.expect(r.visible).to.eql(false); });
+      { const r = pm.response.json(); pm.collectionVariables.set("servicioOcultoId", r.id); }
+    language: text/javascript
+order: 2000

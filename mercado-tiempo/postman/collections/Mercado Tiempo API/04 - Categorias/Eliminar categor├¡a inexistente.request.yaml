@@ -1,0 +1,10 @@
+$kind: http-request
+url: "{{baseUrl}}/categorias/{{idInexistente}}"
+method: DELETE
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 404", () => pm.response.to.have.status(404));
+      pm.test("Mensaje: No se encontró", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("No se encontró"); });
+    language: text/javascript
+order: 13000

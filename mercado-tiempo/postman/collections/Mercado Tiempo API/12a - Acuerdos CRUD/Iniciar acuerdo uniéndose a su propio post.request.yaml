@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/iniciar"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "postAyudaId": "{{postId}}",
+      "perfilId": "{{perfilA}}",
+      "fechaRealizacion": "{{futuroInicio}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 412", () => pm.response.to.have.status(412));
+      pm.test("Mensaje: No puedes unirte a tu propio post", () => { const r = pm.response.json(); pm.expect(String(r.message)).to.include("No puedes unirte a tu propio post"); });
+    language: text/javascript
+order: 13200

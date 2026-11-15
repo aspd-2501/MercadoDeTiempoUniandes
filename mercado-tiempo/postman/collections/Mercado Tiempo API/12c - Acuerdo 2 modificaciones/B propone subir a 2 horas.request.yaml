@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdo2}}/solicitudes-modificacion"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "tipo": "MODIFICACION",
+      "solicitanteId": "{{perfilB}}",
+      "horas": 2
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("PENDIENTE (0)", () => { const r = pm.response.json(); pm.expect(r.estado).to.eql(0); });
+      { const r = pm.response.json(); pm.collectionVariables.set("modif1", r.id); }
+    language: text/javascript
+order: 11000

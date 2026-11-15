@@ -1,0 +1,12 @@
+$kind: http-request
+url: "{{baseUrl}}/depositos-horas/fondo"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      
+      pm.test("Código 200 o 404 (puede no existir aún)", () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));
+      pm.collectionVariables.set("fondoExistia", pm.response.code === 200 ? "si" : "no");
+      if (pm.response.code === 200) pm.collectionVariables.set("fondoId", pm.response.json().id);
+    language: text/javascript
+order: 2000

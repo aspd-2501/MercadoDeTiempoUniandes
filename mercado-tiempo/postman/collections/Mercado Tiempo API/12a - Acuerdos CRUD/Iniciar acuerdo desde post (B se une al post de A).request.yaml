@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/iniciar"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "postAyudaId": "{{postId}}",
+      "perfilId": "{{perfilB}}",
+      "fechaRealizacion": "{{futuroInicio}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("Queda en creación", () => { const r = pm.response.json(); pm.expect(r.estado).to.eql(0); });
+      pm.test("A es prestador y B receptor", () => { const r = pm.response.json(); const rol = id => r.participantes.find(p => p.idPerfil === id)?.rol; pm.expect(rol(pm.collectionVariables.get("perfilA"))).to.eql("PRESTADOR"); pm.expect(rol(pm.collectionVariables.get("perfilB"))).to.eql("RECEPTOR"); });
+      pm.test("Ya tiene chat", () => { const r = pm.response.json(); pm.expect(r.chat).to.be.an("object"); });
+      { const r = pm.response.json(); pm.collectionVariables.set("acuerdoIniciadoId", r.id); pm.collectionVariables.set("chatIniciadoId", r.chat.id); }
+    language: text/javascript
+order: 13000

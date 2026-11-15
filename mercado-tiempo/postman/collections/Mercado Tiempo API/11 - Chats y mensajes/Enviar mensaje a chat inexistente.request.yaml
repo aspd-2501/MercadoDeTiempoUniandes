@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/mensajes"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "contenido": "Hola",
+      "emisorId": "{{perfilA}}",
+      "chatId": "{{idInexistente}}"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("Código 404", () => pm.response.to.have.status(404));
+    language: text/javascript
+order: 16000

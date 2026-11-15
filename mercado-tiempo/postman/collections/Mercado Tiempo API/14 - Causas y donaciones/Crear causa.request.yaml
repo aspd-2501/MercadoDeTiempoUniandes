@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/causas"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Libros para Bruno {{runId}}",
+      "descripcion": "Horas para tutorías",
+      "imagen": "https://picsum.photos/250",
+      "perfilCreadorId": "{{perfilA}}",
+      "perfilReceptorId": "{{perfilB}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("Tiene id UUID", () => { const r = pm.response.json(); pm.expect(r.id).to.match(/^[0-9a-f-]{36}$/); });
+      { const r = pm.response.json(); pm.collectionVariables.set("causaId", r.id); }
+    language: text/javascript
+order: 1000

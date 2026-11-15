@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{baseUrl}}/acuerdos/{{acuerdoTmp}}"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "horas": 3,
+      "fechaCreacion": "{{ahora}}",
+      "fechaRealizacion": "{{futuroInicio}}",
+      "postAyudaId": "{{postId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 200", () => pm.response.to.have.status(200));
+      pm.test("horas", () => { const r = pm.response.json(); pm.expect(r.horas).to.eql(3); });
+    language: text/javascript
+order: 7000

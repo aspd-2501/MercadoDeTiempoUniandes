@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{baseUrl}}/reconocimientos"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "nombre": "Tutor estrella {{runId}}",
+      "descripcion": "Por ayudar a sus compañeros",
+      "requerimiento": "Completar 1 tutoría",
+      "icono": "star"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("Código 201", () => pm.response.to.have.status(201));
+      pm.test("Tiene id UUID", () => { const r = pm.response.json(); pm.expect(r.id).to.match(/^[0-9a-f-]{36}$/); });
+      { const r = pm.response.json(); pm.collectionVariables.set("recId", r.id); }
+    language: text/javascript
+order: 1000
