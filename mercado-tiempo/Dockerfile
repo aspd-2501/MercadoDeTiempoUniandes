@@ -1,20 +1,19 @@
-FROM nginx:latest
-
-# NEST
-
-# Descarga la imagen de Docker de Node.js:
-docker pull node:24-slim
-# Crea un contenedor de Node.js e inicia una sesión shell:
-docker run -it --rm --entrypoint sh node:24-slim
-# Verifica la versión de Node.js:
-node -v # Debería mostrar "v24.21.0".
-# Verifica versión de npm:
-npm -v # Debería mostrar "11.19.0".
-
-FROM node:20
+# ---------- Etapa 1: compilar ----------
+FROM node:22-slim AS build
 WORKDIR /app
-COPY package*.json ./
+COPY package*.json .npmrc ./
 RUN npm ci
 COPY . .
-RUN npm run build
+RUN npm run build && npm prune --omit=dev
+
+# ---------- Etapa 2: imagen final (solo lo necesario) ----------
+FROM node:22-slim
+ENV NODE_ENV=production
+WORKDIR /app
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY package*.json ./
+RUN mkdir -p /app/uploads && chown -R node:node /app
+USER node
+EXPOSE 3000
 CMD ["node", "dist/main"]

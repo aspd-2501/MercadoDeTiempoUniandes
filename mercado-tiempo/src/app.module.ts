@@ -96,11 +96,11 @@ import { TransaccionEntity } from './transaccion/transaccion.entity';
     FeedModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'postgres',
-      database: 'mercado-tiempo',
+      host: process.env.DB_HOST ?? 'localhost',
+      port: Number(process.env.DB_PORT ?? 5432),
+      username: process.env.DB_USER ?? 'postgres',
+      password: process.env.DB_PASSWORD ?? 'postgres',
+      database: process.env.DB_NAME ?? 'mercado-tiempo',
       entities: [
         UsuarioEntity,
         ModeradorEntity,
@@ -134,7 +134,8 @@ import { TransaccionEntity } from './transaccion/transaccion.entity';
         AprobacionModificacionEntity,
         TransaccionEntity,
       ],
-      synchronize: true,
+      // En producción se puede desactivar con DB_SYNCHRONIZE=false cuando existan migraciones
+      synchronize: (process.env.DB_SYNCHRONIZE ?? 'true') === 'true',
     }),
   ],
   controllers: [AppController],

@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-test
+coverage
+uploads
+src.zip
+postman
+.postman
+.env
+*.log
+.git
