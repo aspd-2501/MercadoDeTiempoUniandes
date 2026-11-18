@@ -89,7 +89,7 @@ export class PostAyudaController {
         post.imagen = dto.imagen;
         post.ofrece = dto.ofrece;
         post.cupo = dto.cupo;
-        post.cupoLleno = dto.cupoLleno;
+        post.cupoLleno = dto.cupoLleno ?? false;   // lo recalcula el servicio
         post.fechaCreacion = new Date(dto.fechaCreacion);
         post.perfilAutor = { id: dto.perfilAutorId } as any;
         return post;

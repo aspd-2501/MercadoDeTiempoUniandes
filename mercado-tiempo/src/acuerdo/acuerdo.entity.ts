@@ -28,8 +28,10 @@ export class AcuerdoEntity {
     @Column()
     fechaCreacion: Date;
 
-    @Column()
-    fechaRealizacion: Date;
+    // Puede quedar vacía al crear el acuerdo: se fija sola cuando se coordina el horario
+    // (o con una solicitud de modificación)
+    @Column({ type: Date, nullable: true })
+    fechaRealizacion: Date | null;
 
     // 0: en creación, 1: acordado, 2: realizado, 3: en modificación y 4: cancelado (ver enum EstadoAcuerdo)
     @Column({ type: 'int', default: EstadoAcuerdo.EN_CREACION })

@@ -28,7 +28,7 @@ export class AcuerdoController {
             postAyudaId: dto.postAyudaId,
             solicitudId: dto.solicitudId,
             perfilId: dto.perfilId,
-            fechaRealizacion: new Date(dto.fechaRealizacion),
+            fechaRealizacion: dto.fechaRealizacion ? new Date(dto.fechaRealizacion) : undefined,
             horas: dto.horas,
         });
     }
@@ -119,7 +119,7 @@ export class AcuerdoController {
         const acuerdo = new AcuerdoEntity();
         acuerdo.horas = dto.horas;
         acuerdo.fechaCreacion = new Date(dto.fechaCreacion);
-        acuerdo.fechaRealizacion = new Date(dto.fechaRealizacion);
+        if (dto.fechaRealizacion) acuerdo.fechaRealizacion = new Date(dto.fechaRealizacion);
         if (dto.estado !== undefined) acuerdo.estado = dto.estado;
         if (dto.postAyudaId) acuerdo.postAyuda = { id: dto.postAyudaId } as any;
         if (dto.solicitudId) acuerdo.solicitud = { id: dto.solicitudId } as any;

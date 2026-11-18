@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 /* archivo: src/post-ayuda/post-ayuda.dto.ts */
-import { ArrayMaxSize, ArrayMinSize, ArrayNotEmpty, IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsString, IsUUID } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, ArrayNotEmpty, IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class PostAyudaDto {
     @IsString()
@@ -27,9 +27,10 @@ export class PostAyudaDto {
     @IsNotEmpty()
     readonly cupo: number;
 
+    // Lo calcula el backend según los participantes de los acuerdos del post; si se envía, se ignora
     @IsBoolean()
-    @IsNotEmpty()
-    readonly cupoLleno: boolean;
+    @IsOptional()
+    readonly cupoLleno?: boolean;
 
     @IsDateString()
     @IsNotEmpty()

@@ -8,6 +8,7 @@ import { SolicitudModificacionEntity } from './solicitud-modificacion.entity';
 import { AprobacionModificacionEntity } from './aprobacion-modificacion.entity';
 import { EstadoSolicitudModificacion, TipoSolicitudModificacion } from './estado-solicitud-modificacion.enum';
 import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
+import { recalcularCupoPost } from '../acuerdo/cupo-post';
 import { EstadoAcuerdo } from '../acuerdo/estado-acuerdo.enum';
 import { ParticipanteAcuerdoEntity } from '../acuerdo/participante-acuerdo.entity';
 import { validarSaldosReceptores } from '../acuerdo/reparto-horas';
@@ -162,6 +163,12 @@ export class SolicitudModificacionService {
             acuerdo.estado = solicitud.estadoAcuerdoAnterior;
         }
         await this.acuerdoRepository.save(acuerdo);
+
+        // Al cancelarse, los participantes liberan sus cupos del post
+        if (acuerdo.estado === EstadoAcuerdo.CANCELADO) {
+            const conPost = await this.acuerdoRepository.findOne({ where: { id: acuerdo.id }, relations: { postAyuda: true } });
+            if (conPost?.postAyuda) await recalcularCupoPost(this.acuerdoRepository.manager, conPost.postAyuda.id);
+        }
 
         solicitud.estado = EstadoSolicitudModificacion.APROBADA;
         await this.solicitudRepository.save(solicitud);

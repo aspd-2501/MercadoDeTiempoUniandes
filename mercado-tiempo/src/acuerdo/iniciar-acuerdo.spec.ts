@@ -87,7 +87,7 @@ describe('AcuerdoService.iniciar (acuerdo, participantes y chat en una sola oper
         expect(acuerdo.estado).toBe(EstadoAcuerdo.EN_CREACION);
         expect(acuerdo.horas).toBe(2);
         expect(acuerdo.postAyuda.id).toBe(postOfrece.id);
-        expect(new Date(acuerdo.fechaRealizacion).getTime()).toBe(fecha.getTime());
+        expect(new Date(acuerdo.fechaRealizacion!).getTime()).toBe(fecha.getTime());
         expect(acuerdo.participantes).toHaveLength(2);
         expect(rolDe(acuerdo, autor)).toBe(RolParticipante.PRESTADOR);
         expect(rolDe(acuerdo, miembro)).toBe(RolParticipante.RECEPTOR);
@@ -143,10 +143,77 @@ describe('AcuerdoService.iniciar (acuerdo, participantes y chat en una sola oper
         await nadaCreado();
     });
 
-    it('should reject a post with cupo lleno', async () => {
-        const lleno = await crearPost(true, 2, true);
-        await expect(() => service.iniciar({ postAyudaId: lleno.id, perfilId: miembro.id, fechaRealizacion: fecha }))
+    it('should fill the cupo and reject new members when it is full', async () => {
+        const otro = await crearPerfil(10);
+        const tercero = await crearPerfil(10);   // postOfrece tiene cupo 2
+
+        await service.iniciar({ postAyudaId: postOfrece.id, perfilId: miembro.id });
+        expect((await postRepository.findOneBy({ id: postOfrece.id }))!.cupoLleno).toBe(false);
+
+        await service.iniciar({ postAyudaId: postOfrece.id, perfilId: otro.id });
+        expect((await postRepository.findOneBy({ id: postOfrece.id }))!.cupoLleno).toBe(true);
+
+        await expect(() => service.iniciar({ postAyudaId: postOfrece.id, perfilId: tercero.id }))
             .rejects.toHaveProperty('message', 'El post de ayuda ya no tiene cupos');
+        expect(await acuerdoRepository.count()).toBe(2);
+    });
+
+    it('should not let a member join the same post twice', async () => {
+        await service.iniciar({ postAyudaId: postOfrece.id, perfilId: miembro.id });
+        await expect(() => service.iniciar({ postAyudaId: postOfrece.id, perfilId: miembro.id }))
+            .rejects.toHaveProperty('message', 'El perfil ya participa en un acuerdo de este post');
+        expect(await acuerdoRepository.count()).toBe(1);
+        expect(await chatRepository.count()).toBe(1);
+    });
+
+    it('should not count cancelled acuerdos and should free the cupo when an acuerdo is deleted', async () => {
+        const otro = await crearPerfil(10);
+        const primero = await service.iniciar({ postAyudaId: postOfrece.id, perfilId: miembro.id });
+        await service.iniciar({ postAyudaId: postOfrece.id, perfilId: otro.id });
+        expect((await postRepository.findOneBy({ id: postOfrece.id }))!.cupoLleno).toBe(true);
+
+        await acuerdoRepository.update(primero.id, { estado: EstadoAcuerdo.CANCELADO });
+        // El miembro de un acuerdo cancelado puede volver a unirse
+        await service.iniciar({ postAyudaId: postOfrece.id, perfilId: miembro.id });
+        expect((await postRepository.findOneBy({ id: postOfrece.id }))!.cupoLleno).toBe(true);
+
+        const ultimo = (await acuerdoRepository.find({ where: { estado: EstadoAcuerdo.EN_CREACION } }))[0];
+        await service.delete(ultimo.id);
+        expect((await postRepository.findOneBy({ id: postOfrece.id }))!.cupoLleno).toBe(false);
+    });
+
+    it('should not require a fechaRealizacion', async () => {
+        const acuerdo = await service.iniciar({ postAyudaId: postOfrece.id, perfilId: miembro.id });
+        expect(acuerdo.fechaRealizacion).toBeNull();
+    });
+
+    it('addParticipante should respect the cupo and reject members already in another acuerdo of the post', async () => {
+        const otro = await crearPerfil(10);
+        const tercero = await crearPerfil(10);
+        const acuerdo = await service.iniciar({ postAyudaId: postOfrece.id, perfilId: miembro.id });
+        const segundo = await service.iniciar({ postAyudaId: postOfrece.id, perfilId: otro.id });
+
+        // El miembro ya está en el primer acuerdo del post
+        await expect(() => service.addParticipanteAcuerdo(segundo.id, miembro.id, RolParticipante.RECEPTOR))
+            .rejects.toHaveProperty('message', 'El perfil ya participa en un acuerdo de este post');
+        // El post (cupo 2) ya está lleno
+        await expect(() => service.addParticipanteAcuerdo(acuerdo.id, tercero.id, RolParticipante.RECEPTOR))
+            .rejects.toHaveProperty('message', 'El post de ayuda ya no tiene cupos');
+
+        // Al salir un participante se libera el cupo
+        await service.deleteParticipanteAcuerdo(segundo.id, otro.id);
+        expect((await postRepository.findOneBy({ id: postOfrece.id }))!.cupoLleno).toBe(false);
+        await service.addParticipanteAcuerdo(acuerdo.id, tercero.id, RolParticipante.RECEPTOR);
+        expect((await postRepository.findOneBy({ id: postOfrece.id }))!.cupoLleno).toBe(true);
+    });
+
+    it('associateParticipantes should reject a repeated perfil', async () => {
+        const acuerdo = await service.iniciar({ postAyudaId: postOfrece.id, perfilId: miembro.id });
+        await expect(() => service.associateParticipantesAcuerdo(acuerdo.id, [
+            { perfilId: autor.id, rol: RolParticipante.PRESTADOR },
+            { perfilId: miembro.id, rol: RolParticipante.RECEPTOR },
+            { perfilId: miembro.id, rol: RolParticipante.RECEPTOR },
+        ])).rejects.toHaveProperty('message', 'Un perfil no puede estar dos veces en el mismo acuerdo');
     });
 
     it('should require the perfil that joins the post', async () => {

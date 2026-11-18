@@ -138,7 +138,7 @@ describe('AgendaMiembroService', () => {
         await crearAcuerdo(EstadoAcuerdo.REALIZADO, 5);
 
         const result = await service.findAcuerdos(miembro.id, FiltroAcuerdos.PENDIENTES);
-        expect(result.map(a => new Date(a.fechaRealizacion).getUTCDate())).toEqual([12, 18, 25]);
+        expect(result.map(a => new Date(a.fechaRealizacion!).getUTCDate())).toEqual([12, 18, 25]);
     });
 
     it('findAcuerdos should return the completados and the cancelados', async () => {

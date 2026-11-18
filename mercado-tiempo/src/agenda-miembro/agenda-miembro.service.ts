@@ -66,7 +66,8 @@ export class AgendaMiembroService {
         if (filtro)
             acuerdos = acuerdos.filter(a => ESTADOS_POR_FILTRO[filtro].includes(a.estado));
 
-        const fecha = (a: AcuerdoEntity) => new Date(a.fechaRealizacion).getTime();
+        // Los acuerdos sin fecha todavía van al final de los pendientes y al principio de los demás
+        const fecha = (a: AcuerdoEntity) => a.fechaRealizacion ? new Date(a.fechaRealizacion).getTime() : Number.MAX_SAFE_INTEGER;
         return filtro === FiltroAcuerdos.PENDIENTES
             ? acuerdos.sort((a, b) => fecha(a) - fecha(b))
             : acuerdos.sort((a, b) => fecha(b) - fecha(a));

@@ -137,7 +137,7 @@ describe('DisponibilidadAcuerdoService', () => {
         const stored = await acuerdoGuardado();
         expect(stored.estado).toBe(EstadoAcuerdo.ACORDADO);
         expect(stored.horarioAcordado).not.toBeNull();
-        expect(new Date(stored.fechaRealizacion).getTime()).toBe(f(15, 17).inicio.getTime());
+        expect(new Date(stored.fechaRealizacion!).getTime()).toBe(f(15, 17).inicio.getTime());
     });
 
     it('registrarDisponibilidad should report insuficiente without assigning a horario', async () => {

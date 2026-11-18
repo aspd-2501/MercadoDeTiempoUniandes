@@ -8,8 +8,7 @@ body:
   content: |-
     {
       "postAyudaId": "{{postId}}",
-      "perfilId": "{{perfilB}}",
-      "fechaRealizacion": "{{futuroInicio}}"
+      "perfilId": "{{perfilB}}"
     }
 scripts:
   - type: afterResponse
@@ -17,6 +16,7 @@ scripts:
       pm.test("Código 201", () => pm.response.to.have.status(201));
       pm.test("Queda en creación", () => { const r = pm.response.json(); pm.expect(r.estado).to.eql(0); });
       pm.test("A es prestador y B receptor", () => { const r = pm.response.json(); const rol = id => r.participantes.find(p => p.idPerfil === id)?.rol; pm.expect(rol(pm.collectionVariables.get("perfilA"))).to.eql("PRESTADOR"); pm.expect(rol(pm.collectionVariables.get("perfilB"))).to.eql("RECEPTOR"); });
+      pm.test("Sin fecha de realización todavía", () => { const r = pm.response.json(); pm.expect(r.fechaRealizacion).to.eql(null); });
       pm.test("Ya tiene chat", () => { const r = pm.response.json(); pm.expect(r.chat).to.be.an("object"); });
       { const r = pm.response.json(); pm.collectionVariables.set("acuerdoIniciadoId", r.id); pm.collectionVariables.set("chatIniciadoId", r.chat.id); }
     language: text/javascript

@@ -84,7 +84,7 @@ export function convertirAcuerdo(
       proveedorConfirmo: participantes.find(p => p.idPerfil === proveedorId)?.confirmoPrestacion ?? false,
       solicitanteConfirmo: participantes.find(p => p.idPerfil === solicitanteId)?.confirmoPrestacion ?? false,
       habilitada: api.estado === EstadoAcuerdoAPI.ACORDADO &&
-        Boolean(api.horarioAcordado) && new Date(api.fechaRealizacion).getTime() <= Date.now() &&
+        Boolean(api.horarioAcordado) && api.fechaRealizacion !== null && new Date(api.fechaRealizacion).getTime() <= Date.now() &&
         Boolean(propio) && Boolean(otro),
     },
   };

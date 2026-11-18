@@ -80,7 +80,7 @@ describe('AcuerdoService', () => {
             descripcion: faker.lorem.sentence(),
             imagen: faker.image.url(),
             ofrece: true,
-            cupo: 1,
+            cupo: 10,   // alcanza para las pruebas con varios participantes
             cupoLleno: false,
             horas: faker.number.int({ min: 1, max: 10 }),
             fechaCreacion: faker.date.recent(),
@@ -229,6 +229,13 @@ describe('AcuerdoService', () => {
 
     const saldoDe = async (perfil: PerfilMiembroEntity) =>
         (await perfilRepository.findOne({ where: { id: perfil.id } }))!.saldo;
+
+    it('confirmarPrestacion should throw an exception when the acuerdo has no fechaRealizacion yet', async () => {
+        await prepararParaConfirmar();
+        await acuerdoRepository.update(acuerdo.id, { fechaRealizacion: null });
+        await expect(() => service.confirmarPrestacion(acuerdo.id, perfilesList[0].id))
+            .rejects.toHaveProperty('message', 'El acuerdo todavía no tiene fecha de realización');
+    });
 
     it('confirmarPrestacion should register the confirmation without moving horas', async () => {
         await prepararParaConfirmar();

@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { BusinessError, BusinessLogicException } from '../shared/errors/business-errors';
 import { PostAyudaEntity } from './post-ayuda.entity';
+import { recalcularCupoPost } from '../acuerdo/cupo-post';
 import { PostAyudaCategoriaEntity } from './post-ayuda-categoria.entity';
 import { PerfilMiembroEntity } from '../perfil-miembro/perfil-miembro.entity';
 import { CategoriaEntity } from '../categoria/categoria.entity';
@@ -96,6 +97,7 @@ export class PostAyudaService {
             throw new BusinessLogicException("Solo un horario del post de ayuda puede ser el preferido", BusinessError.PRECONDITION_FAILED);
         const preferida = marcadas[0] ?? [...horarios].sort((a, b) => inicioMs(a) - inicioMs(b))[0];
 
+        post.cupoLleno = false;   // un post nuevo no tiene participantes; luego lo recalcula el backend
         const nuevoPost = await this.postAyudaRepository.save(post);
 
         const relaciones = categoriaIds.map(idCategoria =>
@@ -122,7 +124,11 @@ export class PostAyudaService {
         if (!persisted)
             throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
         post.id = id;
-        return await this.postAyudaRepository.save(post);
+        // cupoLleno lo calcula el backend según los participantes; si cambió el cupo, se recalcula
+        post.cupoLleno = persisted.cupoLleno;
+        await this.postAyudaRepository.save(post);
+        await recalcularCupoPost(this.postAyudaRepository.manager, id);
+        return (await this.postAyudaRepository.findOne({ where: { id } }))!;
     }
 
     async delete(id: string) {

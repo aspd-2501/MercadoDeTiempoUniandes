@@ -17,12 +17,13 @@ import { PostAyudaEntity } from '../post-ayuda/post-ayuda.entity';
 import { SolicitudAyudaEntity } from '../solicitud-ayuda/solicitud-ayuda.entity';
 import { ChatParticipanteEntity } from '../chat/chat-participante.entity';
 import { calcularReparto, ParticipanteReparto, validarSaldosReceptores } from './reparto-horas';
+import { bloquearPost, ocupacionPost, recalcularCupoPost, validarCupo } from './cupo-post';
 
 export interface DatosInicioAcuerdo {
     postAyudaId?: string;
     solicitudId?: string;
     perfilId?: string;          // quien se une al post
-    fechaRealizacion: Date;
+    fechaRealizacion?: Date;    // opcional: se fija sola al coordinar el horario
     horas?: number;             // por defecto, las del post o la solicitud
 }
 
@@ -94,11 +95,9 @@ export class AcuerdoService {
             const origen: Partial<AcuerdoEntity> = {};
 
             if (datos.postAyudaId) {
-                const post = await manager.findOne(PostAyudaEntity, { where: { id: datos.postAyudaId }, relations: { perfilAutor: true } });
-                if (!post)
-                    throw new BusinessLogicException("No se encontró el post de ayuda", BusinessError.NOT_FOUND);
-                if (post.cupoLleno)
-                    throw new BusinessLogicException("El post de ayuda ya no tiene cupos", BusinessError.PRECONDITION_FAILED);
+                await bloquearPost(manager, datos.postAyudaId);
+                const ocupacion = await ocupacionPost(manager, datos.postAyudaId);
+                const post = ocupacion.post;
                 if (!datos.perfilId)
                     throw new BusinessLogicException("Debes indicar el perfil que se une al post", BusinessError.BAD_REQUEST);
 
@@ -107,6 +106,8 @@ export class AcuerdoService {
                     throw new BusinessLogicException("No se encontró el perfil", BusinessError.NOT_FOUND);
                 if (miembro.id === post.perfilAutor.id)
                     throw new BusinessLogicException("No puedes unirte a tu propio post", BusinessError.PRECONDITION_FAILED);
+                // No puede unirse dos veces al mismo post, ni pasar del cupo
+                validarCupo(ocupacion, [miembro.id]);
 
                 [prestador, receptor] = post.ofrece ? [post.perfilAutor, miembro] : [miembro, post.perfilAutor];
                 horas = datos.horas ?? post.horas;
@@ -143,7 +144,7 @@ export class AcuerdoService {
                 ...origen,
                 horas,
                 fechaCreacion: new Date(),
-                fechaRealizacion: datos.fechaRealizacion,
+                fechaRealizacion: datos.fechaRealizacion ?? null,
                 estado: EstadoAcuerdo.EN_CREACION,
                 chat,
             }));
@@ -152,6 +153,9 @@ export class AcuerdoService {
                 manager.create(ParticipanteAcuerdoEntity, { idAcuerdo: acuerdo.id, idPerfil: prestador.id, rol: RolParticipante.PRESTADOR }),
                 manager.create(ParticipanteAcuerdoEntity, { idAcuerdo: acuerdo.id, idPerfil: receptor.id, rol: RolParticipante.RECEPTOR }),
             ]);
+
+            if (origen.postAyuda)
+                await recalcularCupoPost(manager, origen.postAyuda.id);
 
             return acuerdo.id;
         });
@@ -183,10 +187,14 @@ export class AcuerdoService {
     }
 
     async delete(id: string) {
-        const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({ where: { id } });
+        const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({ where: { id }, relations: { postAyuda: true } });
         if (!acuerdo)
             throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
-        await this.acuerdoRepository.remove(acuerdo);
+        const postId = acuerdo.postAyuda?.id;
+        await this.acuerdoRepository.manager.transaction(async manager => {
+            await manager.remove(acuerdo);
+            if (postId) await recalcularCupoPost(manager, postId);   // se libera el cupo
+        });
     }
 
     // --- Relación con PerfilMiembro (vía ParticipanteAcuerdo, con rol) ---
@@ -198,7 +206,7 @@ export class AcuerdoService {
 
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
             where: { id: acuerdoId },
-            relations: { participantes: true }
+            relations: { participantes: true, postAyuda: true }
         });
         if (!acuerdo)
             throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
@@ -212,8 +220,16 @@ export class AcuerdoService {
         const actuales = await this.participantesConSaldo(acuerdoId);
         validarSaldosReceptores(acuerdo.horas, [...actuales, { idPerfil: perfilId, rol, saldo: perfil.saldo }]);
 
-        const participante = this.participanteRepository.create({ idAcuerdo: acuerdoId, idPerfil: perfilId, rol });
-        await this.participanteRepository.save(participante);
+        const postId = acuerdo.postAyuda?.id;
+        await this.acuerdoRepository.manager.transaction(async manager => {
+            if (postId) {
+                // Si el acuerdo viene de un post: no puede estar en otro acuerdo del post ni pasar del cupo
+                await bloquearPost(manager, postId);
+                validarCupo(await ocupacionPost(manager, postId), [perfilId]);
+            }
+            await manager.save(ParticipanteAcuerdoEntity, manager.create(ParticipanteAcuerdoEntity, { idAcuerdo: acuerdoId, idPerfil: perfilId, rol }));
+            if (postId) await recalcularCupoPost(manager, postId);
+        });
 
         const acuerdoActualizado: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
             where: { id: acuerdoId },
@@ -258,11 +274,15 @@ export class AcuerdoService {
     ): Promise<AcuerdoEntity> {
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
             where: { id: acuerdoId },
-            relations: { participantes: true }
+            relations: { participantes: true, postAyuda: true }
         });
         if (!acuerdo)
             throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
         this.validarAcuerdoActivo(acuerdo);
+
+        const ids = participantes.map(p => p.perfilId);
+        if (new Set(ids).size !== ids.length)
+            throw new BusinessLogicException("Un perfil no puede estar dos veces en el mismo acuerdo", BusinessError.PRECONDITION_FAILED);
 
         const nuevos: ParticipanteReparto[] = [];
         for (const p of participantes) {
@@ -273,12 +293,19 @@ export class AcuerdoService {
         }
         validarSaldosReceptores(acuerdo.horas, nuevos);
 
-        await this.participanteRepository.delete({ idAcuerdo: acuerdoId });
-
-        const nuevosParticipantes = participantes.map(p =>
-            this.participanteRepository.create({ idAcuerdo: acuerdoId, idPerfil: p.perfilId, rol: p.rol })
-        );
-        await this.participanteRepository.save(nuevosParticipantes);
+        const postId = acuerdo.postAyuda?.id;
+        await this.acuerdoRepository.manager.transaction(async manager => {
+            if (postId) {
+                // Los cupos se cuentan sin los participantes actuales de este acuerdo (se reemplazan)
+                await bloquearPost(manager, postId);
+                validarCupo(await ocupacionPost(manager, postId, acuerdoId), ids);
+            }
+            await manager.delete(ParticipanteAcuerdoEntity, { idAcuerdo: acuerdoId });
+            await manager.save(ParticipanteAcuerdoEntity, participantes.map(p =>
+                manager.create(ParticipanteAcuerdoEntity, { idAcuerdo: acuerdoId, idPerfil: p.perfilId, rol: p.rol })
+            ));
+            if (postId) await recalcularCupoPost(manager, postId);
+        });
 
         const acuerdoActualizado: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
             where: { id: acuerdoId },
@@ -294,7 +321,7 @@ export class AcuerdoService {
 
         const acuerdo: AcuerdoEntity | null = await this.acuerdoRepository.findOne({
             where: { id: acuerdoId },
-            relations: { participantes: true }
+            relations: { participantes: true, postAyuda: true }
         });
         if (!acuerdo)
             throw new BusinessLogicException("No se encontró el acuerdo", BusinessError.NOT_FOUND);
@@ -304,7 +331,10 @@ export class AcuerdoService {
         if (!participante)
             throw new BusinessLogicException("El perfil no es participante del acuerdo", BusinessError.PRECONDITION_FAILED);
 
-        await this.participanteRepository.delete({ idAcuerdo: acuerdoId, idPerfil: perfilId });
+        await this.acuerdoRepository.manager.transaction(async manager => {
+            await manager.delete(ParticipanteAcuerdoEntity, { idAcuerdo: acuerdoId, idPerfil: perfilId });
+            if (acuerdo.postAyuda) await recalcularCupoPost(manager, acuerdo.postAyuda.id);   // se libera el cupo
+        });
     }
 
     // --- Horario acordado: debe ser uno de los horarios propuestos para el acuerdo, su post o su solicitud ---
@@ -377,6 +407,9 @@ export class AcuerdoService {
 
         if (acuerdo.estado !== EstadoAcuerdo.ACORDADO)
             throw new BusinessLogicException("El acuerdo debe estar acordado para confirmar la prestación", BusinessError.PRECONDITION_FAILED);
+
+        if (!acuerdo.fechaRealizacion)
+            throw new BusinessLogicException("El acuerdo todavía no tiene fecha de realización", BusinessError.PRECONDITION_FAILED);
 
         if (new Date(acuerdo.fechaRealizacion).getTime() > Date.now())
             throw new BusinessLogicException("La prestación no se puede confirmar antes de la fecha de realización", BusinessError.PRECONDITION_FAILED);

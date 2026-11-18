@@ -56,7 +56,8 @@ export interface AcuerdoAPI {
   id: string;
   horas: number;
   fechaCreacion: string;
-  fechaRealizacion: string;
+  /** null hasta que se coordina el horario del acuerdo. */
+  fechaRealizacion: string | null;
   estado: EstadoAcuerdoAPI;
   postAyuda: OrigenAcuerdoAPI | null;
   solicitud: OrigenAcuerdoAPI | null;

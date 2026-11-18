@@ -11,9 +11,10 @@ export class AcuerdoDto {
     @IsNotEmpty()
     readonly fechaCreacion: string;
 
+    // Opcional: se fija sola al coordinar el horario del acuerdo
     @IsDateString()
-    @IsNotEmpty()
-    readonly fechaRealizacion: string;
+    @IsOptional()
+    readonly fechaRealizacion?: string;
 
     // 0: en creación, 1: acordado, 2: realizado, 3: en modificación
     @IsInt()

@@ -5,6 +5,8 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { faker } from '@faker-js/faker';
 import { TypeOrmTestingConfig } from '../shared/testing-utils/typeorm-testing-config';
+import { AcuerdoEntity } from '../acuerdo/acuerdo.entity';
+import { ParticipanteAcuerdoEntity, RolParticipante } from '../acuerdo/participante-acuerdo.entity';
 import { FranjaHoraria, PostAyudaService } from './post-ayuda.service';
 import { PostAyudaEntity } from './post-ayuda.entity';
 import { PostAyudaCategoriaEntity } from './post-ayuda-categoria.entity';
@@ -304,6 +306,19 @@ describe('PostAyudaService', () => {
         post.titulo = faker.lorem.words(3);
         const updated = await service.update(post.id, post);
         expect(updated.titulo).toBe(post.titulo);
+    });
+
+    it('update should ignore the cupoLleno sent and recalculate it when the cupo changes', async () => {
+        // Un miembro ya ocupa un cupo del post (cupo 1)
+        const otro = await perfilRepository.save({ ...perfil, id: undefined, usuario: undefined, nombre: 'Otro' } as any);
+        const acuerdo = await postAyudaRepository.manager.save(AcuerdoEntity, { horas: 2, fechaCreacion: new Date(), estado: 0, postAyuda: post });
+        await postAyudaRepository.manager.save(ParticipanteAcuerdoEntity, { idAcuerdo: acuerdo.id, idPerfil: otro.id, rol: RolParticipante.RECEPTOR });
+
+        const lleno = await service.update(post.id, { ...post, cupo: 1, cupoLleno: false } as PostAyudaEntity);
+        expect(lleno.cupoLleno).toBe(true);
+
+        const conMasCupo = await service.update(post.id, { ...post, cupo: 3, cupoLleno: true } as PostAyudaEntity);
+        expect(conMasCupo.cupoLleno).toBe(false);
     });
 
     it('update should throw an exception for an invalid post ayuda', async () => {
