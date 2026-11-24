@@ -16,7 +16,7 @@ interface OnboardingProps {
 const PASOS = [
   { titulo: 'Cuéntanos quién eres', descripcion: 'Crea tu cuenta y completa los datos de tu perfil.' },
   { titulo: 'Sobre ti', descripcion: 'Escribe una breve descripción para otros miembros.' },
-  { titulo: '¿Qué te interesa?', descripcion: 'Selecciona categorías reales del Banco de Tiempo.' },
+  { titulo: '¿Qué te interesa?', descripcion: 'Selecciona de entre las siguientes categorías.' },
 ] as const;
 
 /**

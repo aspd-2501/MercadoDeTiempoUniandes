@@ -56,13 +56,13 @@ export interface AcuerdoAPI {
   id: string;
   horas: number;
   fechaCreacion: string;
-  /** null hasta que se coordina el horario del acuerdo. */
   fechaRealizacion: string | null;
   estado: EstadoAcuerdoAPI;
   postAyuda: OrigenAcuerdoAPI | null;
   solicitud: OrigenAcuerdoAPI | null;
   participantes: ParticipanteAcuerdoAPI[];
   horarioAcordado: HorarioAcordadoAPI | null;
+  /** En el listado de Actividad esta relación no viene expandida. GET /acuerdos/:id sí la incluye. */
   chat?: ChatAcuerdoAPI | null;
 }
 
@@ -93,6 +93,7 @@ export interface DisponibilidadDetalleAPI {
   resultado: { estado: 'pendiente' | 'sin-coincidencia' } |
     { estado: 'compatible' | 'insuficiente'; intervalo: FranjaAcuerdoAPI };
   horarioAcordado: FranjaAcuerdoAPI | null;
+  horarioPreferido: FranjaAcuerdoAPI | null;
 }
 export interface SolicitudCambioAPI {
   id: string;
@@ -144,6 +145,13 @@ export function responderCambioAcuerdo(id: string, solicitudId: string, perfilId
     metodo: 'POST', datos: { perfilId },
   });
 }
+/** Retira una solicitud propia de modificación o cancelación mientras está pendiente. */
+export function retirarCambioAcuerdo(id: string, solicitudId: string, perfilId: string) {
+  return clienteApi<SolicitudCambioAPI>(`${rutaAcuerdo(id)}/solicitudes-modificacion/${encodeURIComponent(solicitudId)}/retirar`, {
+    metodo: 'POST', datos: { perfilId },
+  });
+}
+
 export function confirmarPrestacionAcuerdo(id: string, perfilId: string) {
   return clienteApi<DetalleAcuerdoAPI>(`${rutaAcuerdo(id)}/confirmaciones/${encodeURIComponent(perfilId)}`, {
     metodo: 'POST',

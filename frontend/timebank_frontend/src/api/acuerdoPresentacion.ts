@@ -59,6 +59,9 @@ export function convertirAcuerdo(
     creditosHoras: api.horas, // horas del acuerdo; no equivale a saldo ni cuota por persona
     resumenParticipantes: participantes.map(p => p.perfil?.nombre ?? 'Miembro').join(', '),
     fechaProgramada: fecha?.dia,
+    horarioPreferidoOrigen: disponibilidad.horarioPreferido
+      ? intervaloVisible(disponibilidad.horarioPreferido.inicio, disponibilidad.horarioPreferido.fin, 'preferido-post')
+      : undefined,
     horaInicio: fecha?.inicio,
     horaFin: fin ? piezas(fin).inicio : undefined,
     postId: api.postAyuda?.id,
@@ -84,7 +87,8 @@ export function convertirAcuerdo(
       proveedorConfirmo: participantes.find(p => p.idPerfil === proveedorId)?.confirmoPrestacion ?? false,
       solicitanteConfirmo: participantes.find(p => p.idPerfil === solicitanteId)?.confirmoPrestacion ?? false,
       habilitada: api.estado === EstadoAcuerdoAPI.ACORDADO &&
-        Boolean(api.horarioAcordado) && api.fechaRealizacion !== null && new Date(api.fechaRealizacion).getTime() <= Date.now() &&
+        Boolean(api.horarioAcordado && api.fechaRealizacion) &&
+        Boolean(api.fechaRealizacion && new Date(api.fechaRealizacion).getTime() <= Date.now()) &&
         Boolean(propio) && Boolean(otro),
     },
   };

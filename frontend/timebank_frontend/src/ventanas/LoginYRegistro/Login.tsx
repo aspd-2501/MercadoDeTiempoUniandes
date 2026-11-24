@@ -39,7 +39,7 @@ export default function Login({ onContinuar, onCrearCuenta }: LoginProps) {
           <div className="mx-auto mb-2 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3C9DA0] shadow-lg">
             <Clock3 size={28} className="text-[#FFFF00]" />
           </div>
-          <h1 className="text-2xl font-bold text-[#0D0D0D]" style={{ fontFamily: 'Outfit, sans-serif' }}>Banco de Tiempo</h1>
+          <h1 className="text-2xl font-bold text-[#0D0D0D]" style={{ fontFamily: 'Outfit, sans-serif' }}>Tengo Tiempo</h1>
           <p className="font-semibold text-[#3C9DA0]">Uniandes</p>
         </header>
         <p className="mb-4 text-center text-base font-medium leading-snug text-[#0D0D0D]">
@@ -85,7 +85,7 @@ export default function Login({ onContinuar, onCrearCuenta }: LoginProps) {
         </p>
       </div>
       <footer className="border-t border-[#E8E8E8] px-4 py-3 text-center text-[11px] text-[#737373]">
-        Al ingresar, aceptas los términos del Banco de Tiempo Uniandes
+        Al ingresar, aceptas los términos del Tengo Tiempo.
       </footer>
     </div>
   );

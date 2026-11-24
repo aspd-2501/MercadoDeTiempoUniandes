@@ -31,27 +31,27 @@ interface OpcionCrear {
 const OPCIONES_CREAR: OpcionCrear[] = [
   {
     id: 'pedir-ayuda',
-    titulo: 'Pedir ayuda',
-    descripcion: 'Publica lo que necesitas y la comunidad te ayuda',
+    titulo: 'Comparte un Plan',
+    descripcion: 'Crea un plan para que otros se unan a tus actividades.',
     icono: TriangleAlert,
     clasesIcono: 'bg-[#E8F5F6]',
     clasesColorIcono: 'text-[#3C9DA0]',
     clasesHover: 'hover:bg-[#E8F5F6]',
     distintivo: {
-      texto: 'Pide ayuda',
+      texto: 'Te tengo el plan',
       clases: 'bg-[#E8F5F6] text-[#3C9DA0]',
     },
   },
   {
     id: 'ofrecer-ayuda',
-    titulo: 'Ofrecer ayuda',
-    descripcion: 'Publica lo que puedes hacer y otros se unen',
+    titulo: 'Comparte Tiempo',
+    descripcion: 'Comparte tu tiempo orfeciendote a hacer algo por alguien más.',
     icono: Star,
     clasesIcono: 'bg-[#FFFDE7]',
     clasesColorIcono: 'text-[#F57F17]',
     clasesHover: 'hover:bg-[#FFFDE7]',
     distintivo: {
-      texto: 'Ofrece ayuda',
+      texto: 'Tengo Tiempo',
       clases: 'bg-[#FFFF00] text-[#0D0D0D]',
     },
   },

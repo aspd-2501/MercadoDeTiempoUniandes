@@ -96,7 +96,7 @@ export default function Actividad({
               </button>
             )}
             <h1 className="text-2xl font-bold text-[#0D0D0D]"
-              style={{ fontFamily: 'Outfit, sans-serif' }}>Actividad</h1>
+              style={{ fontFamily: 'Outfit, sans-serif' }}>Citas</h1>
           </div>
           <nav aria-label="Categorías de actividad" className="flex min-w-0 gap-1 overflow-x-auto"
             style={{ scrollbarWidth: 'none' }}>

@@ -225,7 +225,7 @@ export default function MiembroProfile({
     { label: 'Reconocimientos', value: cargandoDatos ? '—' : reconocimientos.length },
   ];
   const quickLinks: { icon: IconName; label: string; ruta: string }[] = [
-    { icon: 'activity', label: 'Acuerdos pendientes', ruta: '/actividad' },
+    { icon: 'activity', label: 'Citas pendientes', ruta: '/actividad' },
     { icon: 'clock', label: 'Historial de intercambios', ruta: '/movimientos' },
   ];
 

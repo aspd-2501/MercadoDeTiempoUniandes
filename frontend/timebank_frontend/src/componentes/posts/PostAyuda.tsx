@@ -215,7 +215,7 @@ export default function PostAyuda({
             ) : (
               <TriangleAlert size={10} strokeWidth={2.5} aria-hidden="true" />
             )}
-            {esOfrecimiento ? 'Ofrece ayuda' : 'Pide ayuda'}
+            {esOfrecimiento ? 'Tengo tiempo' : 'Te tengo el plan'}
           </span>
         </header>
 
@@ -303,8 +303,8 @@ export default function PostAyuda({
           style={{ fontFamily: 'Outfit, sans-serif' }}
         >
           {esOfrecimiento
-              ? 'Quiero recibir ayuda'
-              : 'Quiero ayudar'}
+              ? 'Aceptar su tiempo'
+              : 'Participar'}
         </button>
 
         {/* 01.7.2 GUARDAR: acción preparada, sin persistencia */}

@@ -1,30 +1,30 @@
 import { clienteApi } from './clienteApi';
+import type { AcuerdoAPI } from './acuerdos.api';
 
 /**
- * CONTRATO PROPUESTO (todavía no implementado en el backend del 10-11-2026).
- * POST /api/v1/posts-ayuda/:postId/participaciones
- * El backend extrae el perfil desde el JWT y realiza TODO dentro de una transacción.
- * NO enviar perfilId, roles, horas ni IDs de chat/acuerdo desde el cliente.
+ * POST /acuerdos/iniciar (backend src(5)).
+ * El servidor crea el acuerdo, los participantes y el chat en una transacción.
+ * No enviamos fechaRealizacion: se establecerá cuando las disponibilidades coincidan.
+ * IMPORTANTE: el backend actual exige perfilId en el cuerpo; la autorización con JWT
+ * sigue siendo una tarea pendiente del servidor, NO un control de React.
  */
 export interface ParticipacionCreadaAPI {
   acuerdoId: string;
   chatId: string;
 }
 
-/**
- * Solo utilizar cuando el endpoint exista y el backend garantice atomicidad,
- * autorización, idempotencia y cupos bajo concurrencia.
- */
-export async function participarEnPublicacion(postId: string): Promise<ParticipacionCreadaAPI> {
-  const resultado = await clienteApi<ParticipacionCreadaAPI>(
-    `/posts-ayuda/${encodeURIComponent(postId)}/participaciones`,
-    { metodo: 'POST' },
-  );
+export async function participarEnPublicacion(
+  postId: string,
+  perfilId: string,
+): Promise<ParticipacionCreadaAPI> {
+  if (!postId || !perfilId) throw new Error('Se necesita una publicación y un perfil autenticado.');
 
-  if (!resultado || typeof resultado.acuerdoId !== 'string' || !resultado.acuerdoId ||
-      typeof resultado.chatId !== 'string' || !resultado.chatId) {
-    throw new Error('La respuesta de participación no contiene el acuerdo y el chat.');
+  const acuerdo = await clienteApi<AcuerdoAPI>('/acuerdos/iniciar', {
+    metodo: 'POST',
+    datos: { postAyudaId: postId, perfilId },
+  });
+  if (!acuerdo?.id || !acuerdo.chat?.id) {
+    throw new Error('El servidor no confirmó el acuerdo y su chat. Revisa Actividad antes de reintentar.');
   }
-
-  return resultado;
+  return { acuerdoId: acuerdo.id, chatId: acuerdo.chat.id };
 }

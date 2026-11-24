@@ -8,6 +8,7 @@ import {
   Edit3,
   Heart,
   MessageCircle,
+  RefreshCw,
   TriangleAlert,
 } from 'lucide-react';
 
@@ -21,7 +22,7 @@ import EditorFranjasDisponibilidad, {
 } from '../../componentes/calendario/EditorFranjasDisponibilidad';
 import type { AcuerdoServicio, DatosPropuestaCambio } from '../../tipos/acuerdo';
 import { convertirAcuerdo } from '../../api/acuerdoPresentacion';
-import { obtenerDetalleAcuerdo, guardarDisponibilidadAcuerdo, solicitarCambioAcuerdo, responderCambioAcuerdo, confirmarPrestacionAcuerdo, type ParticipanteAcuerdoAPI } from '../../api/acuerdos.api';
+import { obtenerDetalleAcuerdo, guardarDisponibilidadAcuerdo, solicitarCambioAcuerdo, responderCambioAcuerdo, retirarCambioAcuerdo, confirmarPrestacionAcuerdo, type ParticipanteAcuerdoAPI } from '../../api/acuerdos.api';
 import type { IntervaloDisponibilidad } from '../../tipos/disponibilidad';
 
 /**
@@ -256,9 +257,9 @@ function MiDisponibilidad({
     setAviso('');
     try {
       await onGuardar(franjas);
-      setAviso('Disponibilidad enviada. Los datos se actualizarán al consultar nuevamente el acuerdo.');
-    } catch {
-      setAviso('No se pudo enviar la disponibilidad. Inténtalo de nuevo.');
+      setAviso('Disponibilidad guardada. El backend asignará el horario cuando encuentre una coincidencia.');
+    } catch (error) {
+      setAviso(error instanceof Error ? error.message : 'No se pudo enviar la disponibilidad.');
     } finally {
       setProcesando(false);
     }
@@ -343,6 +344,10 @@ export default function AcuerdoDetail({
     await responderCambioAcuerdo(id, propuestaId, miId, decision === 'aceptada' ? 'aprobar' : 'rechazar');
     await actualizarDetalle();
   };
+  const retirarPropuestaReal = async (id: string, propuestaId: string) => {
+    await retirarCambioAcuerdo(id, propuestaId, miId);
+    await actualizarDetalle();
+  };
   const confirmarServicioReal = async (id: string) => {
     await confirmarPrestacionAcuerdo(id, miId);
     await actualizarDetalle();
@@ -420,7 +425,7 @@ export default function AcuerdoDetail({
   const propuestaAjena = propuesta?.autorId !== miId && !(propuesta?.aprobacionesIds ?? []).includes(miId);
   const esCancelacion = propuesta?.tipo === 'CANCELACION';
 
-  const tituloVista = modoEdicion ? 'Editar acuerdo' : 'Detalle del acuerdo';
+  const tituloVista = modoEdicion ? 'Editar cita' : 'Detalles de la cita';
 
   return (
     <div className="min-h-screen min-w-0 bg-[#F6F6F6]" data-section="detalle-acuerdo">
@@ -436,6 +441,15 @@ export default function AcuerdoDetail({
             <ArrowLeft size={19} aria-hidden="true" />
           </button>
           <h1 className="min-w-0 flex-1 truncate text-lg font-bold text-[#0D0D0D]">{tituloVista}</h1>
+          {!modoEdicion && (
+            <button type="button" aria-label="Actualizar estado del acuerdo" title="Actualizar estado"
+              disabled={procesando}
+              onClick={() => void ejecutar(() => actualizarDetalle(), 'Información actualizada desde el servidor.')}
+              className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-[#3C9DA0] disabled:opacity-50">
+              <RefreshCw size={16} aria-hidden="true" />
+              <span className="hidden sm:inline">Actualizar</span>
+            </button>
+          )}
           {!modoEdicion && (
             <span className={`shrink-0 rounded-full px-2.5 py-1.5 text-xs font-semibold ${estado.clases}`}>
               {acuerdo.estadoHorario === 'pending' ? 'Horario pendiente' : estado.texto}
@@ -512,6 +526,16 @@ export default function AcuerdoDetail({
                 {esCancelacion ? 'La cancelación requiere aprobación de todos los participantes.' : 'El acuerdo actual sigue vigente hasta que se apruebe la propuesta.'}
               </p>
 
+              {propuesta.autorId === miId && (
+                <button type="button" disabled={procesando}
+                  onClick={() => void ejecutar(
+                    () => retirarPropuestaReal(acuerdo.id, propuesta.id),
+                    'Retiraste tu solicitud. El acuerdo vuelve al estado anterior.',
+                  )}
+                  className={`${ESTILO_ACCION} mt-3 w-full border border-[#D8B946] bg-white py-2.5 text-[#705900]`}>
+                  Retirar mi solicitud
+                </button>
+              )}
               {propuestaAjena && (
                 <div className="mt-3 flex gap-2">
                   {!esCancelacion && <button

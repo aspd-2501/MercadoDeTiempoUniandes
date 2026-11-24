@@ -26,12 +26,12 @@ import { buscarPostsAyuda, type PostAyudaAPI } from '../api/postsAyuda.api';
  */
 
 // ────────────────────── 00. TIPOS Y CONSTANTES ──────────────────────
-type PestanaExplorar = 'Miembros' | 'Solicitudes' | 'Servicios' | 'Actividades';
+type PestanaExplorar = 'Organizaciones' | 'Planes' | 'Tiempos' | 'Actividades';
 
 const PESTANAS: PestanaExplorar[] = [
-  'Miembros',
-  'Solicitudes',
-  'Servicios',
+  'Organizaciones',
+  'Planes',
+  'Tiempos',
   'Actividades',
 ];
 
@@ -61,7 +61,7 @@ export default function Explorar({
 }: ExplorarProps) {
   // 01.1 BÚSQUEDA Y PESTAÑAS
   const [busqueda, setBusqueda] = useState('');
-  const [pestanaActiva, setPestanaActiva] = useState<PestanaExplorar>('Miembros');
+  const [pestanaActiva, setPestanaActiva] = useState<PestanaExplorar>('Organizaciones');
 
   // 01.2 PERFILES: GET /api/v1/perfiles-miembro
   const [perfiles, setPerfiles] = useState<PerfilMiembroAPI[]>([]);
@@ -71,7 +71,7 @@ export default function Explorar({
 
   // 01.2.1 Efecto para buscar miembros cuando la pestaña activa es "Miembros" y la búsqueda cambia
   useEffect(() => {
-    if (pestanaActiva !== 'Miembros') return;
+    if (pestanaActiva !== 'Organizaciones') return;
 
     let vigente = true;
 
@@ -116,7 +116,7 @@ export default function Explorar({
   // 01.3.1 Efecto para buscar servicios cuando la pestaña activa es "Servicios" y la búsqueda cambia
 
   useEffect(() => {
-    if (pestanaActiva !== 'Servicios') return;
+    if (pestanaActiva !== 'Tiempos') return;
 
     let vigente = true;
     setCargandoServicios(true);
@@ -132,7 +132,7 @@ export default function Explorar({
             setErrorServicios(
               error instanceof Error
                 ? error.message
-                : 'No se pudieron consultar los servicios.'
+                : 'No se pudieron consultar los tiempos.'
             );
           }
         })
@@ -157,7 +157,7 @@ export default function Explorar({
   
   useEffect(() => {
     // Consultar solamente cuando estamos en Solicitudes
-    if (pestanaActiva !== 'Solicitudes') return;
+    if (pestanaActiva !== 'Planes') return;
 
     let vigente = true;
 
@@ -176,7 +176,7 @@ export default function Explorar({
             setErrorSolicitudes(
               error instanceof Error
                 ? error.message
-                : 'No se pudieron cargar las solicitudes.'
+                : 'No se pudieron cargar los planes.'
             );
           }
         })
@@ -271,15 +271,15 @@ export default function Explorar({
       {/* 03. CONTENIDO DE LA PESTAÑA ACTIVA */}
       <main className="mx-auto w-full max-w-2xl min-w-0 space-y-3 px-4 py-4" data-section="resultados-explorar">
         {/* 03.1 MIEMBROS */}
-        {pestanaActiva === 'Miembros' && (
-          <section aria-label="Miembros" className="space-y-3">
+        {pestanaActiva === 'Organizaciones' && (
+          <section aria-label="Organizaciones" className="space-y-3">
             {cargandoPerfiles ? (
               <p role="status" className="py-16 text-center text-sm text-[#737373]">
-                Cargando miembros desde el backend…
+                Cargando organizaciones desde el backend…
               </p>
             ) : errorPerfiles ? (
               <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-6 text-center">
-                <p className="text-sm font-medium text-red-700">No pudimos cargar los miembros.</p>
+                <p className="text-sm font-medium text-red-700">No pudimos cargar las organizaciones.</p>
                 <p className="mt-1 text-xs text-red-700">{errorPerfiles}</p>
                 <button
                   type="button"
@@ -300,9 +300,9 @@ export default function Explorar({
         )}
 
         {/* 03.2 SOLICITUDES DE AYUDA */}
-          {pestanaActiva === 'Solicitudes' && (
+          {pestanaActiva === 'Planes' && (
             <section
-              aria-label="Solicitudes de ayuda"
+              aria-label="Planes"
               className="space-y-3"
             >
               {cargandoSolicitudes ? (
@@ -310,7 +310,7 @@ export default function Explorar({
                   role="status"
                   className="py-16 text-center text-sm text-[#737373]"
                 >
-                  Cargando solicitudes...
+                  Cargando planes...
                 </p>
               ) : errorSolicitudes ? (
                 <div
@@ -331,7 +331,7 @@ export default function Explorar({
                 </div>
               ) : solicitudes.length === 0 ? (
                 <EstadoVacio
-                  mensaje="No encontramos solicitudes. Prueba con otra búsqueda."
+                  mensaje="No encontramos planes. Prueba con otra búsqueda."
                 />
               ) : (
                 solicitudes.map((post) => (
@@ -349,14 +349,14 @@ export default function Explorar({
           )}
 
         {/* 03.3 SERVICIOS DEL CATÁLOGO */}
-        {pestanaActiva === 'Servicios' && (
+        {pestanaActiva === 'Tiempos' && (
           <section aria-label="Servicios" className="space-y-3">
             {cargandoServicios ? (
-              <p>Cargando servicios...</p>
+              <p>Cargando Tiempos...</p>
             ) : errorServicios ? (
               <p>{errorServicios}</p>
             ) : servicios.length === 0 ? (
-              <EstadoVacio mensaje="No encontramos servicios." />
+              <EstadoVacio mensaje="No encontramos tiempos." />
             ) : (
               servicios.map((servicio) => (
                 <ServicioCard

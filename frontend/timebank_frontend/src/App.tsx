@@ -34,12 +34,6 @@ import { participarEnPublicacion } from './api/participaciones.api';
 import './App.css';
 
 /**
- * Se habilita SOLO cuando el backend publique y pruebe el POST transaccional.
- * Mientras tanto, los botones de participación real permanecen deshabilitados.
- */
-const PARTICIPACION_HABILITADA = import.meta.env.VITE_PARTICIPACION_HABILITADA === 'true';
-
-/**
  * Interfaz compartida por todas las rutas privadas.
  * Solo se monta después de que RutaProtegida valida la sesión.
  */
@@ -139,6 +133,7 @@ function App() {
     const horarios = datos.availability.map((franja) => ({
       fechaInicio: new Date(`${franja.date}T${franja.startTime}:00`).toISOString(),
       fechaFin: new Date(`${franja.date}T${franja.endTime}:00`).toISOString(),
+      preferido: franja.id === datos.preferredAvailabilityId,
     }));
 
     const publicado = await crearPostAyuda(perfil.id, {
@@ -258,7 +253,10 @@ function App() {
                   onVolverInicio={() => navigate('/')}
                   onVerAcuerdo={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}`)}
                   onIrChat={(acuerdoId) => navigate(`/acuerdos/${acuerdoId}/chat`)}
-                  onParticipar={PARTICIPACION_HABILITADA ? participarEnPublicacion : undefined}
+                  onParticipar={(postId) => {
+                    if (!perfil?.id) throw new Error('Inicia sesión para participar.');
+                    return participarEnPublicacion(postId, perfil.id);
+                  }}
                 />
               }
             />

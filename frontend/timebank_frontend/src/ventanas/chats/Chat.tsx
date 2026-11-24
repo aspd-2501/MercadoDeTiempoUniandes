@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, Clock3, Paperclip, Send, UsersRound } from 'lucide-react';
+import { ArrowLeft, Clock3, Paperclip, RefreshCw, Send, UsersRound } from 'lucide-react';
 
 import { useMiembroSesion } from '../../contextos/MiembroSesionContext';
 import { obtenerParticipantesChat, obtenerMensajesChat, enviarMensajeChat, type MensajeAPI, type ParticipanteChatAPI } from '../../api/chats.api';
@@ -159,6 +159,7 @@ export default function Chat(props: ChatProps) {
         await enviarMensajeChat(chat.id, perfilId, contenido);
         return (await obtenerMensajesChat(chat.id)).map(adaptarMensaje);
       }}
+      onRecargarMensajes={async () => (await obtenerMensajesChat(chat.id)).map(adaptarMensaje)}
       onVolver={() => navigate(`/acuerdos/${acuerdoId}`)}
       {...props}
     />
@@ -176,6 +177,7 @@ interface ConversacionProps extends ChatProps {
   onVolver: () => void;
   mensajesIniciales: MensajeChat[];
   onEnviarMensaje: (contenido: string) => Promise<MensajeChat[]>;
+  onRecargarMensajes: () => Promise<MensajeChat[]>;
 }
 
 function Conversacion({
@@ -185,6 +187,7 @@ function Conversacion({
   onVolver,
   mensajesIniciales,
   onEnviarMensaje,
+  onRecargarMensajes,
   onAbrirPerfil,
   onVerAcuerdo,
 }: ConversacionProps) {
@@ -195,7 +198,44 @@ function Conversacion({
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
+  const [errorActualizacion, setErrorActualizacion] = useState<string | null>(null);
+  const [actualizandoMensajes, setActualizandoMensajes] = useState(false);
   const contenedorMensajesRef = useRef<HTMLDivElement>(null);
+  const consultaEnCursoRef = useRef(false);
+  const envioEnCursoRef = useRef(false);
+  const revisionMensajesRef = useRef(0);
+
+  async function recargarMensajes(manual = false) {
+    if (consultaEnCursoRef.current || envioEnCursoRef.current) return;
+    consultaEnCursoRef.current = true;
+    const revision = revisionMensajesRef.current;
+    if (manual) setActualizandoMensajes(true);
+    try {
+      const nuevos = await onRecargarMensajes();
+      if (revision !== revisionMensajesRef.current) return;
+      setMensajes(anteriores => {
+        const iguales = anteriores.length === nuevos.length &&
+          anteriores.every((m, i) => m.id === nuevos[i]?.id && m.text === nuevos[i]?.text);
+        return iguales ? anteriores : nuevos;
+      });
+      setErrorActualizacion(null);
+    } catch (error) {
+      if (manual) setErrorActualizacion(error instanceof Error ? error.message : 'Error al actualizar los mensajes.');
+    } finally {
+      consultaEnCursoRef.current = false;
+      if (manual) setActualizandoMensajes(false);
+    }
+  }
+
+  // Refresco periódico sin WebSockets, solo mientras el chat está visible.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void recargarMensajes();
+    }, 12000);
+    return () => window.clearInterval(timer);
+    // La función de lectura corresponde siempre al chat montado (key={chat.id}).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onRecargarMensajes]);
 
   // 02.2 MANTENER A LA VISTA EL ÚLTIMO MENSAJE, SIN MOVER TODA LA PÁGINA
   useEffect(() => {
@@ -210,12 +250,15 @@ function Conversacion({
     const contenido = texto.trim();
     if (!contenido || enviando) return;
     setEnviando(true); setErrorEnvio(null);
+    envioEnCursoRef.current = true;
+    revisionMensajesRef.current += 1;
     try {
       setMensajes(await onEnviarMensaje(contenido));
       setTexto('');
     } catch (e) {
       setErrorEnvio(e instanceof Error ? e.message : 'No se pudo enviar el mensaje.');
     } finally {
+      envioEnCursoRef.current = false;
       setEnviando(false);
     }
   }
@@ -258,6 +301,11 @@ function Conversacion({
             </span>
           </div>
 
+          <button type="button" aria-label="Actualizar mensajes" title="Actualizar mensajes"
+            onClick={() => void recargarMensajes(true)} disabled={actualizandoMensajes || enviando}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#3C9DA0] disabled:opacity-50">
+            <RefreshCw size={17} aria-hidden="true" />
+          </button>
           {/* 03.3 ACCESO AL ACUERDO */}
           <button
             type="button"
@@ -272,6 +320,9 @@ function Conversacion({
         </div>
       </header>
 
+      {errorActualizacion && (
+        <p role="alert" className="shrink-0 px-4 py-1 text-xs text-red-700">{errorActualizacion}</p>
+      )}
       {/* 04. MENSAJES: SOLO ESTA REGIÓN TIENE DESPLAZAMIENTO VERTICAL */}
       <div
         ref={contenedorMensajesRef}

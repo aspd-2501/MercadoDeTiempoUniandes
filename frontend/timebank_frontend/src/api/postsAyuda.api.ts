@@ -18,6 +18,7 @@ export interface HorarioPostAPI {
   id: string;
   fechaInicio: string;
   fechaFin: string;
+  preferido?: boolean;
 }
 
 export interface PostAyudaAPI {
@@ -71,7 +72,7 @@ export interface NuevaPublicacionPostAPI {
   ofrece: boolean;
   cupo: number;
   categoriaIds: string[];
-  horarios: Array<{ fechaInicio: string; fechaFin: string }>;
+  horarios: Array<{ fechaInicio: string; fechaFin: string; preferido: boolean }>;
 }
 
 /**

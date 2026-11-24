@@ -317,7 +317,7 @@ export default function CrearPostAyuda({
             {esOferta ? 'Publicar oferta de ayuda' : 'Publicar solicitud de ayuda'}
           </h1>
           <span className={`shrink-0 rounded-full px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide ${esOferta ? 'bg-[#FFFF00] text-[#0D0D0D]' : 'bg-[#E8F5F6] text-[#3C9DA0]'}`}>
-            {esOferta ? 'Ofrece ayuda' : 'Pide ayuda'}
+            {esOferta ? 'Comparte tu tiempo' : 'Arma tu plan'}
           </span>
         </div>
       </header>

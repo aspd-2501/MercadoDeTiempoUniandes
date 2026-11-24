@@ -25,11 +25,12 @@ import {
   type CategoriaPostAPI,
 } from '../../api/postsAyuda.api';
 import type { IntervaloDisponibilidad } from '../../tipos/disponibilidad';
+import { obtenerAcuerdosMiembro } from '../../api/acuerdos.api';
 
 /**
- * Vista actual conectada a /posts/:postId y a los mocks compartidos.
- * Añade el horario preferido y calendario de disponibilidad de la publicación.
- * No calcula coincidencias ni crea acuerdos desde el calendario.
+ * Detalle de /posts/:postId. Consulta el post real y permite unirse mediante
+ * POST /acuerdos/iniciar a través de App; calendario y coincidencias son del backend.
+ * Los mocks se conservan únicamente para visualizar ejemplos antiguos.
  */
 export type TipoPostAyuda = 'help-offer' | 'help-request';
 
@@ -254,6 +255,40 @@ export default function PostAyudaDetail({
     setConfirmedParticipants(postDemo?.confirmedParticipants ?? []);
   }, [postId, postDemo]);
 
+  // Evita crear un acuerdo duplicado si el usuario regresa al post o refresca la página.
+  // Se consultan tanto los acuerdos pendientes como los realizados; los cancelados
+  // no ocupan cupo y permiten volver a participar.
+  const [acuerdoExistente, setAcuerdoExistente] = useState<ResultadoParticipacion | null>(null);
+  const [consultandoParticipacion, setConsultandoParticipacion] = useState(true);
+  const [errorConsultaParticipacion, setErrorConsultaParticipacion] = useState<string | null>(null);
+  const [revisionParticipacion, setRevisionParticipacion] = useState(0);
+
+  useEffect(() => {
+    let vigente = true;
+    setAcuerdoExistente(null);
+    setErrorConsultaParticipacion(null);
+    if (!postId || postDemo || !currentUserId) {
+      setConsultandoParticipacion(false);
+      return () => { vigente = false; };
+    }
+    setConsultandoParticipacion(true);
+    void Promise.all([
+      obtenerAcuerdosMiembro(currentUserId, 'pendientes'),
+      obtenerAcuerdosMiembro(currentUserId, 'completados'),
+    ]).then(([pendientes, completados]) => {
+      if (!vigente) return;
+      const encontrado = [...pendientes, ...completados].find(a => a.postAyuda?.id === postId);
+      if (encontrado) {
+        setAcuerdoExistente({ acuerdoId: encontrado.id });
+      }
+    }).catch((error: unknown) => {
+      if (vigente) setErrorConsultaParticipacion(
+        error instanceof Error ? error.message : 'No se pudo verificar si ya participas.',
+      );
+    }).finally(() => { if (vigente) setConsultandoParticipacion(false); });
+    return () => { vigente = false; };
+  }, [postId, postDemo, currentUserId, revisionParticipacion]);
+
   if (cargandoPost && !post) {
     return <main role="status" className="min-h-screen bg-[#F6F6F6] p-8 text-center text-sm text-[#737373]">Cargando publicación…</main>;
   }
@@ -317,30 +352,33 @@ export default function PostAyudaDetail({
   const isFull = postApi ? postApi.cupoLleno : (slotsLeft ?? 0) <= 0;
   // No se inventa un estado de participación del backend. Los duplicados se validan en el servidor.
   const currentUserJoined = postApi
-    ? Boolean(resultadoParticipacion)
+    ? Boolean(resultadoParticipacion || acuerdoExistente)
     : Boolean(resultadoParticipacion) || confirmedParticipants.includes(currentUserId);
   const esAutorPost = Boolean(postApi && currentUserId && postApi.perfilAutor?.id === currentUserId);
 
-  // No existe "preferido" en PostAyudaEntity: mostramos todas las franjas.
   const franjasPropuestas: IntervaloDisponibilidad[] = postApi
     ? (postApi.horariosDisponibles ?? []).map(horarioParaCalendario)
     : (postMock!.availability ?? []);
-  const franjaPreferida = postMock?.availability?.find(
-    (franja) => franja.id === postMock.preferredAvailabilityId,
-  );
+  const preferidaApi = postApi?.horariosDisponibles?.find(h => h.preferido);
+  const franjaPreferida = postApi
+    ? preferidaApi ? horarioParaCalendario(preferidaApi) : undefined
+    : postMock?.availability?.find(franja => franja.id === postMock.preferredAvailabilityId);
   const fechaPreferida = franjaPreferida
     ? mostrarFechaISO(franjaPreferida.date)
     : postMock?.preferredDate;
   const horaPreferida = franjaPreferida
     ? `${mostrarHora24(franjaPreferida.startTime)} – ${mostrarHora24(franjaPreferida.endTime)}`
     : postMock?.preferredTime;
-  // Si el backend aún no tiene el endpoint transaccional, App no proporciona onParticipar.
-  const participacionDisponible = Boolean(postApi && onParticipar && currentUserId && !esAutorPost);
+  const participacionDisponible = Boolean(
+    postApi && onParticipar && currentUserId && !esAutorPost &&
+    !consultandoParticipacion && !errorConsultaParticipacion,
+  );
 
   // 05. SOLICITAR PARTICIPACIÓN: un solo POST atómico a través de App.
   // El acuerdo y el chat solo se muestran como creados cuando el backend lo confirma.
   async function handleJoin() {
-    if (!postApi || !currentUserId || esAutorPost || currentUserJoined || isFull || enviandoParticipacion || !onParticipar) return;
+    if (!postApi || !currentUserId || esAutorPost || currentUserJoined || isFull ||
+      enviandoParticipacion || !participacionDisponible || !onParticipar) return;
     setEnviandoParticipacion(true);
     setErrorParticipacion('');
     try {
@@ -396,7 +434,7 @@ export default function PostAyudaDetail({
               className="w-full py-3 rounded-xl bg-[#3C9DA0] text-white font-semibold text-sm btn-press disabled:cursor-not-allowed disabled:opacity-50"
               style={{ fontFamily: 'Outfit, sans-serif' }}
             >
-              Ver acuerdo de servicio
+              Ver tu cita
             </button>
             {resultadoParticipacion.chatId && (
               <button
@@ -441,7 +479,7 @@ export default function PostAyudaDetail({
             className="flex-1 text-base font-bold text-[#0D0D0D] truncate"
             style={{ fontFamily: 'Outfit, sans-serif' }}
           >
-            {isOffer ? 'Oferta de ayuda' : 'Solicitud de ayuda'}
+            {isOffer ? 'Detalles del Tiempo' : 'Detalles del Plan'}
           </h1>
 
           {/* Etiqueta que indica el tipo de publicación */}
@@ -451,7 +489,7 @@ export default function PostAyudaDetail({
             }`}
           >
             <Icon name={isOffer ? 'star' : 'alert-triangle'} size={11} strokeWidth={2.5} />
-            {isOffer ? 'Ofrece ayuda' : 'Pide ayuda'}
+            {isOffer ? 'Te tengo el plan' : 'Tengo Tiempo'}
           </span>
         </div>
       </header>
@@ -595,7 +633,7 @@ export default function PostAyudaDetail({
         {typeof horas === 'number' && horas > 0 ? (
           <CalendarioDisponibilidadPostAyuda
             intervalos={franjasPropuestas}
-            idPreferido={postMock?.preferredAvailabilityId}
+            idPreferido={franjaPreferida?.id}
             duracion={horas}
           />
         ) : (
@@ -635,7 +673,7 @@ export default function PostAyudaDetail({
                 className="text-sm font-semibold text-[#0D0D0D]"
                 style={{ fontFamily: 'Outfit, sans-serif' }}
               >
-                {isOffer ? `${author.firstName} ofrece su ayuda` : `${author.firstName} pide ayuda`}
+                {isOffer ? `${author.firstName} comparte tiempo` : `${author.firstName} tiene un plan`}
               </p>
               <p className="text-xs text-[#737373] mt-0.5 leading-relaxed">
                 {isOffer
@@ -652,7 +690,22 @@ export default function PostAyudaDetail({
           aria-label="Participar en la publicación"
           className="pb-4"
         >
-          <button
+          {acuerdoExistente && !resultadoParticipacion ? (
+            <div className="space-y-2">
+              <button type="button" onClick={() => onVerAcuerdo?.(acuerdoExistente.acuerdoId)}
+                disabled={!onVerAcuerdo}
+                className="w-full rounded-2xl bg-[#3C9DA0] py-4 text-base font-bold text-white disabled:opacity-50">
+                Ver mi cita
+              </button>
+              {onIrChat && (
+                <button type="button" onClick={() => onIrChat?.(acuerdoExistente.acuerdoId)}
+                  disabled={!onIrChat}
+                  className="w-full rounded-2xl border border-[#E8E8E8] bg-white py-3 text-sm font-semibold text-[#3C9DA0] disabled:opacity-50">
+                  Ir al chat de la cita
+                </button>
+              )}
+            </div>
+          ) : <button
             type="button"
             onClick={handleJoin}
             disabled={isFull || esAutorPost || currentUserJoined || enviandoParticipacion || !participacionDisponible}
@@ -665,6 +718,8 @@ export default function PostAyudaDetail({
           >
             {enviandoParticipacion
               ? 'Continuando…'
+              : consultandoParticipacion
+              ? 'Comprobando participación…'
               : currentUserJoined
               ? 'Ya estás participando'
               : esAutorPost
@@ -672,17 +727,18 @@ export default function PostAyudaDetail({
               : isFull
                 ? 'Cupos completos'
                 : isOffer
-                  ? 'Quiero recibir ayuda'
-                  : 'Quiero ayudar'}
-          </button>
+                  ? 'Aceptar su tiempo'
+                  : 'Participar'}
+          </button>}
           {errorParticipacion && (
             <p className="mt-2 text-sm text-[#D32F2F]" role="alert">{errorParticipacion}</p>
           )}
-          {!participacionDisponible && !esAutorPost && !isFull && (
-            <p className="mt-2 text-xs text-[#737373]">
-              La publicación se consulta desde el backend, pero la participación todavía requiere
-              el endpoint transaccional de creación de acuerdo y chat.
-            </p>
+          {errorConsultaParticipacion && !esAutorPost && !acuerdoExistente && (
+            <div className="mt-2 text-sm text-[#D32F2F]" role="alert">
+              <p>No se pudo comprobar si ya estás participando: {errorConsultaParticipacion}</p>
+              <button type="button" className="mt-1 font-semibold underline"
+                onClick={() => setRevisionParticipacion(v => v + 1)}>Volver a comprobar</button>
+            </div>
           )}
         </section>
       </main>

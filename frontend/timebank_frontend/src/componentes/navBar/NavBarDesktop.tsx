@@ -31,7 +31,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'home', label: 'Inicio', icon: House },
   { id: 'explore', label: 'Explorar', icon: Search },
   //{ id: 'chat', label: 'Chats', icon: MessageCircle },
-  { id: 'activity', label: 'Actividad', icon: Activity },
+  { id: 'activity', label: 'Citas', icon: Activity },
   { id: 'profile', label: 'Perfil', icon: UserRound },
   { id: 'calendar', label: 'Calendario', icon: CalendarDays },
 ];
@@ -71,9 +71,8 @@ export default function NavBarDesktop({
               className="text-xs font-semibold leading-tight text-[#0D0D0D]"
               style={{ fontFamily: 'Outfit, sans-serif' }}
             >
-              Banco de Tiempo
+              Tengo Tiempo
             </p>
-            <p className="text-[10px] leading-tight text-[#737373]">Uniandes</p>
           </div>
         </div>
       </header>

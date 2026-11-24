@@ -137,9 +137,9 @@ export default function AcuerdoCard({
         </p>
       )}
 
-      {(onVerAcuerdo || (activo && acuerdo.chat?.id && onIrChat)) && (
+      {(onVerAcuerdo || (activo && onIrChat)) && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {activo && acuerdo.chat?.id && onIrChat && (
+          {activo && onIrChat && (
             <button
               type="button"
               onClick={() => onIrChat(acuerdo.id)}
