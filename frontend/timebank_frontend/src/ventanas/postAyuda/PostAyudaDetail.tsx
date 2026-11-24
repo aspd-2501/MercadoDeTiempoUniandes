@@ -489,7 +489,7 @@ export default function PostAyudaDetail({
             }`}
           >
             <Icon name={isOffer ? 'star' : 'alert-triangle'} size={11} strokeWidth={2.5} />
-            {isOffer ? 'Te tengo el plan' : 'Tengo Tiempo'}
+            {isOffer ? 'Tengo Tiempo' : 'Te tengo el plan'}
           </span>
         </div>
       </header>
