@@ -121,7 +121,7 @@ export default function AcuerdoCard({
 
       {acuerdo.estado === EstadoAcuerdoAPI.EN_CREACION && (
         <p className="mt-3 rounded-xl bg-[#FFF9C4] px-3 py-2.5 text-xs text-[#795C00]">
-          Los participantes todavía deben definir y aceptar las condiciones del acuerdo.
+          Los participantes todavía deben definir y aceptar las condiciones de la cita.
         </p>
       )}
       {acuerdo.estado === EstadoAcuerdoAPI.EN_MODIFICACION && (
