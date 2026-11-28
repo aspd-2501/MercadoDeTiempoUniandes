@@ -413,8 +413,8 @@ function BalanceCard({
       <div aria-hidden="true" className="absolute bottom-0 left-0 h-24 w-24 -translate-x-1/4 translate-y-1/2 rounded-full bg-[#FFFF00]/10" />
 
       <div className="relative">
-        {/* 04.2 SALUDO, FACULTAD Y AVATAR DEL MIEMBRO */}
-        <header className="mb-4 flex items-start justify-between">
+        {/* 04.2 SALUDO Y AFILIACIÓN DEL MIEMBRO */}
+        <header className="mb-4">
           <div>
             <h2
               className="text-xl font-bold leading-tight text-white"
@@ -423,15 +423,6 @@ function BalanceCard({
               Hola, {miembro.firstName} 👋
             </h2>
             <p className="mt-0.5 text-sm text-white/70">{miembro.afiliacion}</p>
-          </div>
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/20 ring-2 ring-white/30">
-            {miembro.avatar ? (
-              <img src={miembro.avatar} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-base font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                {miembro.initials}
-              </span>
-            )}
           </div>
         </header>
 

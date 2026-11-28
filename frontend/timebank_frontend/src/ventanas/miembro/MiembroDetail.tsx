@@ -5,11 +5,8 @@ import {
   Award,
   Ban,
   Flag,
-  MessageCircle,
   MoreHorizontal,
   Star,
-  TriangleAlert,
-  Users,
 } from 'lucide-react';
 
 import type { PerfilMiembroAPI } from '../../api/perfilesMiembro.api';
@@ -33,8 +30,6 @@ import {
 
 interface MiembroDetailProps {
   onVolver?: () => void;
-  onSolicitarAyuda?: (perfilId: string) => void;
-  onEnviarMensaje?: (perfilId: string) => void;
 }
 
 interface DatosComplementarios {
@@ -51,8 +46,6 @@ const DATOS_VACIOS: DatosComplementarios = {
 
 const ANIMACION_BOTON =
   'transition-[transform,background-color,border-color,color,box-shadow] duration-200 ease-out motion-safe:active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3C9DA0] focus-visible:ring-offset-2 motion-reduce:transition-none';
-const ANIMACION_ELEVACION =
-  'motion-safe:hover:-translate-y-0.5 hover:shadow-md';
 
 function AvatarMiembro({ miembro }: { miembro: PerfilMiembroAPI }) {
   const iniciales = miembro.nombre
@@ -123,8 +116,6 @@ function SeccionPerfil({
 
 export default function MiembroDetail({
   onVolver,
-  onSolicitarAyuda,
-  onEnviarMensaje,
 }: MiembroDetailProps) {
   const { miembroId } = useParams<{ miembroId: string }>();
   const [perfil, setPerfil] = useState<PerfilMiembroAPI | null>(null);
@@ -297,7 +288,7 @@ export default function MiembroDetail({
             <p className="mb-4 text-sm leading-relaxed text-[#737373]">{perfil.descripcion}</p>
           )}
 
-          <section aria-label="Estadísticas del miembro" className="mb-4 grid grid-cols-2 gap-2">
+          <section aria-label="Estadísticas del miembro" className="grid grid-cols-2 gap-2">
             {estadisticas.map((estadistica) => (
               <div key={estadistica.label} className="rounded-xl bg-[#F6F6F6] p-3 text-center">
                 <div className="text-xl font-bold text-[#0D0D0D]"
@@ -306,30 +297,6 @@ export default function MiembroDetail({
               </div>
             ))}
           </section>
-
-          <div className="flex gap-2" data-section="acciones-perfil">
-            <button
-              type="button"
-              disabled={!onSolicitarAyuda}
-              onClick={() => onSolicitarAyuda?.(perfil.id)}
-              title={!onSolicitarAyuda ? 'Pendiente de integración' : undefined}
-              className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-[#3C9DA0] px-2 py-3 text-sm font-bold text-white hover:bg-[#2D8B8E] disabled:cursor-not-allowed disabled:opacity-50 ${ANIMACION_BOTON} ${ANIMACION_ELEVACION}`}
-              style={{ fontFamily: 'Outfit, sans-serif' }}
-            >
-              <TriangleAlert size={16} aria-hidden="true" />
-              Pedir ayuda
-            </button>
-            <button
-              type="button"
-              disabled={!onEnviarMensaje}
-              onClick={() => onEnviarMensaje?.(perfil.id)}
-              title={!onEnviarMensaje ? 'Pendiente de integración' : undefined}
-              className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-[#E8E8E8] px-2 py-3 text-sm font-medium text-[#0D0D0D] hover:bg-[#F6F6F6] disabled:cursor-not-allowed disabled:opacity-50 ${ANIMACION_BOTON} ${ANIMACION_ELEVACION}`}
-            >
-              <MessageCircle size={16} aria-hidden="true" />
-              Enviar mensaje
-            </button>
-          </div>
         </article>
 
         {avisoComplementos && (
@@ -350,7 +317,22 @@ export default function MiembroDetail({
           </SeccionPerfil>
         )}
 
-        {/* 04. Servicios: ServicioOfrecidoEntity[], sin duración inexistente */}
+        {/* 04. Reconocimientos: ReconocimientoOtorgadoEntity[] */}
+        {datos.reconocimientos.length > 0 && (
+          <SeccionPerfil titulo="Reconocimientos recibidos" identificador="reconocimientos">
+            <div className="flex flex-wrap gap-2">
+              {datos.reconocimientos.map((otorgamiento) => (
+                <span key={otorgamiento.id}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#FFFF00] px-3 py-1.5 text-xs font-bold text-[#0D0D0D]">
+                  <Award size={13} aria-hidden="true" />
+                  {otorgamiento.reconocimiento.nombre}
+                </span>
+              ))}
+            </div>
+          </SeccionPerfil>
+        )}
+
+        {/* 05. Servicios: ServicioOfrecidoEntity[], sin duración inexistente */}
         {serviciosVisibles.length > 0 && (
           <SeccionPerfil titulo="Servicios ofrecidos" identificador="servicios-ofrecidos">
             <div className="space-y-3">
@@ -381,21 +363,6 @@ export default function MiembroDetail({
                   </article>
                 );
               })}
-            </div>
-          </SeccionPerfil>
-        )}
-
-        {/* 05. Reconocimientos: ReconocimientoOtorgadoEntity[] */}
-        {datos.reconocimientos.length > 0 && (
-          <SeccionPerfil titulo="Reconocimientos recibidos" identificador="reconocimientos">
-            <div className="flex flex-wrap gap-2">
-              {datos.reconocimientos.map((otorgamiento) => (
-                <span key={otorgamiento.id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#FFFF00] px-3 py-1.5 text-xs font-bold text-[#0D0D0D]">
-                  <Award size={13} aria-hidden="true" />
-                  {otorgamiento.reconocimiento.nombre}
-                </span>
-              ))}
             </div>
           </SeccionPerfil>
         )}

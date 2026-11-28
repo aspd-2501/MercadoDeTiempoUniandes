@@ -195,6 +195,7 @@ function App() {
               path="/"
               element={
                 <HomeFeed
+                  onVerPerfil={() => navigate('/perfil')}
                   onDonarHoras={() => navigate('/donar-horas')}
                   onVerMovimientos={() => navigate('/movimientos')}
                   onVerAutorPost={(miembroId) => navigate(`/${miembroId}`)}

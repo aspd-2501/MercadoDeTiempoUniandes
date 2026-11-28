@@ -262,10 +262,18 @@ export default function MiembroProfile({
             <div className="mb-3 flex items-start gap-4">
               {/* Avatar: es el único elemento que sobresale por encima de la tarjeta */}
               <div className="relative -mt-3 shrink-0">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#3C9DA0] ring-4 ring-white">
-                  <span className="text-2xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    {miembro.initials}
-                  </span>
+                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#3C9DA0] ring-4 ring-white">
+                  {perfil?.imagen ? (
+                    <img
+                      src={perfil.imagen}
+                      alt={`Foto de perfil de ${miembro.name}`}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-2xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      {miembro.initials}
+                    </span>
+                  )}
                 </div>
                 <div className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-[#FFFF00]">
                   <Icon name="check" size={11} strokeWidth={3} className="text-[#0D0D0D]" />
